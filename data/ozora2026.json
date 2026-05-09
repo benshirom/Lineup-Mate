@@ -1,0 +1,50 @@
+[
+  {
+    "day_date": "2026-07-23",
+    "stage": "Main Stage",
+    "performances": [
+      { "start": "2026-07-23T00:00:00", "end": "2026-07-23T01:00:00", "artist": "Hilight Tribe" },
+      { "start": "2026-07-23T01:00:00", "end": "2026-07-23T02:00:00", "artist": "Shpongle (Simon Posford & Raja Ram) – LIVE" },
+      { "start": "2026-07-23T02:00:00", "end": "2026-07-23T03:00:00", "artist": "Novelty Engine" },
+      { "start": "2026-07-23T03:00:00", "end": "2026-07-23T04:00:00", "artist": "Star Sounds Orchestra" },
+      { "start": "2026-07-23T04:00:00", "end": "2026-07-23T05:00:00", "artist": "Merkaba" },
+      { "start": "2026-07-23T05:00:00", "end": "2026-07-23T06:00:00", "artist": "Strontium Dogs" },
+      { "start": "2026-07-23T06:00:00", "end": "2026-07-23T07:00:00", "artist": "Atmos" },
+      { "start": "2026-07-23T07:00:00", "end": "2026-07-23T08:00:00", "artist": "Eat Static" }
+    ]
+  },
+  {
+    "day_date": "2026-07-24",
+    "stage": "Main Stage",
+    "performances": [
+      { "start": "2026-07-24T08:00:00", "end": "2026-07-24T09:00:00", "artist": "Egorythmia" },
+      { "start": "2026-07-24T09:00:00", "end": "2026-07-24T10:00:00", "artist": "Grouch" },
+      { "start": "2026-07-24T10:00:00", "end": "2026-07-24T11:00:00", "artist": "Astrix" },
+      { "start": "2026-07-24T11:00:00", "end": "2026-07-24T12:00:00", "artist": "Raja Ram & Lucas" },
+      { "start": "2026-07-24T12:00:00", "end": "2026-07-24T13:00:00", "artist": "Thatha" },
+      { "start": "2026-07-24T13:00:00", "end": "2026-07-24T14:00:00", "artist": "Ajja" },
+      { "start": "2026-07-24T14:00:00", "end": "2026-07-24T15:00:00", "artist": "Tristan" },
+      { "start": "2026-07-24T15:00:00", "end": "2026-07-24T16:00:00", "artist": "Ace Ventura" }
+    ]
+  },
+  {
+    "day_date": "2026-07-25",
+    "stage": "Main Stage",
+    "performances": [
+      { "start": "2026-07-25T08:00:00", "end": "2026-07-25T09:00:00", "artist": "Aardvarkk" },
+      { "start": "2026-07-25T09:00:00", "end": "2026-07-25T10:00:00", "artist": "8ternal Beings" },
+      { "start": "2026-07-25T10:00:00", "end": "2026-07-25T11:00:00", "artist": "Starlab" },
+      { "start": "2026-07-25T11:00:00", "end": "2026-07-25T12:00:00", "artist": "Undefined Behavior" }
+    ]
+  },
+  {
+    "day_date": "2026-07-26",
+    "stage": "Main Stage",
+    "performances": [
+      { "start": "2026-07-26T08:00:00", "end": "2026-07-26T09:00:00", "artist": "He She It" },
+      { "start": "2026-07-26T09:00:00", "end": "2026-07-26T10:00:00", "artist": "Psynonima" },
+      { "start": "2026-07-26T10:00:00", "end": "2026-07-26T11:00:00", "artist": "Cyber Aghori" },
+      { "start": "2026-07-26T11:00:00", "end": "2026-07-26T12:00:00", "artist": "Weirdos" }
+    ]
+  }
+]
