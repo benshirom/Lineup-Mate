@@ -3,13 +3,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 
+interface Profile {
+  email?: string | null;
+  display_name?: string | null;
+}
+
 interface GroupMember {
   user_id: string;
   role: 'owner' | 'member';
-  profiles?: {
-    email?: string | null;
-    display_name?: string | null;
-  } | null;
+  profile?: Profile | null;
 }
 
 interface GroupMemberPref {
@@ -69,15 +71,38 @@ export default function GroupPage() {
 
         const { data: memberData, error: membersError } = await supabase
           .from('group_members')
-          .select('user_id, role, profiles(email, display_name)')
+          .select('user_id, role')
           .eq('group_id', groupId);
 
         if (membersError) throw membersError;
 
-        const memberList = (memberData ?? []) as GroupMember[];
+        const rawMembers = (memberData ?? []) as Array<{ user_id: string; role: 'owner' | 'member' }>;
+        const memberIds = rawMembers.map((m) => m.user_id);
+
+        let profilesById: Record<string, Profile> = {};
+        if (memberIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, email, display_name')
+            .in('id', memberIds);
+
+          if (profilesError) throw profilesError;
+
+          profilesById = Object.fromEntries(
+            (profilesData ?? []).map((profile: any) => [
+              profile.id,
+              { email: profile.email, display_name: profile.display_name }
+            ])
+          );
+        }
+
+        const memberList: GroupMember[] = rawMembers.map((member) => ({
+          ...member,
+          profile: profilesById[member.user_id] ?? null
+        }));
+
         setMembers(memberList);
 
-        const memberIds = memberList.map((m) => m.user_id);
         if (memberIds.length === 0) {
           setPerformancePrefs([]);
           setPerformances({});
@@ -95,8 +120,8 @@ export default function GroupPage() {
         const prefWithProfile: GroupMemberPref[] = (prefs ?? []).map((p: any) => {
           const matchingMember = memberList.find((m) => m.user_id === p.user_id);
           const label =
-            matchingMember?.profiles?.display_name ||
-            matchingMember?.profiles?.email ||
+            matchingMember?.profile?.display_name ||
+            matchingMember?.profile?.email ||
             p.user_id.slice(0, 8);
 
           return {
@@ -209,7 +234,7 @@ export default function GroupPage() {
                 <ul className="space-y-2">
                   {members.map((member) => (
                     <li key={member.user_id} className="flex justify-between text-sm border-b border-gray-100 pb-2 last:border-b-0">
-                      <span>{member.profiles?.display_name || member.profiles?.email || member.user_id.slice(0, 8)}</span>
+                      <span>{member.profile?.display_name || member.profile?.email || member.user_id.slice(0, 8)}</span>
                       <span className="text-gray-500 capitalize">{member.role}</span>
                     </li>
                   ))}
