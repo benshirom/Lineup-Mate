@@ -30,6 +30,11 @@ const Navbar: React.FC = () => {
         <Link href="/" className="font-bold text-lg">
           Lineup-Mate
         </Link>
+        {user && (
+          <Link href="/my-schedule" className="text-sm text-gray-200 hover:text-white">
+            My Schedule
+          </Link>
+        )}
         {user && isAdmin && (
           <Link href="/admin" className="text-sm text-gray-200 hover:text-white">
             Admin
