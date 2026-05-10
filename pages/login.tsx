@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
 import Navbar from '@/components/Navbar';
 
-type SocialProvider = 'google' | 'apple';
+type SocialProvider = 'google';
 
 function getFriendlyAuthError(message: string) {
   const lower = message.toLowerCase();
@@ -25,7 +25,7 @@ function getFriendlyAuthError(message: string) {
   }
 
   if (lower.includes('provider') && lower.includes('not enabled')) {
-    return 'This social login provider is not enabled yet in Supabase. Enable it in Authentication → Providers.';
+    return 'Google login is not enabled yet in Supabase. Enable it in Authentication → Providers → Google.';
   }
 
   return message;
@@ -66,12 +66,10 @@ const LoginPage = () => {
         provider,
         options: {
           redirectTo,
-          queryParams: provider === 'google'
-            ? {
-                access_type: 'offline',
-                prompt: 'consent'
-              }
-            : undefined
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
 
@@ -150,14 +148,6 @@ const LoginPage = () => {
               className="w-full border border-gray-300 rounded py-2 px-4 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
             >
               {socialLoading === 'google' ? 'Redirecting…' : 'Continue with Google'}
-            </button>
-            <button
-              type="button"
-              disabled={socialLoading !== null || submitting}
-              onClick={() => handleSocialLogin('apple')}
-              className="w-full rounded py-2 px-4 font-bold text-white bg-black hover:bg-gray-900 disabled:opacity-60"
-            >
-              {socialLoading === 'apple' ? 'Redirecting…' : 'Continue with Apple'}
             </button>
           </div>
 
