@@ -50,6 +50,7 @@ export default function FestivalPage() {
           .from('performances')
           .select('id, start_time, end_time, day_date, stage_id, artist_id, stages(name), artists(name)')
           .eq('festival_id', festivalId)
+          .eq('is_active', true)
           .order('start_time');
 
         if (perfError) throw perfError;
@@ -250,7 +251,7 @@ export default function FestivalPage() {
           </>
         )}
 
-        {!loading && days.length === 0 && !error && <p>No performances found.</p>}
+        {!loading && days.length === 0 && !error && <p>No active performances found.</p>}
       </main>
     </>
   );
