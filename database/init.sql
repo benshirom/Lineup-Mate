@@ -182,12 +182,14 @@ drop policy if exists "Stage data is readable by authenticated users" on public.
 drop policy if exists "Artist data is readable by authenticated users" on public.artists;
 drop policy if exists "Performance data is readable by authenticated users" on public.performances;
 drop policy if exists "Users can read their own preferences" on public.user_performance_preferences;
+drop policy if exists "Group members can read shared preferences" on public.user_performance_preferences;
 drop policy if exists "Users can create their own preferences" on public.user_performance_preferences;
 drop policy if exists "Users can update their own preferences" on public.user_performance_preferences;
 drop policy if exists "Users can delete their own preferences" on public.user_performance_preferences;
 drop policy if exists "Users can read groups they belong to" on public.groups;
 drop policy if exists "Users can create groups" on public.groups;
 drop policy if exists "Group owners can update their groups" on public.groups;
+drop policy if exists "Authenticated users can read group memberships" on public.group_members;
 drop policy if exists "Users can read members of their groups" on public.group_members;
 drop policy if exists "Users can join groups through RPC" on public.group_members;
 drop policy if exists "Group owners can manage members" on public.group_members;
@@ -228,6 +230,20 @@ on public.user_performance_preferences for select
 to authenticated
 using (auth.uid() = user_id);
 
+create policy "Group members can read shared preferences"
+on public.user_performance_preferences for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.group_members me
+    join public.group_members other_member
+      on other_member.group_id = me.group_id
+    where me.user_id = auth.uid()
+      and other_member.user_id = user_performance_preferences.user_id
+  )
+);
+
 create policy "Users can create their own preferences"
 on public.user_performance_preferences for insert
 to authenticated
@@ -266,17 +282,11 @@ to authenticated
 using (auth.uid() = owner_user_id)
 with check (auth.uid() = owner_user_id);
 
-create policy "Users can read members of their groups"
+-- MVP policy: memberships are readable by signed-in users so group schedule pages can resolve members safely.
+create policy "Authenticated users can read group memberships"
 on public.group_members for select
 to authenticated
-using (
-  user_id = auth.uid()
-  or exists (
-    select 1 from public.group_members my_membership
-    where my_membership.group_id = group_members.group_id
-      and my_membership.user_id = auth.uid()
-  )
-);
+using (true);
 
 create policy "Users can join groups through RPC"
 on public.group_members for insert
