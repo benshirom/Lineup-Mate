@@ -1,9 +1,24 @@
 import Link from 'next/link';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 
 const Navbar: React.FC = () => {
   const { user, supabase } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      setIsAdmin(!error && data?.role === 'admin');
+    };
+
+    checkAdminRole();
+  }, [user, supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -15,7 +30,7 @@ const Navbar: React.FC = () => {
         <Link href="/" className="font-bold text-lg">
           Lineup-Mate
         </Link>
-        {user && (
+        {user && isAdmin && (
           <Link href="/admin" className="text-sm text-gray-200 hover:text-white">
             Admin
           </Link>
