@@ -1,4 +1,4 @@
-import supabaseAdmin from './supabaseAdmin';
+import getSupabaseAdmin from './supabaseAdmin';
 import { buildClashfinderEventUrl } from './clashfinder';
 import type { NormalizedClashfinderEvent, NormalizedClashfinderPerformance } from './clashfinder';
 
@@ -9,6 +9,7 @@ export interface ImportFestivalResult {
 }
 
 async function upsertArtist(name: string) {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from('artists')
     .upsert({ name }, { onConflict: 'name' })
@@ -20,6 +21,7 @@ async function upsertArtist(name: string) {
 }
 
 async function upsertStage(festivalId: number, name: string) {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from('stages')
     .upsert({ festival_id: festivalId, name }, { onConflict: 'festival_id,name' })
@@ -31,6 +33,7 @@ async function upsertStage(festivalId: number, name: string) {
 }
 
 async function upsertPerformance(festivalId: number, performance: NormalizedClashfinderPerformance) {
+  const supabaseAdmin = getSupabaseAdmin();
   const [artistId, stageId] = await Promise.all([
     upsertArtist(performance.artistName),
     upsertStage(festivalId, performance.stageName)
@@ -52,9 +55,10 @@ async function upsertPerformance(festivalId: number, performance: NormalizedClas
 }
 
 export async function importNormalizedFestival(event: NormalizedClashfinderEvent): Promise<ImportFestivalResult> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: existingBySlug } = event.slug
     ? await supabaseAdmin.from('festivals').select('id').eq('clashfinder_slug', event.slug).maybeSingle()
-    : { data: null } as { data: null };
+    : ({ data: null } as { data: null });
 
   const payload = {
     name: event.name,
