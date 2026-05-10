@@ -2,10 +2,22 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfinder';
 import { importNormalizedFestival } from '@/lib/importFestival';
 
+function isAuthorized(req: NextApiRequest) {
+  const expectedSecret = process.env.ADMIN_IMPORT_SECRET;
+  if (!expectedSecret) return false;
+
+  const providedSecret = req.headers['x-admin-secret'];
+  return typeof providedSecret === 'string' && providedSecret === expectedSecret;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!isAuthorized(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const slug = typeof req.body?.slug === 'string' ? req.body.slug.trim() : '';
