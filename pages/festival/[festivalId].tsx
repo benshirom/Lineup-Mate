@@ -25,11 +25,6 @@ export default function FestivalPage() {
   const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
     if (!festivalId) return;
 
     const loadData = async () => {
@@ -55,17 +50,20 @@ export default function FestivalPage() {
 
         if (perfError) throw perfError;
 
-        const { data: prefs, error: prefsError } = await supabase
-          .from('user_performance_preferences')
-          .select('performance_id,status')
-          .eq('user_id', user.id);
-
-        if (prefsError) throw prefsError;
-
         const prefMap: Record<number, LineupPerformance['status']> = {};
-        prefs?.forEach((p) => {
-          prefMap[p.performance_id] = p.status;
-        });
+
+        if (user) {
+          const { data: prefs, error: prefsError } = await supabase
+            .from('user_performance_preferences')
+            .select('performance_id,status')
+            .eq('user_id', user.id);
+
+          if (prefsError) throw prefsError;
+
+          prefs?.forEach((p) => {
+            prefMap[p.performance_id] = p.status;
+          });
+        }
 
         const performances = performancesData ?? [];
         const uniqueDays = Array.from(new Set(performances.map((p: any) => p.day_date as string))).sort();
@@ -99,7 +97,7 @@ export default function FestivalPage() {
     };
 
     loadData();
-  }, [festivalId, supabase, user, router]);
+  }, [festivalId, supabase, user]);
 
   const stagesForSelectedDay = useMemo(() => {
     return Object.keys(lineupByStage)
@@ -111,8 +109,17 @@ export default function FestivalPage() {
     return lineupByStage[`${day}__${stage}`] || [];
   };
 
+  const requireLogin = () => {
+    if (!user) {
+      router.push('/login');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleCreateGroup = async () => {
-    if (!festival || !user) return;
+    if (!festival || !requireLogin()) return;
 
     const groupName = window.prompt('Enter a name for your group');
     if (!groupName?.trim()) return;
@@ -123,7 +130,7 @@ export default function FestivalPage() {
     try {
       const { data: newGroup, error: groupError } = await supabase
         .from('groups')
-        .insert({ festival_id: festival.id, name: groupName.trim(), owner_user_id: user.id })
+        .insert({ festival_id: festival.id, name: groupName.trim(), owner_user_id: user!.id })
         .select()
         .single();
 
@@ -131,7 +138,7 @@ export default function FestivalPage() {
 
       const { error: memberError } = await supabase
         .from('group_members')
-        .insert({ group_id: newGroup.id, user_id: user.id, role: 'owner' });
+        .insert({ group_id: newGroup.id, user_id: user!.id, role: 'owner' });
 
       if (memberError) throw memberError;
 
@@ -147,6 +154,8 @@ export default function FestivalPage() {
   const handleJoinGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     setJoinError(null);
+
+    if (!requireLogin()) return;
 
     if (!inviteCode.trim()) {
       setJoinError('Enter an invite code.');
@@ -176,6 +185,7 @@ export default function FestivalPage() {
             <h1 className="text-3xl font-bold text-gray-900">
               {festival.name} {festival.year}
             </h1>
+            {!user && <p className="mt-2 text-sm text-gray-600">You can browse the lineup without an account. Sign in to save acts and create groups.</p>}
           </div>
         )}
 
@@ -192,7 +202,7 @@ export default function FestivalPage() {
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-60"
                 onClick={handleCreateGroup}
               >
-                {creatingGroup ? 'Creating…' : 'Create Group'}
+                {creatingGroup ? 'Creating…' : user ? 'Create Group' : 'Sign in to Create Group'}
               </button>
             </div>
 
@@ -207,7 +217,7 @@ export default function FestivalPage() {
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                  Join
+                  {user ? 'Join' : 'Sign in to Join'}
                 </button>
               </div>
               {joinError && <p className="text-sm text-red-600 mt-2">{joinError}</p>}
