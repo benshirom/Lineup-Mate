@@ -1,13 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfinder';
-
-function isAuthorized(req: NextApiRequest) {
-  const expectedSecret = process.env.ADMIN_IMPORT_SECRET;
-  if (!expectedSecret) return false;
-
-  const providedSecret = req.headers['x-admin-secret'];
-  return typeof providedSecret === 'string' && providedSecret === expectedSecret;
-}
+import { requireAdmin } from '@/lib/adminAuth';
 
 function summarizeRawShape(raw: unknown) {
   if (Array.isArray(raw)) {
@@ -34,8 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!isAuthorized(req)) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const admin = await requireAdmin(req);
+  if (!admin.ok) {
+    return res.status(admin.status).json({ error: admin.error });
   }
 
   const slug = typeof req.body?.slug === 'string' ? req.body.slug.trim() : '';
