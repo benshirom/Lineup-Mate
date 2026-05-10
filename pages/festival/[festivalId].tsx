@@ -246,6 +246,32 @@ export default function FestivalPage() {
   const hourWidth = 118;
   const stageLabelWidth = 132;
 
+  const renderStarButton = (performance: PerformanceItem, compact = false) => {
+    const isGoing = performance.status === 'going';
+    return (
+      <button
+        type="button"
+        disabled={savingId === performance.id}
+        onClick={(event) => {
+          event.stopPropagation();
+          updatePreference(performance.id, isGoing ? null : 'going');
+        }}
+        aria-label={isGoing ? 'Remove from my schedule' : 'Add to my schedule'}
+        className="inline-flex items-center justify-center rounded-full font-black transition hover:scale-110 disabled:opacity-60"
+        style={{
+          width: compact ? 30 : 36,
+          height: compact ? 30 : 36,
+          background: isGoing ? '#ffd166' : 'rgba(0,0,0,.35)',
+          color: isGoing ? '#1a1a10' : '#fff',
+          border: `1px solid ${isGoing ? '#ffd166' : 'rgba(255,255,255,.35)'}`,
+          boxShadow: isGoing ? '0 0 18px rgba(255, 209, 102, .35)' : 'none'
+        }}
+      >
+        {isGoing ? '★' : '☆'}
+      </button>
+    );
+  };
+
   return (
     <>
       <Navbar />
@@ -411,22 +437,20 @@ export default function FestivalPage() {
                                 ))}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.startTime) - minHour) * hourWidth;
-                                  const width = Math.max(86, durationHours(performance.startTime, performance.endTime) * hourWidth - 6);
-                                  const isGoing = performance.status === 'going';
-                                  const isMaybe = performance.status === 'maybe';
+                                  const width = Math.max(92, durationHours(performance.startTime, performance.endTime) * hourWidth - 6);
                                   return (
-                                    <button
+                                    <div
                                       key={performance.id}
-                                      type="button"
-                                      disabled={savingId === performance.id}
-                                      onClick={() => updatePreference(performance.id, isGoing ? null : 'going')}
                                       title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`}
-                                      className="absolute top-2 h-12 overflow-hidden rounded-xl px-3 text-left text-xs font-black text-white shadow-lg transition hover:scale-[1.02] disabled:opacity-60"
-                                      style={{ left, width, background: isGoing ? '#18a87a' : isMaybe ? '#d4a017' : performance.stageColor }}
+                                      className="absolute top-2 h-12 overflow-hidden rounded-xl px-3 pr-10 text-left text-xs font-black text-white shadow-lg"
+                                      style={{ left, width, background: performance.stageColor }}
                                     >
-                                      <span className="block truncate">{isGoing ? '★ ' : ''}{performance.artistName}</span>
+                                      <span className="block truncate">{performance.artistName}</span>
                                       <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
-                                    </button>
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2">
+                                        {renderStarButton(performance, true)}
+                                      </span>
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -448,14 +472,7 @@ export default function FestivalPage() {
                           <h3 className="font-black">{performance.artistName}</h3>
                           <p className="text-xs" style={{ color: performance.stageColor }}>{performance.stageName}</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => updatePreference(performance.id, performance.status === 'going' ? null : 'going')}
-                          className="rounded-full px-3 py-1 text-xs font-black"
-                          style={{ background: performance.status === 'going' ? '#18a87a' : c.surf2, color: performance.status === 'going' ? '#fff' : c.muted, border: `1px solid ${performance.status === 'going' ? '#18a87a' : c.brd}` }}
-                        >
-                          {performance.status === 'going' ? '★ Going' : '☆ Save'}
-                        </button>
+                        {renderStarButton(performance)}
                       </div>
                       <p className="text-sm" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</p>
                     </article>
