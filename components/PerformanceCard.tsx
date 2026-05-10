@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
 
 export type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
@@ -52,13 +53,18 @@ const PerformanceCard: React.FC<PerformanceCardProps> = ({
   endTime,
   initialStatus
 }) => {
+  const router = useRouter();
   const { user, supabase } = useAuth();
   const [status, setStatus] = useState<PreferenceStatus | null>(initialStatus ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSetStatus = async (newStatus: PreferenceStatus | null) => {
-    if (!user) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -90,23 +96,26 @@ const PerformanceCard: React.FC<PerformanceCardProps> = ({
           <div className="text-xs text-gray-500">{stageName}</div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {preferenceButtons.map((btn) => {
-            const active = status === btn.value;
-            return (
-              <button
-                key={btn.label}
-                type="button"
-                disabled={saving}
-                onClick={() => handleSetStatus(btn.value)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition disabled:opacity-60 disabled:cursor-not-allowed ${
-                  active ? btn.activeClass : btn.inactiveClass
-                }`}
-              >
-                {btn.label}
-              </button>
-            );
-          })}
+        <div>
+          {!user && <p className="mb-2 text-xs text-gray-500">Sign in to save this act to your lineup.</p>}
+          <div className="flex flex-wrap gap-2">
+            {preferenceButtons.map((btn) => {
+              const active = status === btn.value;
+              return (
+                <button
+                  key={btn.label}
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSetStatus(btn.value)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition disabled:opacity-60 disabled:cursor-not-allowed ${
+                    active ? btn.activeClass : btn.inactiveClass
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
