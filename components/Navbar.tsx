@@ -31,9 +31,14 @@ const Navbar: React.FC = () => {
           Lineup-Mate
         </Link>
         {user && (
-          <Link href="/my-schedule" className="text-sm text-gray-200 hover:text-white">
-            My Schedule
-          </Link>
+          <>
+            <Link href="/my-schedule" className="text-sm text-gray-200 hover:text-white">
+              My Schedule
+            </Link>
+            <Link href="/groups" className="text-sm text-gray-200 hover:text-white">
+              Groups
+            </Link>
+          </>
         )}
         {user && isAdmin && (
           <Link href="/admin" className="text-sm text-gray-200 hover:text-white">
