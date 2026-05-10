@@ -1,4 +1,5 @@
 import supabaseAdmin from './supabaseAdmin';
+import { buildClashfinderEventUrl } from './clashfinder';
 import type { NormalizedClashfinderEvent, NormalizedClashfinderPerformance } from './clashfinder';
 
 export interface ImportFestivalResult {
@@ -51,20 +52,26 @@ async function upsertPerformance(festivalId: number, performance: NormalizedClas
 }
 
 export async function importNormalizedFestival(event: NormalizedClashfinderEvent): Promise<ImportFestivalResult> {
-  const { data: festival, error: festivalError } = await supabaseAdmin
-    .from('festivals')
-    .upsert(
-      {
-        name: event.name,
-        year: event.year,
-        location: event.location,
-        start_date: event.startDate,
-        end_date: event.endDate
-      },
-      { onConflict: 'name,year' }
-    )
-    .select('id')
-    .single();
+  const { data: existingBySlug } = event.slug
+    ? await supabaseAdmin.from('festivals').select('id').eq('clashfinder_slug', event.slug).maybeSingle()
+    : { data: null } as { data: null };
+
+  const payload = {
+    name: event.name,
+    year: event.year,
+    location: event.location,
+    start_date: event.startDate,
+    end_date: event.endDate,
+    clashfinder_slug: event.slug,
+    source_url: buildClashfinderEventUrl(event.slug),
+    source_type: 'clashfinder',
+    last_synced_at: new Date().toISOString(),
+    raw_clashfinder: event.raw
+  };
+
+  const { data: festival, error: festivalError } = existingBySlug?.id
+    ? await supabaseAdmin.from('festivals').update(payload).eq('id', existingBySlug.id).select('id').single()
+    : await supabaseAdmin.from('festivals').upsert(payload, { onConflict: 'name,year' }).select('id').single();
 
   if (festivalError) throw festivalError;
 
