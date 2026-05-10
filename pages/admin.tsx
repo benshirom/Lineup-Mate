@@ -18,6 +18,7 @@ interface AdminResponse {
   detectedPerformances?: number;
   imported?: number;
   skipped?: number;
+  deactivated?: number;
   samplePerformances?: Array<{
     artistName: string;
     stageName: string;
@@ -29,29 +30,42 @@ interface AdminResponse {
 }
 
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, session, supabase } = useAuth();
   const [slug, setSlug] = useState('ozora2026');
-  const [secret, setSecret] = useState('');
   const [loadingAction, setLoadingAction] = useState<'preview' | 'import' | null>(null);
   const [result, setResult] = useState<AdminResponse | null>(null);
+  const [checkingRole, setCheckingRole] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const storedSecret = window.localStorage.getItem('lineup_mate_admin_secret');
-    if (storedSecret) setSecret(storedSecret);
-  }, []);
+    const checkRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setCheckingRole(false);
+        return;
+      }
+
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      setIsAdmin(!error && data?.role === 'admin');
+      setCheckingRole(false);
+    };
+
+    checkRole();
+  }, [user, supabase]);
 
   const callAdminApi = async (endpoint: 'preview-clashfinder' | 'import-clashfinder') => {
     setResult(null);
     setLoadingAction(endpoint === 'preview-clashfinder' ? 'preview' : 'import');
 
     try {
-      window.localStorage.setItem('lineup_mate_admin_secret', secret);
+      const token = session?.access_token;
+      if (!token) throw new Error('Missing auth session. Please sign in again.');
 
       const response = await fetch(`/api/admin/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': secret
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ slug })
       });
@@ -86,6 +100,32 @@ export default function AdminPage() {
     );
   }
 
+  if (checkingRole) {
+    return (
+      <>
+        <Navbar />
+        <main className="p-4 max-w-3xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4">Admin</h1>
+          <p>Checking permissions…</p>
+        </main>
+      </>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <>
+        <Navbar />
+        <main className="p-4 max-w-3xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4">Admin</h1>
+          <p className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">
+            You do not have permission to access the admin tools.
+          </p>
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -115,31 +155,17 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="secret">
-              Admin import secret
-            </label>
-            <input
-              id="secret"
-              type="password"
-              value={secret}
-              onChange={(event) => setSecret(event.target.value)}
-              placeholder="ADMIN_IMPORT_SECRET from .env.local"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
-              disabled={!slug || !secret || loadingAction !== null}
+              disabled={!slug || loadingAction !== null}
               className="rounded-lg bg-gray-900 px-4 py-2 text-white hover:bg-black disabled:opacity-60"
             >
               {loadingAction === 'preview' ? 'Previewing…' : 'Preview'}
             </button>
             <button
               type="button"
-              disabled={!slug || !secret || loadingAction !== null}
+              disabled={!slug || loadingAction !== null}
               onClick={handleImport}
               className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
             >
@@ -166,7 +192,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
               {typeof result.detectedPerformances === 'number' && (
                 <div className="rounded-lg bg-gray-50 p-3"><strong>Detected:</strong> {result.detectedPerformances}</div>
               )}
@@ -175,6 +201,9 @@ export default function AdminPage() {
               )}
               {typeof result.skipped === 'number' && (
                 <div className="rounded-lg bg-yellow-50 p-3"><strong>Skipped:</strong> {result.skipped}</div>
+              )}
+              {typeof result.deactivated === 'number' && (
+                <div className="rounded-lg bg-red-50 p-3"><strong>Deactivated:</strong> {result.deactivated}</div>
               )}
             </div>
 
