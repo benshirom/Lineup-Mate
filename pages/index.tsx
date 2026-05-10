@@ -21,13 +21,9 @@ export default function Home() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
     const fetchFestivals = async () => {
       setLoading(true);
       setError(null);
@@ -47,7 +43,21 @@ export default function Home() {
     };
 
     fetchFestivals();
-  }, [user, supabase, router]);
+  }, [supabase]);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      setIsAdmin(!error && data?.role === 'admin');
+    };
+
+    checkAdmin();
+  }, [user, supabase]);
 
   return (
     <>
@@ -57,20 +67,22 @@ export default function Home() {
           <div>
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">Lineup-Mate</p>
             <h1 className="text-3xl font-bold text-gray-900">Select a Festival</h1>
-            <p className="mt-1 text-gray-600">Festivals are loaded from Supabase and can be synced from Clashfinder.</p>
+            <p className="mt-1 text-gray-600">Browse festivals and build your own lineup after signing in.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => router.push('/admin')}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Import / Sync
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => router.push('/admin')}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Import / Sync
+            </button>
+          )}
         </div>
 
         {loading && <p>Loading festivals…</p>}
         {error && <p className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">{error}</p>}
-        {!loading && !error && festivals.length === 0 && <p>No festivals available. Use the Admin page to import one.</p>}
+        {!loading && !error && festivals.length === 0 && <p>No festivals available yet.</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {festivals.map((festival) => (
