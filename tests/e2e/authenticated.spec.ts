@@ -12,10 +12,11 @@ test.describe('authenticated flows', () => {
     await page.getByLabel('Password').fill(testPassword!);
     await page.getByRole('button', { name: /^Login$/ }).click();
     await expect(page).toHaveURL('/');
+    await expect(page.getByRole('button', { name: /Sign out/i })).toBeVisible();
   });
 
   test('user can save a festival and open My Schedule', async ({ page }) => {
-    await expect(page.getByText(testEmail!).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /My Schedule/i })).toBeVisible();
 
     const saveButton = page.getByRole('button', { name: /Save Festival/i }).first();
     if (await saveButton.isVisible()) {
