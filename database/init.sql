@@ -46,8 +46,24 @@ create table if not exists public.festivals (
   location text,
   start_date date,
   end_date date,
+  clashfinder_slug text,
+  source_url text,
+  source_type text default 'manual',
+  last_synced_at timestamptz,
+  raw_clashfinder jsonb,
   unique (name, year)
 );
+
+alter table public.festivals
+  add column if not exists clashfinder_slug text,
+  add column if not exists source_url text,
+  add column if not exists source_type text default 'manual',
+  add column if not exists last_synced_at timestamptz,
+  add column if not exists raw_clashfinder jsonb;
+
+create unique index if not exists festivals_clashfinder_slug_unique
+on public.festivals (clashfinder_slug)
+where clashfinder_slug is not null;
 
 -- Stages belong to a festival
 create table if not exists public.stages (
@@ -190,7 +206,6 @@ drop policy if exists "Users can read groups they belong to" on public.groups;
 drop policy if exists "Users can create groups" on public.groups;
 drop policy if exists "Group owners can update their groups" on public.groups;
 drop policy if exists "Authenticated users can read group memberships" on public.group_members;
-drop policy if exists "Users can read members of their groups" on public.group_members;
 drop policy if exists "Users can join groups through RPC" on public.group_members;
 drop policy if exists "Group owners can manage members" on public.group_members;
 
@@ -306,86 +321,85 @@ using (
 );
 
 -- Seed data for Ozora Festival 2026
-insert into public.festivals (name, year, location, start_date, end_date)
-values ('Ozora Festival', 2026, 'Dádpuszta, Hungary', '2026-07-23', '2026-07-26')
-on conflict (name, year) do nothing;
+insert into public.festivals (name, year, location, start_date, end_date, clashfinder_slug, source_type)
+values ('Ozora Festival', 2026, 'Dádpuszta, Hungary', '2026-07-23', '2026-07-26', 'ozora2026', 'seed')
+on conflict (name, year) do update
+set clashfinder_slug = coalesce(public.festivals.clashfinder_slug, excluded.clashfinder_slug),
+    source_type = coalesce(public.festivals.source_type, excluded.source_type);
 
-with festival_row as (
-  select id from public.festivals where name = 'Ozora Festival' and year = 2026
+insert into public.stages (festival_id, name)
+select id, 'Main Stage'
+from public.festivals
+where name = 'Ozora Festival' and year = 2026
+on conflict (festival_id, name) do nothing;
+
+insert into public.artists (name)
+values
+  ('Hilight Tribe'),
+  ('Shpongle (Simon Posford & Raja Ram) – LIVE'),
+  ('Novelty Engine'),
+  ('Star Sounds Orchestra'),
+  ('Merkaba'),
+  ('Strontium Dogs'),
+  ('Atmos'),
+  ('Eat Static'),
+  ('Egorythmia'),
+  ('Grouch'),
+  ('Astrix'),
+  ('Raja Ram & Lucas'),
+  ('Thatha'),
+  ('Ajja'),
+  ('Tristan'),
+  ('Ace Ventura'),
+  ('Aardvarkk'),
+  ('8ternal Beings'),
+  ('Starlab'),
+  ('Undefined Behavior'),
+  ('He She It'),
+  ('Psynonima'),
+  ('Cyber Aghori'),
+  ('Weirdos')
+on conflict (name) do nothing;
+
+with f as (
+  select id as festival_id from public.festivals where name = 'Ozora Festival' and year = 2026 limit 1
 ),
-stage_row as (
-  insert into public.stages (festival_id, name)
-  select id, 'Main Stage' from festival_row
-  on conflict (festival_id, name) do update set name = excluded.name
-  returning id, festival_id
+s as (
+  select id as stage_id from public.stages where festival_id = (select festival_id from f) and name = 'Main Stage' limit 1
 ),
-artist_rows as (
-  insert into public.artists (name)
+seed(artist_name, start_time, end_time, day_date) as (
   values
-    ('Hilight Tribe'),
-    ('Shpongle (Simon Posford & Raja Ram) – LIVE'),
-    ('Novelty Engine'),
-    ('Star Sounds Orchestra'),
-    ('Merkaba'),
-    ('Strontium Dogs'),
-    ('Atmos'),
-    ('Eat Static'),
-    ('Egorythmia'),
-    ('Grouch'),
-    ('Astrix'),
-    ('Raja Ram & Lucas'),
-    ('Thatha'),
-    ('Ajja'),
-    ('Tristan'),
-    ('Ace Ventura'),
-    ('Aardvarkk'),
-    ('8ternal Beings'),
-    ('Starlab'),
-    ('Undefined Behavior'),
-    ('He She It'),
-    ('Psynonima'),
-    ('Cyber Aghori'),
-    ('Weirdos')
-  on conflict (name) do update set name = excluded.name
-  returning id, name
-),
-all_artists as (
-  select id, name from public.artists
-),
-seed_performances as (
-  select * from (
-    values
-      ('Hilight Tribe', '2026-07-23 00:00:00+00'::timestamptz, '2026-07-23 01:00:00+00'::timestamptz, '2026-07-23'::date),
-      ('Shpongle (Simon Posford & Raja Ram) – LIVE', '2026-07-23 01:00:00+00', '2026-07-23 02:00:00+00', '2026-07-23'),
-      ('Novelty Engine', '2026-07-23 02:00:00+00', '2026-07-23 03:00:00+00', '2026-07-23'),
-      ('Star Sounds Orchestra', '2026-07-23 03:00:00+00', '2026-07-23 04:00:00+00', '2026-07-23'),
-      ('Merkaba', '2026-07-23 04:00:00+00', '2026-07-23 05:00:00+00', '2026-07-23'),
-      ('Strontium Dogs', '2026-07-23 05:00:00+00', '2026-07-23 06:00:00+00', '2026-07-23'),
-      ('Atmos', '2026-07-23 06:00:00+00', '2026-07-23 07:00:00+00', '2026-07-23'),
-      ('Eat Static', '2026-07-23 07:00:00+00', '2026-07-23 08:00:00+00', '2026-07-23'),
-      ('Egorythmia', '2026-07-24 08:00:00+00', '2026-07-24 09:00:00+00', '2026-07-24'),
-      ('Grouch', '2026-07-24 09:00:00+00', '2026-07-24 10:00:00+00', '2026-07-24'),
-      ('Astrix', '2026-07-24 10:00:00+00', '2026-07-24 11:00:00+00', '2026-07-24'),
-      ('Raja Ram & Lucas', '2026-07-24 11:00:00+00', '2026-07-24 12:00:00+00', '2026-07-24'),
-      ('Thatha', '2026-07-24 12:00:00+00', '2026-07-24 13:00:00+00', '2026-07-24'),
-      ('Ajja', '2026-07-24 13:00:00+00', '2026-07-24 14:00:00+00', '2026-07-24'),
-      ('Tristan', '2026-07-24 14:00:00+00', '2026-07-24 15:00:00+00', '2026-07-24'),
-      ('Ace Ventura', '2026-07-24 15:00:00+00', '2026-07-24 16:00:00+00', '2026-07-24'),
-      ('Aardvarkk', '2026-07-25 08:00:00+00', '2026-07-25 09:00:00+00', '2026-07-25'),
-      ('8ternal Beings', '2026-07-25 09:00:00+00', '2026-07-25 10:00:00+00', '2026-07-25'),
-      ('Starlab', '2026-07-25 10:00:00+00', '2026-07-25 11:00:00+00', '2026-07-25'),
-      ('Undefined Behavior', '2026-07-25 11:00:00+00', '2026-07-25 12:00:00+00', '2026-07-25'),
-      ('He She It', '2026-07-26 08:00:00+00', '2026-07-26 09:00:00+00', '2026-07-26'),
-      ('Psynonima', '2026-07-26 09:00:00+00', '2026-07-26 10:00:00+00', '2026-07-26'),
-      ('Cyber Aghori', '2026-07-26 10:00:00+00', '2026-07-26 11:00:00+00', '2026-07-26'),
-      ('Weirdos', '2026-07-26 11:00:00+00', '2026-07-26 12:00:00+00', '2026-07-26')
-  ) as v(artist_name, start_time, end_time, day_date)
+    ('Hilight Tribe', '2026-07-23 00:00:00+00'::timestamptz, '2026-07-23 01:00:00+00'::timestamptz, '2026-07-23'::date),
+    ('Shpongle (Simon Posford & Raja Ram) – LIVE', '2026-07-23 01:00:00+00', '2026-07-23 02:00:00+00', '2026-07-23'),
+    ('Novelty Engine', '2026-07-23 02:00:00+00', '2026-07-23 03:00:00+00', '2026-07-23'),
+    ('Star Sounds Orchestra', '2026-07-23 03:00:00+00', '2026-07-23 04:00:00+00', '2026-07-23'),
+    ('Merkaba', '2026-07-23 04:00:00+00', '2026-07-23 05:00:00+00', '2026-07-23'),
+    ('Strontium Dogs', '2026-07-23 05:00:00+00', '2026-07-23 06:00:00+00', '2026-07-23'),
+    ('Atmos', '2026-07-23 06:00:00+00', '2026-07-23 07:00:00+00', '2026-07-23'),
+    ('Eat Static', '2026-07-23 07:00:00+00', '2026-07-23 08:00:00+00', '2026-07-23'),
+    ('Egorythmia', '2026-07-24 08:00:00+00', '2026-07-24 09:00:00+00', '2026-07-24'),
+    ('Grouch', '2026-07-24 09:00:00+00', '2026-07-24 10:00:00+00', '2026-07-24'),
+    ('Astrix', '2026-07-24 10:00:00+00', '2026-07-24 11:00:00+00', '2026-07-24'),
+    ('Raja Ram & Lucas', '2026-07-24 11:00:00+00', '2026-07-24 12:00:00+00', '2026-07-24'),
+    ('Thatha', '2026-07-24 12:00:00+00', '2026-07-24 13:00:00+00', '2026-07-24'),
+    ('Ajja', '2026-07-24 13:00:00+00', '2026-07-24 14:00:00+00', '2026-07-24'),
+    ('Tristan', '2026-07-24 14:00:00+00', '2026-07-24 15:00:00+00', '2026-07-24'),
+    ('Ace Ventura', '2026-07-24 15:00:00+00', '2026-07-24 16:00:00+00', '2026-07-24'),
+    ('Aardvarkk', '2026-07-25 08:00:00+00', '2026-07-25 09:00:00+00', '2026-07-25'),
+    ('8ternal Beings', '2026-07-25 09:00:00+00', '2026-07-25 10:00:00+00', '2026-07-25'),
+    ('Starlab', '2026-07-25 10:00:00+00', '2026-07-25 11:00:00+00', '2026-07-25'),
+    ('Undefined Behavior', '2026-07-25 11:00:00+00', '2026-07-25 12:00:00+00', '2026-07-25'),
+    ('He She It', '2026-07-26 08:00:00+00', '2026-07-26 09:00:00+00', '2026-07-26'),
+    ('Psynonima', '2026-07-26 09:00:00+00', '2026-07-26 10:00:00+00', '2026-07-26'),
+    ('Cyber Aghori', '2026-07-26 10:00:00+00', '2026-07-26 11:00:00+00', '2026-07-26'),
+    ('Weirdos', '2026-07-26 11:00:00+00', '2026-07-26 12:00:00+00', '2026-07-26')
 )
 insert into public.performances (festival_id, stage_id, artist_id, start_time, end_time, day_date)
-select sr.festival_id, sr.id, aa.id, sp.start_time, sp.end_time, sp.day_date
-from seed_performances sp
-cross join stage_row sr
-join all_artists aa on aa.name = sp.artist_name
+select f.festival_id, s.stage_id, a.id, seed.start_time, seed.end_time, seed.day_date
+from seed
+cross join f
+cross join s
+join public.artists a on a.name = seed.artist_name
 on conflict (festival_id, stage_id, artist_id, start_time) do update
 set end_time = excluded.end_time,
     day_date = excluded.day_date;
