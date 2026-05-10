@@ -180,6 +180,13 @@ begin
 end;
 $$;
 
+-- Restrict RPC execution. handle_new_user is only for the auth trigger.
+revoke execute on function public.handle_new_user() from anon, authenticated, public;
+revoke execute on function public.join_group_by_invite_code(text) from anon, public;
+revoke execute on function public.upsert_user_preference(uuid, integer, text) from anon, public;
+grant execute on function public.join_group_by_invite_code(text) to authenticated;
+grant execute on function public.upsert_user_preference(uuid, integer, text) to authenticated;
+
 -- Row Level Security
 alter table public.profiles enable row level security;
 alter table public.festivals enable row level security;
