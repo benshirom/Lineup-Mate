@@ -3,11 +3,13 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
 import Navbar from '@/components/Navbar';
 
+type SocialProvider = 'google' | 'apple';
+
 function getFriendlyAuthError(message: string) {
   const lower = message.toLowerCase();
 
   if (lower.includes('email not confirmed')) {
-    return 'Your account was created, but the email is not confirmed yet. Check your inbox or ask the admin to confirm it in Supabase.';
+    return 'Your account exists, but the email is not confirmed yet. Open your inbox and click the confirmation link from Supabase / Lineup-Mate.';
   }
 
   if (lower.includes('rate limit') || lower.includes('too many')) {
@@ -22,6 +24,10 @@ function getFriendlyAuthError(message: string) {
     return 'Incorrect email or password.';
   }
 
+  if (lower.includes('provider') && lower.includes('not enabled')) {
+    return 'This social login provider is not enabled yet in Supabase. Enable it in Authentication → Providers.';
+  }
+
   return message;
 }
 
@@ -34,6 +40,7 @@ const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -46,6 +53,35 @@ const LoginPage = () => {
   }, [email]);
 
   const isPasswordValid = password.length >= 6;
+
+  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+
+  const handleSocialLogin = async (provider: SocialProvider) => {
+    setError(null);
+    setMessage(null);
+    setSocialLoading(provider);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          queryParams: provider === 'google'
+            ? {
+                access_type: 'offline',
+                prompt: 'consent'
+              }
+            : undefined
+        }
+      });
+
+      if (error) throw error;
+    } catch (err: unknown) {
+      const rawMessage = err instanceof Error ? err.message : 'Social login failed.';
+      setError(getFriendlyAuthError(rawMessage));
+      setSocialLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +107,17 @@ const LoginPage = () => {
         const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.auth.signUp({ email: cleanEmail, password });
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            emailRedirectTo: redirectTo
+          }
+        });
         if (error) throw error;
 
         if (data.user && !data.session) {
-          setMessage('Account created. Please confirm your email before logging in.');
+          setMessage('Account created. We sent a confirmation link to your email. Open your inbox, confirm the account, then log in.');
           setIsLogin(true);
         } else {
           setMessage('Account created successfully.');
@@ -99,6 +141,32 @@ const LoginPage = () => {
           </h1>
           {message && <p className="text-green-700 bg-green-50 border border-green-200 rounded p-3 mb-4 text-sm">{message}</p>}
           {error && <p className="text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-4 text-sm">{error}</p>}
+
+          <div className="grid grid-cols-1 gap-3 mb-5">
+            <button
+              type="button"
+              disabled={socialLoading !== null || submitting}
+              onClick={() => handleSocialLogin('google')}
+              className="w-full border border-gray-300 rounded py-2 px-4 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {socialLoading === 'google' ? 'Redirecting…' : 'Continue with Google'}
+            </button>
+            <button
+              type="button"
+              disabled={socialLoading !== null || submitting}
+              onClick={() => handleSocialLogin('apple')}
+              className="w-full rounded py-2 px-4 font-bold text-white bg-black hover:bg-gray-900 disabled:opacity-60"
+            >
+              {socialLoading === 'apple' ? 'Redirecting…' : 'Continue with Apple'}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-px bg-gray-200 flex-1" />
+            <span className="text-xs text-gray-500">or use email</span>
+            <div className="h-px bg-gray-200 flex-1" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
@@ -132,7 +200,7 @@ const LoginPage = () => {
             <div className="flex items-center justify-between gap-3">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || socialLoading !== null}
                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring disabled:opacity-60"
               >
                 {submitting ? 'Please wait…' : isLogin ? 'Login' : 'Sign Up'}
