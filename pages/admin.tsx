@@ -2,6 +2,15 @@ import { FormEvent, useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 
+type RawShape =
+  | {
+      type: string;
+      length?: number;
+      sampleKeys?: string[];
+      keys?: string[];
+    }
+  | null;
+
 interface AdminResponse {
   ok?: boolean;
   error?: string;
@@ -26,7 +35,7 @@ interface AdminResponse {
     endTime: string;
     dayDate: string;
   }>;
-  rawShape?: unknown;
+  rawShape?: RawShape;
 }
 
 export default function AdminPage() {
@@ -232,7 +241,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            {result.rawShape && (
+            {!!result.rawShape && (
               <details className="mt-4">
                 <summary className="cursor-pointer text-sm font-medium text-gray-700">Raw response shape</summary>
                 <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-gray-900 p-3 text-xs text-white">
