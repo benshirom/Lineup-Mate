@@ -51,6 +51,10 @@ function durationHours(start: string, end: string) {
   return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5);
 }
 
+function festivalTitle(festival: Festival) {
+  return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`;
+}
+
 export default function FestivalPage() {
   const router = useRouter();
   const { festivalId } = router.query;
@@ -77,6 +81,8 @@ export default function FestivalPage() {
     const loadData = async () => {
       setLoading(true);
       setError(null);
+      setSelectedDay('');
+      setActiveStages({});
 
       try {
         const { data: festivalData, error: festivalError } = await supabase
@@ -126,7 +132,7 @@ export default function FestivalPage() {
 
         setPerformances(mapped);
         setDays(nextDays);
-        setSelectedDay((current) => current || nextDays[0] || '');
+        setSelectedDay(nextDays[0] || '');
         setActiveStages(Object.fromEntries(nextStages.map((stage) => [stage, true])));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Could not load festival data.');
@@ -146,7 +152,13 @@ export default function FestivalPage() {
     return selectedDayPerformances.filter((performance) => activeStages[performance.stageName] !== false);
   }, [selectedDayPerformances, activeStages]);
 
-  const stages = useMemo(() => {
+  const allStages = useMemo(() => {
+    const stageMap = new Map<string, string>();
+    performances.forEach((performance) => stageMap.set(performance.stageName, performance.stageColor));
+    return Array.from(stageMap.entries()).map(([name, color]) => ({ name, color }));
+  }, [performances]);
+
+  const dayStages = useMemo(() => {
     const stageMap = new Map<string, string>();
     selectedDayPerformances.forEach((performance) => stageMap.set(performance.stageName, performance.stageColor));
     return Array.from(stageMap.entries()).map(([name, color]) => ({ name, color }));
@@ -295,7 +307,7 @@ export default function FestivalPage() {
                           {festival.genre_label || festival.genre || 'Festival'}
                         </p>
                         <h1 className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
-                          {festival.name} {festival.year}
+                          {festivalTitle(festival)}
                         </h1>
                       </div>
                     </div>
@@ -369,11 +381,12 @@ export default function FestivalPage() {
               </div>
 
               {days.length > 0 && (
-                <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
+                <div className="mb-5 flex gap-2 overflow-x-auto pb-2" data-testid="festival-day-tabs">
                   {days.map((day) => (
                     <button
                       key={day}
                       type="button"
+                      data-testid="festival-day-tab"
                       onClick={() => setSelectedDay(day)}
                       className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black"
                       style={{
@@ -390,20 +403,24 @@ export default function FestivalPage() {
 
               {tab === 'timeline' && (
                 <section className="rounded-[28px] p-4 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {stages.map((stage) => {
+                  <div className="mb-4 flex flex-wrap gap-2" data-testid="festival-stage-filters">
+                    {allStages.map((stage) => {
                       const isOn = activeStages[stage.name] !== false;
+                      const hasShowsToday = selectedDayPerformances.some((performance) => performance.stageName === stage.name);
                       return (
                         <button
                           key={stage.name}
                           type="button"
+                          data-testid="festival-stage-filter"
                           onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))}
                           className="rounded-full px-3 py-1 text-xs font-black"
                           style={{
                             background: isOn ? stage.color : c.surf2,
                             color: isOn ? '#fff' : c.muted,
-                            border: `1px solid ${isOn ? stage.color : c.brd}`
+                            border: `1px solid ${isOn ? stage.color : c.brd}`,
+                            opacity: hasShowsToday ? 1 : 0.45
                           }}
+                          title={hasShowsToday ? stage.name : `${stage.name} has no shows on this day`}
                         >
                           {stage.name}
                         </button>
@@ -424,10 +441,10 @@ export default function FestivalPage() {
                           ))}
                         </div>
 
-                        {stages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
+                        {dayStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
                           const stageItems = visiblePerformances.filter((performance) => performance.stageName === stage.name);
                           return (
-                            <div key={stage.name} className="mb-2 flex">
+                            <div key={stage.name} className="mb-2 flex" data-testid="festival-stage-row">
                               <div className="shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color }}>
                                 {stage.name}
                               </div>
@@ -441,6 +458,7 @@ export default function FestivalPage() {
                                   return (
                                     <div
                                       key={performance.id}
+                                      data-testid="festival-performance-block"
                                       title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`}
                                       className="absolute top-2 h-12 overflow-hidden rounded-xl px-3 pr-10 text-left text-xs font-black text-white shadow-lg"
                                       style={{ left, width, background: performance.stageColor }}
@@ -491,7 +509,8 @@ export default function FestivalPage() {
                     <div className="space-y-3 text-sm" style={{ color: c.muted }}>
                       <div><b style={{ color: c.txt }}>Location:</b> {festival.location || 'TBA'}</div>
                       <div><b style={{ color: c.txt }}>Dates:</b> {formatDateRange(festival.start_date, festival.end_date)}</div>
-                      <div><b style={{ color: c.txt }}>Stages:</b> {stages.length}</div>
+                      <div><b style={{ color: c.txt }}>Stages:</b> {allStages.length}</div>
+                      <div><b style={{ color: c.txt }}>Days:</b> {days.length}</div>
                       <div><b style={{ color: c.txt }}>Performances:</b> {performances.length}</div>
                       {festival.website && <div><b style={{ color: c.txt }}>Website:</b> {festival.website}</div>}
                       {festival.clashfinder_slug && <div><b style={{ color: c.txt }}>Source:</b> {festival.clashfinder_slug}</div>}
