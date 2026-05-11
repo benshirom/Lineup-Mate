@@ -40,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const raw = await fetchClashfinderEvent(slug);
     const normalized = normalizeClashfinderEvent(raw, slug);
+    const detectedStages = Array.from(new Set(normalized.performances.map((performance) => performance.stageName))).sort();
 
     return res.status(200).json({
       ok: true,
@@ -52,12 +53,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         endDate: normalized.endDate
       },
       detectedPerformances: normalized.performances.length,
+      detectedStages: detectedStages.length,
+      sampleStages: detectedStages.slice(0, 20),
       samplePerformances: normalized.performances.slice(0, 10),
       rawShape: summarizeRawShape(raw),
       warning:
         normalized.performances.length === 0
           ? 'No performances were detected. The Clashfinder response may use a format that needs a custom parser.'
-          : null
+          : detectedStages.includes('locations')
+            ? 'Parser warning: detected a stage named "locations", which usually means the Clashfinder locations container was parsed incorrectly.'
+            : null
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown preview error';
