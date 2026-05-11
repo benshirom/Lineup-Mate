@@ -42,7 +42,9 @@ interface AdminResponse {
   };
   detectedPerformances?: number;
   detectedStages?: number;
+  detectedDays?: number;
   sampleStages?: string[];
+  sampleDays?: string[];
   imported?: number;
   skipped?: number;
   deactivated?: number;
@@ -54,6 +56,14 @@ interface AdminResponse {
     dayDate: string;
   }>;
   rawShape?: RawShape;
+}
+
+function formatDay(day: string) {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 export default function AdminPage() {
@@ -99,16 +109,11 @@ export default function AdminPage() {
 
     try {
       const token = getToken();
-      const params = new URLSearchParams({
-        scope: eventsScope,
-        limit: '500'
-      });
+      const params = new URLSearchParams({ scope: eventsScope, limit: '500' });
       if (eventsSearch.trim()) params.set('search', eventsSearch.trim());
 
       const response = await fetch(`/api/admin/clashfinder-events?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       const data = (await response.json()) as ClashfinderEventsResponse;
@@ -129,7 +134,6 @@ export default function AdminPage() {
 
     try {
       const token = getToken();
-
       const response = await fetch(`/api/admin/${endpoint}`, {
         method: 'POST',
         headers: {
@@ -208,7 +212,7 @@ export default function AdminPage() {
           <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">Lineup-Mate Admin</p>
           <h1 className="text-3xl font-bold text-gray-900">Clashfinder Import & Sync</h1>
           <p className="mt-2 text-gray-600">
-            Browse Clashfinder events, select one, preview the detected performances, then import or sync it into Supabase.
+            Browse Clashfinder events, select one, preview all detected days/stages, then import or sync it into Supabase.
           </p>
         </div>
 
@@ -355,12 +359,15 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
               {typeof result.detectedPerformances === 'number' && (
                 <div className="rounded-lg bg-gray-50 p-3"><strong>Detected:</strong> {result.detectedPerformances}</div>
               )}
               {typeof result.detectedStages === 'number' && (
                 <div className="rounded-lg bg-blue-50 p-3" data-testid="detected-stages"><strong>Stages:</strong> {result.detectedStages}</div>
+              )}
+              {typeof result.detectedDays === 'number' && (
+                <div className="rounded-lg bg-purple-50 p-3" data-testid="detected-days"><strong>Days:</strong> {result.detectedDays}</div>
               )}
               {typeof result.imported === 'number' && (
                 <div className="rounded-lg bg-green-50 p-3"><strong>Imported/Synced:</strong> {result.imported}</div>
@@ -379,6 +386,12 @@ export default function AdminPage() {
               </div>
             )}
 
+            {result.sampleDays && result.sampleDays.length > 0 && (
+              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm" data-testid="sample-days">
+                <strong>Sample days:</strong> {result.sampleDays.map(formatDay).join(', ')}
+              </div>
+            )}
+
             {result.samplePerformances && result.samplePerformances.length > 0 && (
               <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="min-w-full text-sm" data-testid="sample-performances-table">
@@ -386,6 +399,7 @@ export default function AdminPage() {
                     <tr>
                       <th className="text-left px-3 py-2">Artist</th>
                       <th className="text-left px-3 py-2">Stage</th>
+                      <th className="text-left px-3 py-2">Day</th>
                       <th className="text-left px-3 py-2">Start</th>
                       <th className="text-left px-3 py-2">End</th>
                     </tr>
@@ -395,6 +409,7 @@ export default function AdminPage() {
                       <tr key={`${performance.artistName}-${performance.startTime}-${index}`} className="border-t border-gray-100" data-testid="sample-performance-row">
                         <td className="px-3 py-2">{performance.artistName}</td>
                         <td className="px-3 py-2">{performance.stageName}</td>
+                        <td className="px-3 py-2">{formatDay(performance.dayDate)}</td>
                         <td className="px-3 py-2">{new Date(performance.startTime).toLocaleString()}</td>
                         <td className="px-3 py-2">{new Date(performance.endTime).toLocaleString()}</td>
                       </tr>
