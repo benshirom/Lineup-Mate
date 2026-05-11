@@ -16,62 +16,70 @@ interface ImportedPerformanceIdentity {
   startTime: string;
 }
 
-async function upsertArtist(name: string) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
-    .from('artists')
-    .upsert({ name }, { onConflict: 'name' })
-    .select('id')
-    .single();
-
-  if (error) throw error;
-  return data.id as number;
+function unique(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
-async function upsertStage(festivalId: number, name: string) {
+function chunkArray<T>(items: T[], size = 500): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+async function upsertArtists(names: string[]) {
   const supabaseAdmin = getSupabaseAdmin();
+  const cleanNames = unique(names);
+  const artistMap = new Map<string, number>();
+
+  if (cleanNames.length === 0) return artistMap;
+
+  const { error: upsertError } = await supabaseAdmin
+    .from('artists')
+    .upsert(cleanNames.map((name) => ({ name })), { onConflict: 'name', ignoreDuplicates: false });
+
+  if (upsertError) throw upsertError;
+
+  for (const namesChunk of chunkArray(cleanNames, 500)) {
+    const { data, error } = await supabaseAdmin
+      .from('artists')
+      .select('id,name')
+      .in('name', namesChunk);
+
+    if (error) throw error;
+    data?.forEach((artist) => artistMap.set(artist.name, artist.id));
+  }
+
+  return artistMap;
+}
+
+async function upsertStages(festivalId: number, names: string[]) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const cleanNames = unique(names);
+  const stageMap = new Map<string, number>();
+
+  if (cleanNames.length === 0) return stageMap;
+
+  const { error: upsertError } = await supabaseAdmin
+    .from('stages')
+    .upsert(
+      cleanNames.map((name) => ({ festival_id: festivalId, name })),
+      { onConflict: 'festival_id,name', ignoreDuplicates: false }
+    );
+
+  if (upsertError) throw upsertError;
+
   const { data, error } = await supabaseAdmin
     .from('stages')
-    .upsert({ festival_id: festivalId, name }, { onConflict: 'festival_id,name' })
-    .select('id')
-    .single();
+    .select('id,name')
+    .eq('festival_id', festivalId)
+    .in('name', cleanNames);
 
   if (error) throw error;
-  return data.id as number;
-}
+  data?.forEach((stage) => stageMap.set(stage.name, stage.id));
 
-async function upsertPerformance(
-  festivalId: number,
-  performance: NormalizedClashfinderPerformance,
-  sourceLastSeenAt: string
-): Promise<ImportedPerformanceIdentity> {
-  const supabaseAdmin = getSupabaseAdmin();
-  const [artistId, stageId] = await Promise.all([
-    upsertArtist(performance.artistName),
-    upsertStage(festivalId, performance.stageName)
-  ]);
-
-  const { error } = await supabaseAdmin.from('performances').upsert(
-    {
-      festival_id: festivalId,
-      stage_id: stageId,
-      artist_id: artistId,
-      start_time: performance.startTime,
-      end_time: performance.endTime,
-      day_date: performance.dayDate,
-      is_active: true,
-      source_last_seen_at: sourceLastSeenAt
-    },
-    { onConflict: 'festival_id,stage_id,artist_id,start_time' }
-  );
-
-  if (error) throw error;
-
-  return {
-    stageId,
-    artistId,
-    startTime: performance.startTime
-  };
+  return stageMap;
 }
 
 async function deactivateMissingPerformances(
@@ -94,7 +102,7 @@ async function deactivateMissingPerformances(
 
   const idsToDeactivate = (existingPerformances ?? [])
     .filter((performance: any) => {
-      const key = `${performance.stage_id}|${performance.artist_id}|${performance.start_time}`;
+      const key = `${performance.stage_id}|${performance.artist_id}|${new Date(performance.start_time).toISOString()}`;
       return !seenKeys.has(key);
     })
     .map((performance: any) => performance.id);
@@ -109,6 +117,52 @@ async function deactivateMissingPerformances(
   if (updateError) throw updateError;
 
   return idsToDeactivate.length;
+}
+
+function buildPerformanceRows(
+  festivalId: number,
+  performances: NormalizedClashfinderPerformance[],
+  artistMap: Map<string, number>,
+  stageMap: Map<string, number>,
+  sourceLastSeenAt: string
+) {
+  const seenRows: ImportedPerformanceIdentity[] = [];
+  const rows: Array<{
+    festival_id: number;
+    stage_id: number;
+    artist_id: number;
+    start_time: string;
+    end_time: string;
+    day_date: string;
+    is_active: boolean;
+    source_last_seen_at: string;
+    source_external_id: string;
+  }> = [];
+
+  for (const performance of performances) {
+    const artistId = artistMap.get(performance.artistName);
+    const stageId = stageMap.get(performance.stageName);
+    if (!artistId || !stageId) continue;
+
+    const startTime = new Date(performance.startTime).toISOString();
+    const endTime = new Date(performance.endTime).toISOString();
+
+    rows.push({
+      festival_id: festivalId,
+      stage_id: stageId,
+      artist_id: artistId,
+      start_time: startTime,
+      end_time: endTime,
+      day_date: performance.dayDate,
+      is_active: true,
+      source_last_seen_at: sourceLastSeenAt,
+      source_external_id: `${festivalId}:${stageId}:${artistId}:${startTime}`
+    });
+
+    seenRows.push({ stageId, artistId, startTime });
+  }
+
+  return { rows, seenRows };
 }
 
 export async function importNormalizedFestival(event: NormalizedClashfinderEvent): Promise<ImportFestivalResult> {
@@ -138,24 +192,34 @@ export async function importNormalizedFestival(event: NormalizedClashfinderEvent
 
   if (festivalError) throw festivalError;
 
-  let insertedPerformances = 0;
-  let skippedPerformances = 0;
-  const seenPerformances: ImportedPerformanceIdentity[] = [];
+  const [artistMap, stageMap] = await Promise.all([
+    upsertArtists(performances.map((performance) => performance.artistName)),
+    upsertStages(festival.id, performances.map((performance) => performance.stageName))
+  ]);
 
-  for (const performance of performances) {
-    try {
-      const seenPerformance = await upsertPerformance(festival.id, performance, sourceLastSeenAt);
-      seenPerformances.push(seenPerformance);
-      insertedPerformances += 1;
-    } catch (error) {
-      skippedPerformances += 1;
-      console.error('Failed to import performance', performance, error);
-    }
+  const { rows, seenRows } = buildPerformanceRows(
+    festival.id,
+    performances,
+    artistMap,
+    stageMap,
+    sourceLastSeenAt
+  );
+
+  let insertedPerformances = 0;
+  let skippedPerformances = performances.length - rows.length;
+
+  for (const rowsChunk of chunkArray(rows, 500)) {
+    const { error } = await supabaseAdmin
+      .from('performances')
+      .upsert(rowsChunk, { onConflict: 'festival_id,stage_id,artist_id,start_time' });
+
+    if (error) throw error;
+    insertedPerformances += rowsChunk.length;
   }
 
   const deactivatedPerformances = await deactivateMissingPerformances(
     festival.id,
-    seenPerformances,
+    seenRows,
     sourceLastSeenAt
   );
 
