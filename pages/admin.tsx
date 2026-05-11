@@ -41,6 +41,8 @@ interface AdminResponse {
     endDate?: string | null;
   };
   detectedPerformances?: number;
+  detectedStages?: number;
+  sampleStages?: string[];
   imported?: number;
   skipped?: number;
   deactivated?: number;
@@ -218,6 +220,7 @@ export default function AdminPage() {
               </label>
               <input
                 id="events-search"
+                data-testid="clashfinder-events-search"
                 value={eventsSearch}
                 onChange={(event) => setEventsSearch(event.target.value)}
                 placeholder="Example: Ozora, Boom, Glastonbury..."
@@ -231,6 +234,7 @@ export default function AdminPage() {
               </label>
               <select
                 id="events-scope"
+                data-testid="clashfinder-events-scope"
                 value={eventsScope}
                 onChange={(event) => setEventsScope(event.target.value as 'core' | 'all')}
                 className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -242,6 +246,7 @@ export default function AdminPage() {
 
             <button
               type="button"
+              data-testid="load-clashfinder-events"
               disabled={loadingAction !== null}
               onClick={loadClashfinderEvents}
               className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
@@ -253,10 +258,10 @@ export default function AdminPage() {
           {eventsError && <p className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">{eventsError}</p>}
 
           {events.length > 0 && (
-            <div>
+            <div data-testid="clashfinder-events-results">
               <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
                 <span>Showing {events.length} events{eventsCount !== null ? ` out of ${eventsCount}` : ''}</span>
-                {selectedEvent && <span>Selected: <strong>{selectedEvent.name}</strong></span>}
+                {selectedEvent && <span data-testid="selected-clashfinder-event">Selected: <strong>{selectedEvent.name}</strong></span>}
               </div>
               <div className="max-h-80 overflow-auto rounded-lg border border-gray-200">
                 <table className="min-w-full text-sm">
@@ -270,13 +275,14 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {events.map((event) => (
-                      <tr key={event.slug} className={`border-t border-gray-100 ${event.slug === slug ? 'bg-blue-50' : ''}`}>
+                      <tr key={event.slug} data-testid="clashfinder-event-row" className={`border-t border-gray-100 ${event.slug === slug ? 'bg-blue-50' : ''}`}>
                         <td className="px-3 py-2 font-medium">{event.name}</td>
                         <td className="px-3 py-2"><code>{event.slug}</code></td>
                         <td className="px-3 py-2">{event.year || '—'}</td>
                         <td className="px-3 py-2">
                           <button
                             type="button"
+                            data-testid={`select-clashfinder-event-${event.slug}`}
                             onClick={() => selectEvent(event)}
                             className="rounded-lg bg-gray-900 px-3 py-1 text-white hover:bg-black"
                           >
@@ -299,6 +305,7 @@ export default function AdminPage() {
             </label>
             <input
               id="slug"
+              data-testid="clashfinder-slug-input"
               value={slug}
               onChange={(event) => setSlug(event.target.value)}
               placeholder="Example: ozora2026"
@@ -312,6 +319,7 @@ export default function AdminPage() {
           <div className="flex flex-wrap gap-3">
             <button
               type="submit"
+              data-testid="preview-clashfinder"
               disabled={!slug || loadingAction !== null}
               className="rounded-lg bg-gray-900 px-4 py-2 text-white hover:bg-black disabled:opacity-60"
             >
@@ -319,6 +327,7 @@ export default function AdminPage() {
             </button>
             <button
               type="button"
+              data-testid="import-clashfinder"
               disabled={!slug || loadingAction !== null}
               onClick={handleImport}
               className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
@@ -329,7 +338,7 @@ export default function AdminPage() {
         </form>
 
         {result && (
-          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm" data-testid="clashfinder-preview-result">
             <h2 className="text-xl font-semibold mb-3">Result</h2>
 
             {result.error && <p className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3 mb-4">{result.error}</p>}
@@ -346,9 +355,12 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
               {typeof result.detectedPerformances === 'number' && (
                 <div className="rounded-lg bg-gray-50 p-3"><strong>Detected:</strong> {result.detectedPerformances}</div>
+              )}
+              {typeof result.detectedStages === 'number' && (
+                <div className="rounded-lg bg-blue-50 p-3" data-testid="detected-stages"><strong>Stages:</strong> {result.detectedStages}</div>
               )}
               {typeof result.imported === 'number' && (
                 <div className="rounded-lg bg-green-50 p-3"><strong>Imported/Synced:</strong> {result.imported}</div>
@@ -361,9 +373,15 @@ export default function AdminPage() {
               )}
             </div>
 
+            {result.sampleStages && result.sampleStages.length > 0 && (
+              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm" data-testid="sample-stages">
+                <strong>Sample stages:</strong> {result.sampleStages.join(', ')}
+              </div>
+            )}
+
             {result.samplePerformances && result.samplePerformances.length > 0 && (
               <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm" data-testid="sample-performances-table">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="text-left px-3 py-2">Artist</th>
@@ -374,7 +392,7 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {result.samplePerformances.map((performance, index) => (
-                      <tr key={`${performance.artistName}-${performance.startTime}-${index}`} className="border-t border-gray-100">
+                      <tr key={`${performance.artistName}-${performance.startTime}-${index}`} className="border-t border-gray-100" data-testid="sample-performance-row">
                         <td className="px-3 py-2">{performance.artistName}</td>
                         <td className="px-3 py-2">{performance.stageName}</td>
                         <td className="px-3 py-2">{new Date(performance.startTime).toLocaleString()}</td>
