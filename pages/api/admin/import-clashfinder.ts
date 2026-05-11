@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfinder';
+import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import { importNormalizedFestival } from '@/lib/importFestival';
 import { requireAdmin } from '@/lib/adminAuth';
 
@@ -22,25 +23,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const raw = await fetchClashfinderEvent(slug);
     const normalized = normalizeClashfinderEvent(raw, slug);
+    const cleanedPerformances = cleanupClashfinderPerformances(normalized.performances);
+    const detectedStages = getStageNames(cleanedPerformances);
+    const detectedDays = Array.from(new Set(cleanedPerformances.map((performance) => performance.dayDate))).sort();
 
-    if (normalized.performances.length === 0) {
+    if (cleanedPerformances.length === 0) {
       return res.status(422).json({
         error: 'Could not find performances in the Clashfinder response.',
         hint: 'The API response format may be different. Check the raw response from Clashfinder.'
       });
     }
 
-    const result = await importNormalizedFestival(normalized);
+    const result = await importNormalizedFestival({
+      ...normalized,
+      performances: cleanedPerformances
+    });
 
     return res.status(200).json({
       ok: true,
       festival: {
         id: result.festivalId,
+        slug: normalized.slug,
         name: normalized.name,
         year: normalized.year,
         startDate: normalized.startDate,
         endDate: normalized.endDate
       },
+      detectedPerformances: cleanedPerformances.length,
+      detectedStages: detectedStages.length,
+      detectedDays: detectedDays.length,
+      sampleStages: detectedStages.slice(0, 20),
+      sampleDays: detectedDays.slice(0, 20),
       imported: result.insertedPerformances,
       skipped: result.skippedPerformances,
       deactivated: result.deactivatedPerformances
