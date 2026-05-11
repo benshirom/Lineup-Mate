@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfinder';
 import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
+import type { NormalizedClashfinderPerformance } from '@/lib/clashfinder';
 import { requireAdmin } from '@/lib/adminAuth';
 
 function summarizeRawShape(raw: unknown) {
@@ -20,6 +21,34 @@ function summarizeRawShape(raw: unknown) {
   }
 
   return { type: typeof raw };
+}
+
+function getDayNames(performances: NormalizedClashfinderPerformance[]) {
+  return Array.from(new Set(performances.map((performance) => performance.dayDate))).sort();
+}
+
+function getRepresentativeSample(performances: NormalizedClashfinderPerformance[], limit = 18) {
+  const sample = new Map<string, NormalizedClashfinderPerformance>();
+  const sorted = [...performances].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const days = getDayNames(sorted);
+  const stages = getStageNames(sorted);
+
+  for (const day of days) {
+    const firstForDay = sorted.find((performance) => performance.dayDate === day);
+    if (firstForDay) sample.set(`${firstForDay.stageName}|${firstForDay.artistName}|${firstForDay.startTime}`, firstForDay);
+  }
+
+  for (const stage of stages) {
+    const firstForStage = sorted.find((performance) => performance.stageName === stage);
+    if (firstForStage) sample.set(`${firstForStage.stageName}|${firstForStage.artistName}|${firstForStage.startTime}`, firstForStage);
+  }
+
+  for (const performance of sorted) {
+    if (sample.size >= limit) break;
+    sample.set(`${performance.stageName}|${performance.artistName}|${performance.startTime}`, performance);
+  }
+
+  return Array.from(sample.values()).sort((a, b) => a.startTime.localeCompare(b.startTime)).slice(0, limit);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -43,6 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const normalized = normalizeClashfinderEvent(raw, slug);
     const performances = cleanupClashfinderPerformances(normalized.performances);
     const detectedStages = getStageNames(performances);
+    const detectedDays = getDayNames(performances);
 
     return res.status(200).json({
       ok: true,
@@ -56,8 +86,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       detectedPerformances: performances.length,
       detectedStages: detectedStages.length,
+      detectedDays: detectedDays.length,
       sampleStages: detectedStages.slice(0, 20),
-      samplePerformances: performances.slice(0, 10),
+      sampleDays: detectedDays.slice(0, 20),
+      samplePerformances: getRepresentativeSample(performances),
       rawShape: summarizeRawShape(raw),
       warning:
         performances.length === 0
