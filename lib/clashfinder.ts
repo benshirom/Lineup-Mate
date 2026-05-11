@@ -19,6 +19,72 @@ export interface NormalizedClashfinderEvent {
   raw: unknown;
 }
 
+interface ParseContext {
+  stageName?: string | null;
+  dayDate?: string | null;
+  year: number;
+}
+
+const RESERVED_CONTAINER_KEYS = new Set([
+  'event',
+  'events',
+  'data',
+  'days',
+  'day',
+  'dates',
+  'date',
+  'lineup',
+  'lineups',
+  'performances',
+  'performance',
+  'items',
+  'acts',
+  'act',
+  'artists',
+  'artist',
+  'stages',
+  'stage',
+  'venues',
+  'venue',
+  'schedule',
+  'schedules',
+  'timeslots',
+  'times',
+  'rows',
+  'columns',
+  'metadata',
+  'meta',
+  'settings',
+  'options'
+]);
+
+const MONTHS: Record<string, number> = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11
+};
+
 export function buildClashfinderPublicKey(options?: { authParam?: string; authValidUntil?: string }) {
   const username = process.env.CLASHFINDER_AUTH_USERNAME;
   const privateKey = process.env.CLASHFINDER_PRIVATE_KEY;
@@ -93,17 +159,6 @@ function inferYear(value: unknown, fallback = new Date().getUTCFullYear()) {
   return match ? Number(match[0]) : fallback;
 }
 
-function findArrayCandidates(value: unknown, depth = 0): unknown[][] {
-  if (depth > 5 || !value || typeof value !== 'object') return [];
-
-  if (Array.isArray(value)) {
-    const nested = value.flatMap((item) => findArrayCandidates(item, depth + 1));
-    return [value, ...nested];
-  }
-
-  return Object.values(value as Record<string, unknown>).flatMap((child) => findArrayCandidates(child, depth + 1));
-}
-
 function readField(source: Record<string, unknown>, names: string[]) {
   for (const name of names) {
     if (source[name] !== undefined && source[name] !== null && source[name] !== '') return source[name];
@@ -111,16 +166,104 @@ function readField(source: Record<string, unknown>, names: string[]) {
   return null;
 }
 
-function normalizePerformanceItem(item: unknown): NormalizedClashfinderPerformance | null {
+function looksLikeTime(value: string) {
+  return /^\d{1,2}:\d{2}$/.test(value.trim()) || /^\d{1,2}(?:am|pm)$/i.test(value.trim());
+}
+
+function parseDateLabel(value: unknown, year: number): string | null {
+  const raw = toStringValue(value)?.trim();
+  if (!raw) return null;
+
+  const iso = isoOrNull(raw);
+  if (iso) return dayFromIso(iso);
+
+  const clean = raw.replace(/\u200b/g, '').replace(/,/g, ' ');
+  const match = clean.match(/(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)/i) || clean.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
+  if (!match) return null;
+
+  const first = match[1];
+  const second = match[2];
+  const day = /^\d+$/.test(first) ? Number(first) : Number(second);
+  const monthName = /^\d+$/.test(first) ? second.toLowerCase() : first.toLowerCase();
+  const month = MONTHS[monthName];
+
+  if (!Number.isFinite(day) || month === undefined) return null;
+  return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10);
+}
+
+function combineDayAndTime(dayDate: string | null | undefined, time: unknown, year: number) {
+  const raw = toStringValue(time)?.trim();
+  if (!raw) return null;
+
+  const directIso = isoOrNull(raw);
+  if (directIso) return directIso;
+
+  const day = dayDate || parseDateLabel(raw, year);
+  if (!day) return null;
+
+  let hour: number | null = null;
+  let minute = 0;
+  const ampm = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
+  const twentyFour = raw.match(/^(\d{1,2}):(\d{2})$/);
+
+  if (ampm) {
+    hour = Number(ampm[1]);
+    minute = ampm[2] ? Number(ampm[2]) : 0;
+    const suffix = ampm[3].toLowerCase();
+    if (suffix === 'pm' && hour < 12) hour += 12;
+    if (suffix === 'am' && hour === 12) hour = 0;
+  } else if (twentyFour) {
+    hour = Number(twentyFour[1]);
+    minute = Number(twentyFour[2]);
+  }
+
+  if (hour === null || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return `${day}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00.000Z`;
+}
+
+function normalizeStageName(value: unknown): string | null {
+  const raw = toStringValue(value)?.trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  if (RESERVED_CONTAINER_KEYS.has(lower)) return null;
+  if (looksLikeTime(raw)) return null;
+  if (parseDateLabel(raw, new Date().getUTCFullYear())) return null;
+  return raw;
+}
+
+function containsPerformanceLikeData(value: unknown, depth = 0): boolean {
+  if (depth > 4 || value === null || value === undefined) return false;
+
+  if (Array.isArray(value)) return value.some((item) => containsPerformanceLikeData(item, depth + 1));
+
+  if (typeof value !== 'object') return false;
+
+  const record = value as Record<string, unknown>;
+  const hasArtist = readField(record, ['artist', 'artistName', 'act', 'actName', 'name', 'title', 'label']) !== null;
+  const hasStart = readField(record, ['start', 'startTime', 'start_time', 'starts', 'timeStart', 'startDateTime', 'from']) !== null;
+  const hasEnd = readField(record, ['end', 'endTime', 'end_time', 'ends', 'timeEnd', 'endDateTime', 'to']) !== null;
+
+  if (hasArtist && (hasStart || hasEnd)) return true;
+
+  return Object.values(record).some((child) => containsPerformanceLikeData(child, depth + 1));
+}
+
+function normalizePerformanceItem(item: unknown, context: ParseContext): NormalizedClashfinderPerformance | null {
   if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
 
   const record = item as Record<string, unknown>;
   const artistName =
     toStringValue(readField(record, ['artist', 'artistName', 'act', 'actName', 'name', 'title', 'label'])) ?? null;
-  const stageName =
-    toStringValue(readField(record, ['stage', 'stageName', 'venue', 'venueName', 'location'])) ?? 'Unknown Stage';
-  const startIso = isoOrNull(readField(record, ['start', 'startTime', 'start_time', 'starts', 'timeStart', 'startDateTime']));
-  const endIso = isoOrNull(readField(record, ['end', 'endTime', 'end_time', 'ends', 'timeEnd', 'endDateTime']));
+  const explicitStage =
+    toStringValue(readField(record, ['stage', 'stageName', 'venue', 'venueName', 'location'])) ?? null;
+  const stageName = explicitStage || context.stageName || 'Unknown Stage';
+
+  const startIso =
+    isoOrNull(readField(record, ['start', 'startTime', 'start_time', 'starts', 'timeStart', 'startDateTime', 'from'])) ||
+    combineDayAndTime(context.dayDate, readField(record, ['start', 'startTime', 'start_time', 'starts', 'timeStart', 'from']), context.year);
+  const endIso =
+    isoOrNull(readField(record, ['end', 'endTime', 'end_time', 'ends', 'timeEnd', 'endDateTime', 'to'])) ||
+    combineDayAndTime(context.dayDate, readField(record, ['end', 'endTime', 'end_time', 'ends', 'timeEnd', 'to']), context.year);
 
   if (!artistName || !startIso || !endIso) return null;
 
@@ -129,11 +272,45 @@ function normalizePerformanceItem(item: unknown): NormalizedClashfinderPerforman
     stageName,
     startTime: startIso,
     endTime: endIso,
-    dayDate: dayFromIso(startIso)
+    dayDate: context.dayDate ?? dayFromIso(startIso)
   };
 }
 
-function normalizeNestedDayStageFormat(raw: unknown): NormalizedClashfinderPerformance[] {
+function collectContextualPerformances(raw: unknown, context: ParseContext, depth = 0): NormalizedClashfinderPerformance[] {
+  if (depth > 8 || raw === null || raw === undefined) return [];
+
+  if (Array.isArray(raw)) {
+    return raw.flatMap((item) => {
+      const direct = normalizePerformanceItem(item, context);
+      const nested = collectContextualPerformances(item, context, depth + 1);
+      return direct ? [direct, ...nested] : nested;
+    });
+  }
+
+  if (typeof raw !== 'object') return [];
+
+  const record = raw as Record<string, unknown>;
+  const direct = normalizePerformanceItem(record, context);
+  const collected = direct ? [direct] : [];
+
+  for (const [key, child] of Object.entries(record)) {
+    const possibleDay = parseDateLabel(key, context.year);
+    const possibleStage = normalizeStageName(key);
+    const childHasPerformanceData = containsPerformanceLikeData(child);
+
+    const nextContext: ParseContext = {
+      ...context,
+      dayDate: possibleDay || context.dayDate,
+      stageName: possibleStage && childHasPerformanceData && !possibleDay ? possibleStage : context.stageName
+    };
+
+    collected.push(...collectContextualPerformances(child, nextContext, depth + 1));
+  }
+
+  return collected;
+}
+
+function normalizeNestedDayStageFormat(raw: unknown, context: ParseContext): NormalizedClashfinderPerformance[] {
   if (!Array.isArray(raw)) return [];
 
   const performances: NormalizedClashfinderPerformance[] = [];
@@ -141,28 +318,19 @@ function normalizeNestedDayStageFormat(raw: unknown): NormalizedClashfinderPerfo
   raw.forEach((dayEntry) => {
     if (!dayEntry || typeof dayEntry !== 'object' || Array.isArray(dayEntry)) return;
     const dayRecord = dayEntry as Record<string, unknown>;
-    const dayDate = toStringValue(dayRecord.day_date ?? dayRecord.date);
-    const stageName = toStringValue(dayRecord.stage ?? dayRecord.stageName) ?? 'Unknown Stage';
+    const dayDate = parseDateLabel(dayRecord.day_date ?? dayRecord.date, context.year) || toStringValue(dayRecord.day_date ?? dayRecord.date);
+    const stageName = toStringValue(dayRecord.stage ?? dayRecord.stageName) ?? context.stageName ?? 'Unknown Stage';
     const dayPerformances = dayRecord.performances;
 
     if (!Array.isArray(dayPerformances)) return;
 
     dayPerformances.forEach((perf) => {
-      if (!perf || typeof perf !== 'object' || Array.isArray(perf)) return;
-      const perfRecord = perf as Record<string, unknown>;
-      const artistName = toStringValue(perfRecord.artist ?? perfRecord.name ?? perfRecord.title);
-      const startIso = isoOrNull(perfRecord.start ?? perfRecord.startTime ?? perfRecord.start_time);
-      const endIso = isoOrNull(perfRecord.end ?? perfRecord.endTime ?? perfRecord.end_time);
-
-      if (!artistName || !startIso || !endIso) return;
-
-      performances.push({
-        artistName,
-        stageName,
-        startTime: startIso,
-        endTime: endIso,
-        dayDate: dayDate ?? dayFromIso(startIso)
+      const normalized = normalizePerformanceItem(perf, {
+        ...context,
+        dayDate: dayDate ?? context.dayDate,
+        stageName
       });
+      if (normalized) performances.push(normalized);
     });
   });
 
@@ -177,12 +345,12 @@ export function normalizeClashfinderEvent(raw: unknown, slug: string): Normalize
   const year = inferYear(name, inferYear(readField(root, ['year', 'startDate', 'start', 'start_date'])));
   const location = toStringValue(readField(root, ['location', 'venue', 'address'])) ?? null;
 
-  const nestedPerformances = normalizeNestedDayStageFormat(raw);
-  const genericPerformances = findArrayCandidates(raw)
-    .flatMap((candidate) => candidate.map(normalizePerformanceItem).filter(Boolean) as NormalizedClashfinderPerformance[]);
+  const context: ParseContext = { year };
+  const nestedPerformances = normalizeNestedDayStageFormat(raw, context);
+  const contextualPerformances = collectContextualPerformances(raw, context);
 
   const deduped = new Map<string, NormalizedClashfinderPerformance>();
-  [...nestedPerformances, ...genericPerformances].forEach((perf) => {
+  [...nestedPerformances, ...contextualPerformances].forEach((perf) => {
     const key = `${perf.stageName}|${perf.artistName}|${perf.startTime}`;
     deduped.set(key, perf);
   });
