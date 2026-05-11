@@ -44,6 +44,8 @@ const RESERVED_CONTAINER_KEYS = new Set([
   'artist',
   'stages',
   'stage',
+  'locations',
+  'location',
   'venues',
   'venue',
   'schedule',
@@ -255,7 +257,7 @@ function normalizePerformanceItem(item: unknown, context: ParseContext): Normali
   const artistName =
     toStringValue(readField(record, ['artist', 'artistName', 'act', 'actName', 'name', 'title', 'label'])) ?? null;
   const explicitStage =
-    toStringValue(readField(record, ['stage', 'stageName', 'venue', 'venueName', 'location'])) ?? null;
+    toStringValue(readField(record, ['stage', 'stageName', 'venue', 'venueName'])) ?? null;
   const stageName = explicitStage || context.stageName || 'Unknown Stage';
 
   const startIso =
@@ -310,6 +312,43 @@ function collectContextualPerformances(raw: unknown, context: ParseContext, dept
   return collected;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function getLocationEntries(locations: unknown): Array<{ key: string; value: unknown }> {
+  if (Array.isArray(locations)) {
+    return locations.map((value, index) => ({ key: String(index), value }));
+  }
+
+  const record = asRecord(locations);
+  if (!record) return [];
+  return Object.entries(record).map(([key, value]) => ({ key, value }));
+}
+
+function normalizeLocationsFormat(root: Record<string, unknown>, context: ParseContext): NormalizedClashfinderPerformance[] {
+  const locations = root.locations;
+  const entries = getLocationEntries(locations);
+  const performances: NormalizedClashfinderPerformance[] = [];
+
+  for (const entry of entries) {
+    const locationRecord = asRecord(entry.value);
+    const stageName =
+      normalizeStageName(locationRecord ? readField(locationRecord, ['name', 'title', 'label', 'stage', 'stageName', 'venue']) : null) ||
+      normalizeStageName(entry.key) ||
+      'Unknown Stage';
+
+    performances.push(
+      ...collectContextualPerformances(entry.value, {
+        ...context,
+        stageName
+      })
+    );
+  }
+
+  return performances;
+}
+
 function normalizeNestedDayStageFormat(raw: unknown, context: ParseContext): NormalizedClashfinderPerformance[] {
   if (!Array.isArray(raw)) return [];
 
@@ -346,11 +385,14 @@ export function normalizeClashfinderEvent(raw: unknown, slug: string): Normalize
   const location = toStringValue(readField(root, ['location', 'venue', 'address'])) ?? null;
 
   const context: ParseContext = { year };
+  const locationsPerformances = normalizeLocationsFormat(root, context);
   const nestedPerformances = normalizeNestedDayStageFormat(raw, context);
-  const contextualPerformances = collectContextualPerformances(raw, context);
+  const contextualPerformances = collectContextualPerformances(raw, context).filter(
+    (performance) => performance.stageName !== 'locations'
+  );
 
   const deduped = new Map<string, NormalizedClashfinderPerformance>();
-  [...nestedPerformances, ...contextualPerformances].forEach((perf) => {
+  [...locationsPerformances, ...nestedPerformances, ...contextualPerformances].forEach((perf) => {
     const key = `${perf.stageName}|${perf.artistName}|${perf.startTime}`;
     deduped.set(key, perf);
   });
