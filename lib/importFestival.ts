@@ -1,6 +1,7 @@
 import getSupabaseAdmin from './supabaseAdmin';
 import { buildClashfinderEventUrl } from './clashfinder';
 import type { NormalizedClashfinderEvent, NormalizedClashfinderPerformance } from './clashfinder';
+import { cleanupClashfinderPerformances } from './clashfinderCleanup';
 
 export interface ImportFestivalResult {
   festivalId: number;
@@ -113,6 +114,7 @@ async function deactivateMissingPerformances(
 export async function importNormalizedFestival(event: NormalizedClashfinderEvent): Promise<ImportFestivalResult> {
   const supabaseAdmin = getSupabaseAdmin();
   const sourceLastSeenAt = new Date().toISOString();
+  const performances = cleanupClashfinderPerformances(event.performances);
   const { data: existingBySlug } = event.slug
     ? await supabaseAdmin.from('festivals').select('id').eq('clashfinder_slug', event.slug).maybeSingle()
     : ({ data: null } as { data: null });
@@ -140,7 +142,7 @@ export async function importNormalizedFestival(event: NormalizedClashfinderEvent
   let skippedPerformances = 0;
   const seenPerformances: ImportedPerformanceIdentity[] = [];
 
-  for (const performance of event.performances) {
+  for (const performance of performances) {
     try {
       const seenPerformance = await upsertPerformance(festival.id, performance, sourceLastSeenAt);
       seenPerformances.push(seenPerformance);
