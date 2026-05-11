@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfinder';
+import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import { requireAdmin } from '@/lib/adminAuth';
 
 function summarizeRawShape(raw: unknown) {
@@ -40,7 +41,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const raw = await fetchClashfinderEvent(slug);
     const normalized = normalizeClashfinderEvent(raw, slug);
-    const detectedStages = Array.from(new Set(normalized.performances.map((performance) => performance.stageName))).sort();
+    const performances = cleanupClashfinderPerformances(normalized.performances);
+    const detectedStages = getStageNames(performances);
 
     return res.status(200).json({
       ok: true,
@@ -52,15 +54,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         startDate: normalized.startDate,
         endDate: normalized.endDate
       },
-      detectedPerformances: normalized.performances.length,
+      detectedPerformances: performances.length,
       detectedStages: detectedStages.length,
       sampleStages: detectedStages.slice(0, 20),
-      samplePerformances: normalized.performances.slice(0, 10),
+      samplePerformances: performances.slice(0, 10),
       rawShape: summarizeRawShape(raw),
       warning:
-        normalized.performances.length === 0
+        performances.length === 0
           ? 'No performances were detected. The Clashfinder response may use a format that needs a custom parser.'
-          : detectedStages.includes('locations')
+          : detectedStages.some((stage) => stage.toLowerCase() === 'locations')
             ? 'Parser warning: detected a stage named "locations", which usually means the Clashfinder locations container was parsed incorrectly.'
             : null
     });
