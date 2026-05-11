@@ -30,7 +30,7 @@ test.describe.serial('group collaboration flows', () => {
 
     const inviteCode = (await page.locator('code').first().innerText()).trim();
     expect(inviteCode.length).toBeGreaterThan(4);
-    await expect(page.getByText(localPart(ownerEmail!)).first()).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: localPart(ownerEmail!) }).first()).toBeVisible();
 
     await signOut(page);
     await login(page, memberEmail!, memberPassword!);
@@ -42,8 +42,8 @@ test.describe.serial('group collaboration flows', () => {
 
     await expect(page).toHaveURL(/\/group\/\d+/);
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible();
-    await expect(page.getByText(localPart(ownerEmail!)).first()).toBeVisible();
-    await expect(page.getByText(localPart(memberEmail!)).first()).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: localPart(ownerEmail!) }).first()).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: localPart(memberEmail!) }).first()).toBeVisible();
 
     await expect(page.getByRole('columnheader', { name: /Going/i })).toBeVisible();
     await expect(page.getByRole('cell', { name: new RegExp(localPart(ownerEmail!), 'i') }).first()).toBeVisible();
