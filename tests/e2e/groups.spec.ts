@@ -19,11 +19,9 @@ test.describe.serial('group collaboration flows', () => {
     const festivalUrl = await openFirstFestival(page);
     await ensureFirstActIsStarred(page);
 
-    page.once('dialog', async (dialog) => {
-      expect(dialog.type()).toBe('prompt');
-      await dialog.accept(groupName);
-    });
     await page.getByRole('button', { name: /^Create Group$/i }).click();
+    await page.getByPlaceholder(/e\.g\. Ozora Squad/i).fill(groupName);
+    await page.getByRole('button', { name: /^Create$/i }).click();
 
     await expect(page).toHaveURL(/\/group\/\d+/);
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible();

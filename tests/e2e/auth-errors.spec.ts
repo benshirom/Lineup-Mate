@@ -6,22 +6,22 @@ const unconfirmedPassword = process.env.E2E_UNCONFIRMED_PASSWORD;
 test.describe('auth errors and email confirmation', () => {
   test('signup form validates obviously invalid email before sending to Supabase', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /Create an account/i }).click();
+    await page.getByRole('button', { name: /No account yet/i }).click();
 
     await page.getByLabel('Email').fill('not-an-email');
     await page.getByLabel('Password').fill('bs12345');
-    await page.getByRole('button', { name: /^Sign Up$/i }).click();
+    await page.getByRole('button', { name: /^Create account$/i }).click();
 
     await expect(page.getByText(/Enter a valid email address/i)).toBeVisible();
   });
 
   test('signup form validates short password before sending to Supabase', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: /Create an account/i }).click();
+    await page.getByRole('button', { name: /No account yet/i }).click();
 
     await page.getByLabel('Email').fill('playwright.invalid@example.com');
     await page.getByLabel('Password').fill('123');
-    await page.getByRole('button', { name: /^Sign Up$/i }).click();
+    await page.getByRole('button', { name: /^Create account$/i }).click();
 
     await expect(page.getByText(/Password must be at least 6 characters/i)).toBeVisible();
   });
@@ -32,7 +32,7 @@ test.describe('auth errors and email confirmation', () => {
     await page.goto('/login');
     await page.getByLabel('Email').fill(unconfirmedEmail!);
     await page.getByLabel('Password').fill(unconfirmedPassword!);
-    await page.getByRole('button', { name: /^Login$/i }).click();
+    await page.getByRole('button', { name: /^Sign in$/i }).click();
 
     await expect(page.getByText(/email is not confirmed|confirm/i)).toBeVisible();
   });
