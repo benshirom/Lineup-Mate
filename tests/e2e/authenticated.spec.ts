@@ -12,18 +12,18 @@ test.describe('authenticated flows', () => {
   });
 
   test('user can save a festival and see it on My Schedule', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /My Schedule/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /My Schedule|הלוח שלי/i })).toBeVisible();
     await ensureFirstFestivalIsSaved(page);
 
-    await page.getByRole('link', { name: /My Schedule/i }).click();
-    await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
+    await page.getByRole('link', { name: /My Schedule|הלוח שלי/i }).click();
+    await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible();
     await expect(page.getByTestId('saved-festivals-section')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('saved-festival-card').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /Open Festival/i }).first()).toBeVisible();
   });
 
   test('user can open groups area', async ({ page }) => {
-    await page.getByRole('link', { name: /Groups/i }).click();
+    await page.getByRole('link', { name: /Groups|קבוצות/i }).click();
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible();
   });
 
@@ -31,8 +31,8 @@ test.describe('authenticated flows', () => {
     await openFirstFestival(page);
     await ensureFirstActIsStarred(page);
 
-    await page.getByRole('link', { name: /My Schedule/i }).click();
-    await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
+    await page.getByRole('link', { name: /My Schedule|הלוח שלי/i }).click();
+    await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible();
     await expect(page.getByTestId('saved-acts-section')).toBeVisible({ timeout: 20_000 });
   });
 
@@ -49,7 +49,7 @@ test.describe('authenticated flows', () => {
     const selectedDayUrl = page.url();
     const selectedDay = new URL(selectedDayUrl).searchParams.get('day');
 
-    await page.getByRole('link', { name: /My Schedule/i }).click();
+    await page.getByRole('link', { name: /My Schedule|הלוח שלי/i }).click();
     await expect(page.getByTestId('schedule-festival-group').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('schedule-day-group').first()).toBeVisible({ timeout: 20_000 });
 
@@ -64,13 +64,36 @@ test.describe('authenticated flows', () => {
     }
   });
 
-  test('user can open Profile page from navbar', async ({ page }) => {
-    await page.getByRole('link', { name: /^Profile$/i }).click();
-    await expect(page.getByRole('heading', { name: /^Profile$/i })).toBeVisible({ timeout: 20_000 });
+  test('user can open Profile page from the user badge', async ({ page }) => {
+    await expect(page.getByRole('link', { name: /^Profile$/i })).toHaveCount(0);
+    await page.getByRole('link', { name: /@|\w+/ }).last().click();
+    await expect(page).toHaveURL(/\/profile/, { timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Account details/i)).toBeVisible();
     await expect(page.getByLabel(/Display Name/i)).toBeVisible();
     await expect(page.getByLabel(/^Email$/i)).toBeVisible();
     await expect(page.getByLabel(/Theme/i)).toBeVisible();
     await expect(page.getByLabel(/Language/i)).toBeVisible();
+    await expect(page.getByLabel(/Profile Photo/i)).toBeVisible();
+  });
+
+  test('profile language and theme preferences update the UI immediately', async ({ page }) => {
+    await page.goto('/profile');
+    await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByLabel(/Language/i).selectOption('he');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await expect(page.getByRole('link', { name: /הלוח שלי/i })).toBeVisible({ timeout: 20_000 });
+
+    await page.getByLabel(/Theme/i).selectOption('light');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+    await page.getByRole('button', { name: /Save Profile/i }).click();
+    await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });
+
+    await page.getByLabel(/Language/i).selectOption('en');
+    await page.getByLabel(/Theme/i).selectOption('dark');
+    await page.getByRole('button', { name: /Save Profile/i }).click();
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   });
 });
