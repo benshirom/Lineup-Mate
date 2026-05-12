@@ -180,10 +180,11 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {view === 'signup' && (
               <div>
-                <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
+                <label htmlFor="display-name" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
                   Display name
                 </label>
                 <input
+                  id="display-name"
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
@@ -196,10 +197,11 @@ const LoginPage = () => {
             )}
 
             <div>
-              <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
+              <label htmlFor="email" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
                 Email
               </label>
               <input
+                id="email"
                 type="text"
                 inputMode="email"
                 value={email}
@@ -213,7 +215,7 @@ const LoginPage = () => {
             {view !== 'forgot' && (
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
+                  <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
                     Password
                   </label>
                   {view === 'login' && (
@@ -228,6 +230,7 @@ const LoginPage = () => {
                   )}
                 </div>
                 <input
+                  id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
