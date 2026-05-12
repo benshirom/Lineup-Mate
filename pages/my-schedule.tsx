@@ -38,6 +38,17 @@ interface ScheduleItem {
   festivalLocation: string | null;
 }
 
+interface FestivalScheduleGroup {
+  festivalId: number;
+  festival: string;
+  festivalColor: string;
+  festivalEmoji: string;
+  days: Array<{
+    dayDate: string;
+    items: ScheduleItem[];
+  }>;
+}
+
 function timeLabel(dateString: string) {
   return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -173,24 +184,41 @@ export default function MySchedulePage() {
     loadSchedule();
   }, [router, supabase, user]);
 
-  const groupedItems = useMemo(() => {
-    const result: Record<string, ScheduleItem[]> = {};
+  const groupedItems = useMemo((): FestivalScheduleGroup[] => {
+    const festivalGroups = new Map<number, FestivalScheduleGroup>();
 
     items.forEach((item) => {
-      const key = `${item.festivalName} ${item.festivalYear}__${item.dayDate}`;
-      if (!result[key]) result[key] = [];
-      result[key].push(item);
+      if (!festivalGroups.has(item.festivalId)) {
+        festivalGroups.set(item.festivalId, {
+          festivalId: item.festivalId,
+          festival: festivalTitle(item.festivalName, item.festivalYear),
+          festivalColor: item.festivalColor,
+          festivalEmoji: item.festivalEmoji,
+          days: []
+        });
+      }
+
+      const festivalGroup = festivalGroups.get(item.festivalId)!;
+      let dayGroup = festivalGroup.days.find((group) => group.dayDate === item.dayDate);
+      if (!dayGroup) {
+        dayGroup = { dayDate: item.dayDate, items: [] };
+        festivalGroup.days.push(dayGroup);
+      }
+      dayGroup.items.push(item);
     });
 
-    return Object.entries(result).map(([key, groupItems]) => ({
-      key,
-      festival: `${groupItems[0].festivalEmoji} ${festivalTitle(groupItems[0].festivalName, groupItems[0].festivalYear)}`,
-      festivalId: groupItems[0].festivalId,
-      festivalColor: groupItems[0].festivalColor,
-      dayDate: groupItems[0].dayDate,
-      items: groupItems
+    return Array.from(festivalGroups.values()).map((group) => ({
+      ...group,
+      days: group.days
+        .map((dayGroup) => ({ ...dayGroup, items: dayGroup.items.sort((a, b) => a.startTime.localeCompare(b.startTime)) }))
+        .sort((a, b) => a.dayDate.localeCompare(b.dayDate))
     }));
   }, [items]);
+
+  const openFestival = (festivalId: number, dayDate?: string) => {
+    const dayQuery = dayDate ? `?day=${dayDate}` : '';
+    router.push(`/festival/${festivalId}${dayQuery}`);
+  };
 
   const removeItem = async (item: ScheduleItem) => {
     if (!user) return;
@@ -266,9 +294,7 @@ export default function MySchedulePage() {
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</p>
                 <h1 className="text-4xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>My Schedule</h1>
-                <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                  Your saved festivals and starred acts in one place.
-                </p>
+                <p className="mt-2 text-sm" style={{ color: c.muted }}>Your saved festivals and starred acts in one place.</p>
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => router.push('/')} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
@@ -278,12 +304,8 @@ export default function MySchedulePage() {
                   confirmClear ? (
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold" style={{ color: c.muted }}>Remove acts?</span>
-                      <button type="button" onClick={clearSchedule} className="rounded-full px-3 py-1.5 text-xs font-black text-white" style={{ background: '#dc2626' }}>
-                        Yes, clear all
-                      </button>
-                      <button type="button" onClick={() => setConfirmClear(false)} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>
-                        Cancel
-                      </button>
+                      <button type="button" onClick={clearSchedule} className="rounded-full px-3 py-1.5 text-xs font-black text-white" style={{ background: '#dc2626' }}>Yes, clear all</button>
+                      <button type="button" onClick={() => setConfirmClear(false)} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>Cancel</button>
                     </div>
                   ) : (
                     <button type="button" onClick={() => setConfirmClear(true)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: '1px solid #dc262640', color: '#dc2626' }}>
@@ -323,9 +345,7 @@ export default function MySchedulePage() {
                       <div className="h-2" style={{ background: festival.color }} />
                       <div className="p-4">
                         <div className="mb-3 flex items-start gap-3">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: `${festival.color}22` }}>
-                            {festival.emoji}
-                          </div>
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: `${festival.color}22` }}>{festival.emoji}</div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-black uppercase" style={{ color: festival.color }}>{festival.genreLabel || 'Festival'}</p>
                             <h3 className="truncate text-xl font-black">{festivalTitle(festival.name, festival.year)}</h3>
@@ -334,7 +354,7 @@ export default function MySchedulePage() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <button type="button" onClick={() => router.push(`/festival/${festival.festivalId}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: festival.color }}>
+                          <button type="button" onClick={() => openFestival(festival.festivalId)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: festival.color }}>
                             Open Festival
                           </button>
                           <button type="button" disabled={removingFestivalId === festival.festivalId} onClick={() => removeSavedFestival(festival)} className="rounded-full px-4 py-2 text-sm font-black disabled:opacity-60" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.muted }}>
@@ -353,9 +373,7 @@ export default function MySchedulePage() {
             <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">☆</div>
               <h2 className="mt-3 text-2xl font-black">No saved acts yet</h2>
-              <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                Open a festival and tap the star next to artists you do not want to miss.
-              </p>
+              <p className="mt-2 text-sm" style={{ color: c.muted }}>Open a festival and tap the star next to artists you do not want to miss.</p>
               <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})` }}>
                 Find Festivals
               </button>
@@ -365,37 +383,52 @@ export default function MySchedulePage() {
           {items.length > 0 && (
             <div className="space-y-5" data-testid="saved-acts-section">
               {groupedItems.map((group) => (
-                <section key={group.key} className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                <section key={group.festivalId} className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="schedule-festival-group">
                   <div className="h-2" style={{ background: group.festivalColor }} />
                   <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="text-xl font-black">{group.festival}</h2>
-                      <p className="text-sm" style={{ color: c.muted }}>{dateLabel(group.dayDate)}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl text-2xl" style={{ background: `${group.festivalColor}22` }}>{group.festivalEmoji}</div>
+                      <div>
+                        <h2 className="text-xl font-black">{group.festival}</h2>
+                        <p className="text-sm" style={{ color: c.muted }}>{group.days.length} saved day{group.days.length === 1 ? '' : 's'}</p>
+                      </div>
                     </div>
-                    <button type="button" onClick={() => router.push(`/festival/${group.festivalId}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: group.festivalColor }}>
+                    <button type="button" onClick={() => openFestival(group.festivalId, group.days[0]?.dayDate)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: group.festivalColor }}>
                       Open Festival
                     </button>
                   </div>
 
-                  <div className="divide-y" style={{ borderColor: c.brd }}>
-                    {group.items.map((item) => (
-                      <article key={item.performanceId} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ background: `${item.stageColor}22`, color: item.stageColor }}>
-                            ★
-                          </div>
+                  <div className="space-y-4 p-5 pt-0">
+                    {group.days.map((dayGroup) => (
+                      <section key={dayGroup.dayDate} className="rounded-3xl overflow-hidden" style={{ background: c.surf2, border: `1px solid ${c.brd}` }} data-testid="schedule-day-group">
+                        <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between" style={{ borderBottom: `1px solid ${c.brd}` }}>
                           <div>
-                            <h3 className="font-black">{item.artistName}</h3>
-                            <p className="text-sm" style={{ color: c.muted }}>
-                              {timeLabel(item.startTime)} – {timeLabel(item.endTime)} · <span style={{ color: item.stageColor }}>{item.stageName}</span>
-                            </p>
+                            <h3 className="font-black">{dateLabel(dayGroup.dayDate)}</h3>
+                            <p className="text-xs" style={{ color: c.muted }}>{dayGroup.items.length} saved act{dayGroup.items.length === 1 ? '' : 's'}</p>
                           </div>
+                          <button type="button" data-testid="open-festival-day" onClick={() => openFestival(group.festivalId, dayGroup.dayDate)} className="rounded-full px-4 py-2 text-xs font-black text-white" style={{ background: group.festivalColor }}>
+                            Open this day
+                          </button>
                         </div>
 
-                        <button type="button" disabled={removingId === item.performanceId} onClick={() => removeItem(item)} className="rounded-full px-4 py-2 text-sm font-black disabled:opacity-60" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>
-                          {removingId === item.performanceId ? 'Removing…' : 'Remove'}
-                        </button>
-                      </article>
+                        <div className="divide-y" style={{ borderColor: c.brd }}>
+                          {dayGroup.items.map((item) => (
+                            <article key={item.performanceId} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ background: `${item.stageColor}22`, color: item.stageColor }}>★</div>
+                                <div>
+                                  <h3 className="font-black">{item.artistName}</h3>
+                                  <p className="text-sm" style={{ color: c.muted }}>{timeLabel(item.startTime)} – {timeLabel(item.endTime)} · <span style={{ color: item.stageColor }}>{item.stageName}</span></p>
+                                </div>
+                              </div>
+
+                              <button type="button" disabled={removingId === item.performanceId} onClick={() => removeItem(item)} className="rounded-full px-4 py-2 text-sm font-black disabled:opacity-60" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.muted }}>
+                                {removingId === item.performanceId ? 'Removing…' : 'Remove'}
+                              </button>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
                     ))}
                   </div>
                 </section>
