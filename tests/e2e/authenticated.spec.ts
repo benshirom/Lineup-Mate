@@ -4,6 +4,10 @@ import { ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFe
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
 
+async function mainBackground(page: import('@playwright/test').Page) {
+  return page.locator('main').first().evaluate((element) => window.getComputedStyle(element).backgroundColor);
+}
+
 test.describe('authenticated flows', () => {
   test.skip(!testEmail || !testPassword, 'Set E2E_USER_EMAIL and E2E_USER_PASSWORD to run authenticated tests.');
 
@@ -95,5 +99,29 @@ test.describe('authenticated flows', () => {
     await page.getByLabel(/Theme/i).selectOption('dark');
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+  });
+
+  test('saved light theme is applied across festival, groups and schedule pages', async ({ page }) => {
+    await page.goto('/profile');
+    await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
+    await page.getByLabel(/Language/i).selectOption('en');
+    await page.getByLabel(/Theme/i).selectOption('light');
+    await page.getByRole('button', { name: /Save Profile/i }).click();
+    await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });
+
+    await openFirstFestival(page);
+    expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
+
+    await page.getByRole('link', { name: /Groups/i }).click();
+    await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
+    expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
+
+    await page.getByRole('link', { name: /My Schedule/i }).click();
+    await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
+    expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
+
+    await page.goto('/profile');
+    await page.getByLabel(/Theme/i).selectOption('dark');
+    await page.getByRole('button', { name: /Save Profile/i }).click();
   });
 });
