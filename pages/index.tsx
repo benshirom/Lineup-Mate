@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
-import { formatDateRange, genreFilters, getThemeColors, translations, type Language, type ThemeMode } from '@/lib/platform';
+import { formatDateRange, genreFilters, getThemeColors } from '@/lib/platform';
 
 interface Festival {
   id: number;
@@ -32,7 +32,7 @@ interface FestivalStats {
 }
 
 export default function Home() {
-  const { user, supabase } = useAuth();
+  const { user, supabase, language, theme, t } = useAuth();
   const router = useRouter();
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [stats, setStats] = useState<Record<number, FestivalStats>>({});
@@ -42,10 +42,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('all');
-  const [language] = useState<Language>('en');
-  const [theme] = useState<ThemeMode>('dark');
 
-  const t = translations[language];
   const c = getThemeColors(theme);
 
   useEffect(() => {
@@ -145,6 +142,10 @@ export default function Home() {
     }
   };
 
+  const getFestivalName = (festival: Festival) => language === 'he' && festival.name_he ? festival.name_he : festival.name;
+  const getFestivalLocation = (festival: Festival) => language === 'he' && festival.location_he ? festival.location_he : festival.location;
+  const getFestivalDescription = (festival: Festival) => language === 'he' && festival.description_he ? festival.description_he : festival.description;
+
   return (
     <>
       <Navbar />
@@ -166,12 +167,7 @@ export default function Home() {
                   {t.browseEvents}
                 </a>
                 {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => router.push('/admin')}
-                    className="rounded-full px-5 py-3 text-sm font-extrabold"
-                    style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}
-                  >
+                  <button type="button" onClick={() => router.push('/admin')} className="rounded-full px-5 py-3 text-sm font-extrabold" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
                     {t.importSync}
                   </button>
                 )}
@@ -185,8 +181,8 @@ export default function Home() {
                   <div key={festival.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: c.surf2 }}>
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl text-xl" style={{ background: `${festival.color || c.acc}22` }}>{festival.emoji || '🎪'}</div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-extrabold">{festival.name}</div>
-                      <div className="truncate text-xs" style={{ color: c.muted }}>{festival.location || 'Location TBA'}</div>
+                      <div className="truncate text-sm font-extrabold">{getFestivalName(festival)}</div>
+                      <div className="truncate text-xs" style={{ color: c.muted }}>{getFestivalLocation(festival) || 'Location TBA'}</div>
                     </div>
                     <div className="h-3 w-3 rounded-full" style={{ background: festival.color || c.acc }} />
                   </div>
@@ -199,28 +195,12 @@ export default function Home() {
         <section id="events" className="mx-auto max-w-6xl px-4 pb-14">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-2xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{t.upcomingEvents}</h2>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t.searchEvents}
-              className="w-full rounded-full px-4 py-3 text-sm outline-none sm:max-w-xs"
-              style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}
-            />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.searchEvents} className="w-full rounded-full px-4 py-3 text-sm outline-none sm:max-w-xs" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }} />
           </div>
 
           <div className="mb-6 flex flex-wrap gap-2">
             {genreFilters.map((filter) => (
-              <button
-                key={filter.key}
-                type="button"
-                onClick={() => setGenre(filter.key)}
-                className="rounded-full px-4 py-2 text-xs font-extrabold transition"
-                style={{
-                  background: genre === filter.key ? c.acc : c.surf,
-                  color: genre === filter.key ? '#fff' : c.muted,
-                  border: `1px solid ${genre === filter.key ? c.acc : c.brd}`
-                }}
-              >
+              <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.acc : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
                 {language === 'he' ? filter.he : filter.en}
               </button>
             ))}
@@ -240,29 +220,22 @@ export default function Home() {
                   <div className="p-5">
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl" style={{ background: `${festival.color || c.acc}22` }}>
-                          {festival.emoji || '🎪'}
-                        </div>
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl" style={{ background: `${festival.color || c.acc}22` }}>{festival.emoji || '🎪'}</div>
                         <div>
-                          <h3 className="text-lg font-black leading-tight" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{festival.name}</h3>
+                          <h3 className="text-lg font-black leading-tight" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{getFestivalName(festival)}</h3>
                           <p className="mt-1 text-xs font-bold" style={{ color: festival.color || c.acc }}>{festival.genre_label || festival.genre || 'Festival'}</p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleSavedFestival(festival.id)}
-                        className="rounded-full px-3 py-1 text-xs font-extrabold"
-                        style={{ background: isSaved ? `${c.acc}22` : c.surf2, color: isSaved ? c.acc : c.muted, border: `1px solid ${isSaved ? c.acc : c.brd}` }}
-                      >
+                      <button type="button" onClick={() => toggleSavedFestival(festival.id)} className="rounded-full px-3 py-1 text-xs font-extrabold" style={{ background: isSaved ? `${c.acc}22` : c.surf2, color: isSaved ? c.acc : c.muted, border: `1px solid ${isSaved ? c.acc : c.brd}` }}>
                         {isSaved ? `✓ ${t.saved}` : t.saveFestival}
                       </button>
                     </div>
 
                     <p className="mb-3 line-clamp-2 text-sm leading-6" style={{ color: c.muted }}>
-                      {festival.description || 'Discover the lineup, save artists and plan with friends.'}
+                      {getFestivalDescription(festival) || 'Discover the lineup, save artists and plan with friends.'}
                     </p>
                     <div className="space-y-1 text-sm" style={{ color: c.muted }}>
-                      <div>📍 {festival.location || 'Location TBA'}</div>
+                      <div>📍 {getFestivalLocation(festival) || 'Location TBA'}</div>
                       <div>📅 {formatDateRange(festival.start_date, festival.end_date)}</div>
                     </div>
 
@@ -272,12 +245,7 @@ export default function Home() {
                       <div className="rounded-2xl p-3" style={{ background: c.surf2 }}><b className="block text-lg" style={{ color: c.txt }}>{festivalStats.days}</b>{t.days}</div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/festival/${festival.id}`)}
-                      className="mt-5 w-full rounded-2xl px-4 py-3 text-sm font-black text-white"
-                      style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}, ${c.accB})` }}
-                    >
+                    <button type="button" onClick={() => router.push(`/festival/${festival.id}`)} className="mt-5 w-full rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}, ${c.accB})` }}>
                       {t.viewLineup}
                     </button>
                   </div>
