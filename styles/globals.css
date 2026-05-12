@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Custom thin scrollbar for the dark theme ─────────────────────────── */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #2c2c4c transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #2c2c4c;
+  border-radius: 99px;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: #4c4c7c;
+}
+
+/* Hide scrollbar visually but keep scrollability (day-tabs, etc.) */
+.scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}

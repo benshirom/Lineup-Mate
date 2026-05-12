@@ -2,214 +2,281 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
 import Navbar from '@/components/Navbar';
+import { getThemeColors } from '@/lib/platform';
 
 type SocialProvider = 'google';
+type View = 'login' | 'signup' | 'forgot';
 
 function getFriendlyAuthError(message: string) {
   const lower = message.toLowerCase();
 
   if (lower.includes('email not confirmed')) {
-    return 'Your account exists, but the email is not confirmed yet. Open your inbox and click the confirmation link from Supabase / Lineup-Mate.';
+    return 'Your account exists, but the email is not confirmed yet. Open your inbox and click the confirmation link.';
   }
-
   if (lower.includes('rate limit') || lower.includes('too many')) {
-    return 'Too many signup attempts were made. Please wait a few minutes before trying again.';
+    return 'Too many attempts. Please wait a few minutes before trying again.';
   }
-
   if (lower.includes('email address') && lower.includes('invalid')) {
-    return 'This email address was rejected by Supabase. Try a different valid email address.';
+    return 'This email address is invalid. Try a different one.';
   }
-
   if (lower.includes('invalid login credentials')) {
     return 'Incorrect email or password.';
   }
-
   if (lower.includes('provider') && lower.includes('not enabled')) {
-    return 'Google login is not enabled yet in Supabase. Enable it in Authentication → Providers → Google.';
+    return 'Google login is not enabled yet. Enable it in Authentication → Providers → Google.';
   }
-
   return message;
 }
 
 const LoginPage = () => {
   const { user, supabase } = useAuth();
   const router = useRouter();
+  const c = getThemeColors('dark');
+
+  const [view, setView] = useState<View>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLogin, setIsLogin] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
 
   useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
+    if (user) router.push('/');
   }, [user, router]);
 
-  const isEmailValid = useMemo(() => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  }, [email]);
-
+  const isEmailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email]);
   const isPasswordValid = password.length >= 6;
 
   const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
 
-  const handleSocialLogin = async (provider: SocialProvider) => {
+  const reset = () => {
     setError(null);
     setMessage(null);
-    setSocialLoading(provider);
+  };
 
+  const handleSocialLogin = async (provider: SocialProvider) => {
+    reset();
+    setSocialLoading(provider);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
-        }
+        options: { redirectTo, queryParams: { access_type: 'offline', prompt: 'consent' } }
       });
-
       if (error) throw error;
     } catch (err: unknown) {
-      const rawMessage = err instanceof Error ? err.message : 'Social login failed.';
-      setError(getFriendlyAuthError(rawMessage));
+      setError(getFriendlyAuthError(err instanceof Error ? err.message : 'Social login failed.'));
       setSocialLoading(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
+    reset();
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (!isEmailValid) {
-      setError('Enter a valid email address.');
+    if (!isEmailValid) { setError('Enter a valid email address.'); return; }
+
+    if (view === 'forgot') {
+      setSubmitting(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo });
+        if (error) throw error;
+        setMessage('Password reset link sent. Check your inbox.');
+        setView('login');
+      } catch (err: unknown) {
+        setError(getFriendlyAuthError(err instanceof Error ? err.message : 'Failed to send reset email.'));
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
-    if (!isPasswordValid) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
+    if (!isPasswordValid) { setError('Password must be at least 6 characters.'); return; }
 
     setSubmitting(true);
-
     try {
-      if (isLogin) {
+      if (view === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
       } else {
+        const name = displayName.trim() || cleanEmail.split('@')[0];
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: {
-            emailRedirectTo: redirectTo
+            emailRedirectTo: redirectTo,
+            data: { display_name: name }
           }
         });
         if (error) throw error;
-
         if (data.user && !data.session) {
-          setMessage('Account created. We sent a confirmation link to your email. Open your inbox, confirm the account, then log in.');
-          setIsLogin(true);
+          setMessage('Account created! We sent a confirmation link to your email. Confirm it, then log in.');
+          setView('login');
         } else {
           setMessage('Account created successfully.');
         }
       }
     } catch (err: unknown) {
-      const rawMessage = err instanceof Error ? err.message : 'Authentication failed.';
-      setError(getFriendlyAuthError(rawMessage));
+      setError(getFriendlyAuthError(err instanceof Error ? err.message : 'Authentication failed.'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const inputClass = 'w-full rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 transition';
+  const inputStyle = { background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt };
+
+  const titles: Record<View, string> = {
+    login: 'Welcome back',
+    signup: 'Create an account',
+    forgot: 'Reset your password'
+  };
+
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-        <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md">
-          <h1 className="text-2xl font-bold mb-4 text-center">
-            {isLogin ? 'Login' : 'Create an Account'}
-          </h1>
-          {message && <p className="text-green-700 bg-green-50 border border-green-200 rounded p-3 mb-4 text-sm">{message}</p>}
-          {error && <p className="text-red-700 bg-red-50 border border-red-200 rounded p-3 mb-4 text-sm">{error}</p>}
+      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="flex flex-col items-center justify-center p-4">
+        <div
+          className="w-full max-w-md rounded-[28px] p-8 shadow-2xl"
+          style={{ background: c.surf, border: `1px solid ${c.brd}` }}
+        >
+          <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
+          <h1 className="mb-6 text-3xl font-black">{titles[view]}</h1>
 
-          <div className="grid grid-cols-1 gap-3 mb-5">
-            <button
-              type="button"
-              disabled={socialLoading !== null || submitting}
-              onClick={() => handleSocialLogin('google')}
-              className="w-full border border-gray-300 rounded py-2 px-4 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-            >
-              {socialLoading === 'google' ? 'Redirecting…' : 'Continue with Google'}
-            </button>
-          </div>
+          {message && (
+            <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#16a34a20', color: '#16a34a', border: '1px solid #16a34a40' }}>
+              {message}
+            </div>
+          )}
+          {error && (
+            <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>
+              {error}
+            </div>
+          )}
 
-          <div className="flex items-center gap-3 mb-5">
-            <div className="h-px bg-gray-200 flex-1" />
-            <span className="text-xs text-gray-500">or use email</span>
-            <div className="h-px bg-gray-200 flex-1" />
-          </div>
+          {view !== 'forgot' && (
+            <>
+              <button
+                type="button"
+                disabled={socialLoading !== null || submitting}
+                onClick={() => handleSocialLogin('google')}
+                className="mb-4 w-full rounded-2xl px-4 py-3 text-sm font-bold transition hover:opacity-80 disabled:opacity-50"
+                style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+              >
+                {socialLoading === 'google' ? 'Redirecting…' : '🌐  Continue with Google'}
+              </button>
+
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-px flex-1" style={{ background: c.brd }} />
+                <span className="text-xs" style={{ color: c.muted }}>or use email</span>
+                <div className="h-px flex-1" style={{ background: c.brd }} />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {view === 'signup' && (
+              <div>
+                <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
+                  Display name
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="How should friends see you?"
+                  autoComplete="name"
+                  className={inputClass}
+                  style={inputStyle}
+                />
+              </div>
+            )}
+
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+              <label className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
                 Email
               </label>
               <input
-                id="email"
                 type="text"
                 inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring"
+                className={inputClass}
+                style={inputStyle}
               />
             </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring"
-              />
-              {!isLogin && <p className="mt-1 text-xs text-gray-500">Use at least 6 characters.</p>}
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="submit"
-                disabled={submitting || socialLoading !== null}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring disabled:opacity-60"
-              >
-                {submitting ? 'Please wait…' : isLogin ? 'Login' : 'Sign Up'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError(null);
-                  setMessage(null);
-                }}
-                className="text-sm text-blue-500 hover:text-blue-700"
-              >
-                {isLogin ? 'Create an account' : 'Already have an account?'}
-              </button>
-            </div>
+
+            {view !== 'forgot' && (
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
+                    Password
+                  </label>
+                  {view === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { reset(); setView('forgot'); }}
+                      className="text-xs font-bold hover:opacity-80"
+                      style={{ color: c.acc }}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete={view === 'login' ? 'current-password' : 'new-password'}
+                  className={inputClass}
+                  style={inputStyle}
+                />
+                {view === 'signup' && (
+                  <p className="mt-1 text-xs" style={{ color: c.muted }}>At least 6 characters.</p>
+                )}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting || socialLoading !== null}
+              className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50"
+              style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})` }}
+            >
+              {submitting
+                ? 'Please wait…'
+                : view === 'login'
+                ? 'Sign in'
+                : view === 'signup'
+                ? 'Create account'
+                : 'Send reset link'}
+            </button>
           </form>
+
+          <div className="mt-5 flex flex-col gap-2 text-center text-sm">
+            {view === 'login' && (
+              <button type="button" onClick={() => { reset(); setView('signup'); }} className="font-bold hover:opacity-80" style={{ color: c.acc }}>
+                No account yet? Sign up
+              </button>
+            )}
+            {view === 'signup' && (
+              <button type="button" onClick={() => { reset(); setView('login'); }} className="font-bold hover:opacity-80" style={{ color: c.acc }}>
+                Already have an account? Sign in
+              </button>
+            )}
+            {view === 'forgot' && (
+              <button type="button" onClick={() => { reset(); setView('login'); }} className="font-bold hover:opacity-80" style={{ color: c.muted }}>
+                ← Back to sign in
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      </main>
     </>
   );
 };

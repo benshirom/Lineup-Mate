@@ -2,9 +2,9 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
+import { getThemeColors } from '@/lib/platform';
 
 interface Profile {
-  email?: string | null;
   display_name?: string | null;
 }
 
@@ -36,23 +36,27 @@ interface GroupData {
   invite_code: string;
 }
 
+function memberLabel(member: GroupMember): string {
+  if (member.profile?.display_name) return member.profile.display_name;
+  return `User·${member.user_id.slice(0, 6)}`;
+}
+
 export default function GroupPage() {
   const router = useRouter();
   const { groupId } = router.query;
   const { user, supabase } = useAuth();
+  const c = getThemeColors('dark');
+
   const [group, setGroup] = useState<GroupData | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [performancePrefs, setPerformancePrefs] = useState<GroupMemberPref[]>([]);
   const [performances, setPerformances] = useState<Record<number, PerformanceInfo>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
+    if (!user) { router.push('/login'); return; }
     if (!groupId) return;
 
     const loadData = async () => {
@@ -83,22 +87,19 @@ export default function GroupPage() {
         if (memberIds.length > 0) {
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, email, display_name')
+            .select('id, display_name')
             .in('id', memberIds);
 
           if (profilesError) throw profilesError;
 
           profilesById = Object.fromEntries(
-            (profilesData ?? []).map((profile: any) => [
-              profile.id,
-              { email: profile.email, display_name: profile.display_name }
-            ])
+            (profilesData ?? []).map((p: any) => [p.id, { display_name: p.display_name }])
           );
         }
 
-        const memberList: GroupMember[] = rawMembers.map((member) => ({
-          ...member,
-          profile: profilesById[member.user_id] ?? null
+        const memberList: GroupMember[] = rawMembers.map((m) => ({
+          ...m,
+          profile: profilesById[m.user_id] ?? null
         }));
 
         setMembers(memberList);
@@ -111,34 +112,26 @@ export default function GroupPage() {
 
         const { data: prefs, error: prefsError } = await supabase
           .from('user_performance_preferences')
-          .select('performance_id,status,user_id')
+          .select('performance_id, status, user_id')
           .in('user_id', memberIds)
           .neq('status', null);
 
         if (prefsError) throw prefsError;
 
-        const prefWithProfile: GroupMemberPref[] = (prefs ?? []).map((p: any) => {
-          const matchingMember = memberList.find((m) => m.user_id === p.user_id);
-          const label =
-            matchingMember?.profile?.display_name ||
-            matchingMember?.profile?.email ||
-            p.user_id.slice(0, 8);
-
+        const prefWithLabel: GroupMemberPref[] = (prefs ?? []).map((p: any) => {
+          const match = memberList.find((m) => m.user_id === p.user_id);
           return {
             performance_id: p.performance_id,
             status: p.status,
             user_id: p.user_id,
-            user_label: label
+            user_label: match ? memberLabel(match) : `User·${p.user_id.slice(0, 6)}`
           };
         });
 
-        setPerformancePrefs(prefWithProfile);
+        setPerformancePrefs(prefWithLabel);
 
         const uniquePerfIds = Array.from(new Set((prefs ?? []).map((p: any) => p.performance_id)));
-        if (uniquePerfIds.length === 0) {
-          setPerformances({});
-          return;
-        }
+        if (uniquePerfIds.length === 0) { setPerformances({}); return; }
 
         const { data: perfData, error: perfError } = await supabase
           .from('performances')
@@ -160,8 +153,7 @@ export default function GroupPage() {
         });
         setPerformances(perfMap);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Could not load group schedule.';
-        setError(message);
+        setError(err instanceof Error ? err.message : 'Could not load group schedule.');
       } finally {
         setLoading(false);
       }
@@ -176,19 +168,10 @@ export default function GroupPage() {
     performancePrefs.forEach((pref) => {
       const perf = performances[pref.performance_id];
       if (!perf) return;
-
       const key = `${perf.day_date}__${perf.start_time}__${perf.stage_name}__${perf.id}`;
-      if (!result[key]) {
-        result[key] = { perf, attendees: [], maybes: [] };
-      }
-
-      if (pref.status === 'going') {
-        result[key].attendees.push(pref.user_label);
-      }
-
-      if (pref.status === 'maybe') {
-        result[key].maybes.push(pref.user_label);
-      }
+      if (!result[key]) result[key] = { perf, attendees: [], maybes: [] };
+      if (pref.status === 'going') result[key].attendees.push(pref.user_label);
+      if (pref.status === 'maybe') result[key].maybes.push(pref.user_label);
     });
 
     return result;
@@ -199,95 +182,155 @@ export default function GroupPage() {
   const copyInviteCode = async () => {
     if (!group?.invite_code) return;
     await navigator.clipboard.writeText(group.invite_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
   };
 
   return (
     <>
       <Navbar />
-      <main className="p-4 max-w-6xl mx-auto">
-        <div className="mb-6">
-          <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">Group schedule</p>
-          <h1 className="text-3xl font-bold text-gray-900">{group ? group.name : 'Group'}</h1>
-        </div>
+      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+        <section className="mx-auto max-w-6xl px-4 py-8">
+          <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Group Schedule</p>
+                <h1 className="text-4xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
+                  {group ? group.name : 'Loading…'}
+                </h1>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push('/groups')}
+                className="rounded-full px-4 py-2 text-sm font-black"
+                style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+              >
+                ← My Groups
+              </button>
+            </div>
+          </header>
 
-        {loading && <p>Loading group schedule…</p>}
-        {error && <p className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">{error}</p>}
+          {loading && <p style={{ color: c.muted }}>Loading group schedule…</p>}
+          {error && (
+            <p className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>
+              {error}
+            </p>
+          )}
 
-        {!loading && group && (
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="border border-gray-200 rounded-xl bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-2">Invite friends</h2>
-              <p className="text-sm text-gray-600 mb-3">Share this code so friends can join from the festival page.</p>
-              <div className="flex gap-2">
-                <code className="flex-1 rounded-lg bg-gray-100 px-3 py-2 text-sm font-mono">{group.invite_code}</code>
-                <button type="button" onClick={copyInviteCode} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                  Copy
-                </button>
+          {!loading && group && (
+            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                <h2 className="mb-1 font-black">Invite friends</h2>
+                <p className="mb-4 text-sm" style={{ color: c.muted }}>Share this code so friends can join from the festival page.</p>
+                <div className="flex items-center gap-2">
+                  <code
+                    className="flex-1 rounded-2xl px-4 py-3 text-sm font-black"
+                    style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
+                  >
+                    {group.invite_code}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyInviteCode}
+                    className="rounded-full px-4 py-3 text-sm font-black text-white"
+                    style={{ background: copied ? '#16a34a' : c.accB }}
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                <h2 className="mb-3 font-black">Members ({members.length})</h2>
+                {members.length === 0 ? (
+                  <p className="text-sm" style={{ color: c.muted }}>No members yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {members.map((member) => (
+                      <li
+                        key={member.user_id}
+                        className="flex items-center justify-between rounded-2xl px-3 py-2"
+                        style={{ background: c.surf2 }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-black"
+                            style={{ background: `${c.acc}33`, color: c.acc }}
+                          >
+                            {memberLabel(member).slice(0, 1).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-bold">{memberLabel(member)}</span>
+                        </div>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-xs font-black capitalize"
+                          style={{ background: c.surf, color: c.muted, border: `1px solid ${c.brd}` }}
+                        >
+                          {member.role}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
+          )}
 
-            <div className="border border-gray-200 rounded-xl bg-white p-4 shadow-sm">
-              <h2 className="font-semibold text-gray-900 mb-2">Members</h2>
-              {members.length === 0 ? (
-                <p className="text-sm text-gray-600">No members yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {members.map((member) => (
-                    <li key={member.user_id} className="flex justify-between text-sm border-b border-gray-100 pb-2 last:border-b-0">
-                      <span>{member.profile?.display_name || member.profile?.email || member.user_id.slice(0, 8)}</span>
-                      <span className="text-gray-500 capitalize">{member.role}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {!loading && !error && sortedKeys.length === 0 && (
+            <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+              <div className="text-5xl">🎶</div>
+              <h2 className="mt-3 text-2xl font-black">No preferences yet</h2>
+              <p className="mt-2 text-sm" style={{ color: c.muted }}>
+                Group members haven't starred any acts yet. Open the festival and tap ★ on artists you want to see.
+              </p>
             </div>
-          </section>
-        )}
+          )}
 
-        {!loading && !error && sortedKeys.length === 0 && <p>No preferences set for this group yet.</p>}
-
-        {!loading && sortedKeys.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Stage</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Artist</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Going</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Maybe</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedKeys.map((key) => {
-                  const { perf, attendees, maybes } = schedule[key];
-                  return (
-                    <tr key={key} className="border-t border-gray-100">
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {new Date(perf.day_date).toLocaleDateString(undefined, {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {new Date(perf.start_time).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{perf.stage_name}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{perf.artist_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{attendees.length > 0 ? attendees.join(', ') : '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{maybes.length > 0 ? maybes.join(', ') : '—'}</td>
+          {!loading && sortedKeys.length > 0 && (
+            <div className="rounded-[28px] overflow-hidden shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+              <div className="overflow-x-auto scroll-thin">
+                <table className="min-w-full">
+                  <thead>
+                    <tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}>
+                      <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th>
+                      <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th>
+                      <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Going</th>
+                      <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Maybe</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </thead>
+                  <tbody>
+                    {sortedKeys.map((key, idx) => {
+                      const { perf, attendees, maybes } = schedule[key];
+                      return (
+                        <tr
+                          key={key}
+                          style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }}
+                          className="transition hover:opacity-80"
+                        >
+                          <td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>
+                            {new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>
+                            {new Date(perf.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="px-4 py-3 text-sm" style={{ color: c.muted }}>{perf.stage_name}</td>
+                          <td className="px-4 py-3 text-sm font-black" style={{ color: c.txt }}>{perf.artist_name}</td>
+                          <td className="px-4 py-3 text-sm font-bold" style={{ color: '#ffd166' }}>
+                            {attendees.length > 0 ? attendees.join(', ') : <span style={{ color: c.muted }}>—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold" style={{ color: c.acc }}>
+                            {maybes.length > 0 ? maybes.join(', ') : <span style={{ color: c.muted }}>—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
       </main>
     </>
   );

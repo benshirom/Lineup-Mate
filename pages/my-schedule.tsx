@@ -43,6 +43,7 @@ export default function MySchedulePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [theme] = useState<ThemeMode>('dark');
 
   const c = getThemeColors(theme);
@@ -160,11 +161,9 @@ export default function MySchedulePage() {
   const clearSchedule = async () => {
     if (!user || items.length === 0) return;
 
-    const approved = window.confirm('Remove all saved acts from your schedule?');
-    if (!approved) return;
-
     setLoading(true);
     setError(null);
+    setConfirmClear(false);
 
     try {
       const { error } = await supabase
@@ -206,14 +205,36 @@ export default function MySchedulePage() {
                   Browse Events
                 </button>
                 {items.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearSchedule}
-                    className="rounded-full px-4 py-2 text-sm font-black text-white"
-                    style={{ background: '#dc2626' }}
-                  >
-                    Clear All
-                  </button>
+                  confirmClear ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold" style={{ color: c.muted }}>Remove everything?</span>
+                      <button
+                        type="button"
+                        onClick={clearSchedule}
+                        className="rounded-full px-3 py-1.5 text-xs font-black text-white"
+                        style={{ background: '#dc2626' }}
+                      >
+                        Yes, clear all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmClear(false)}
+                        className="rounded-full px-3 py-1.5 text-xs font-black"
+                        style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClear(true)}
+                      className="rounded-full px-4 py-2 text-sm font-black"
+                      style={{ background: c.surf2, border: '1px solid #dc262640', color: '#dc2626' }}
+                    >
+                      Clear All
+                    </button>
+                  )
                 )}
               </div>
             </div>
