@@ -3,6 +3,8 @@ import { Session, User } from '@supabase/supabase-js';
 import supabase from './supabaseClient';
 import { translations, type Language, type ThemeMode } from './platform';
 
+type TranslationSet = (typeof translations)[Language];
+
 interface UserProfile {
   email: string | null;
   display_name: string | null;
@@ -18,7 +20,7 @@ interface AuthContextProps {
   profile: UserProfile | null;
   language: Language;
   theme: ThemeMode;
-  t: typeof translations.en;
+  t: TranslationSet;
   supabase: typeof supabase;
   refreshProfile: () => Promise<void>;
   setLocalPreferences: (next: Partial<Pick<UserProfile, 'language' | 'theme'>>) => void;
