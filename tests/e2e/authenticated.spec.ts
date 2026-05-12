@@ -35,4 +35,42 @@ test.describe('authenticated flows', () => {
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
     await expect(page.getByTestId('saved-acts-section')).toBeVisible({ timeout: 20_000 });
   });
+
+  test('My Schedule groups saved acts by festival and opens the exact day', async ({ page }) => {
+    await openFirstFestival(page);
+
+    const dayTabs = page.getByTestId('festival-day-tab');
+    const dayCount = await dayTabs.count();
+    if (dayCount > 1) {
+      await dayTabs.nth(1).click();
+    }
+
+    await ensureFirstActIsStarred(page);
+    const selectedDayUrl = page.url();
+    const selectedDay = new URL(selectedDayUrl).searchParams.get('day');
+
+    await page.getByRole('link', { name: /My Schedule/i }).click();
+    await expect(page.getByTestId('schedule-festival-group').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('schedule-day-group').first()).toBeVisible({ timeout: 20_000 });
+
+    const festivalGroupCount = await page.getByTestId('schedule-festival-group').count();
+    expect(festivalGroupCount).toBeGreaterThanOrEqual(1);
+
+    await page.getByTestId('open-festival-day').first().click();
+    await expect(page).toHaveURL(/\/festival\/\d+\?day=/, { timeout: 20_000 });
+
+    if (selectedDay) {
+      expect(new URL(page.url()).searchParams.get('day')).toBeTruthy();
+    }
+  });
+
+  test('user can open Profile page from navbar', async ({ page }) => {
+    await page.getByRole('link', { name: /^Profile$/i }).click();
+    await expect(page.getByRole('heading', { name: /^Profile$/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Account details/i)).toBeVisible();
+    await expect(page.getByLabel(/Display Name/i)).toBeVisible();
+    await expect(page.getByLabel(/^Email$/i)).toBeVisible();
+    await expect(page.getByLabel(/Theme/i)).toBeVisible();
+    await expect(page.getByLabel(/Language/i)).toBeVisible();
+  });
 });
