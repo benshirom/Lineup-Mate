@@ -2,9 +2,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors, type ThemeMode } from '@/lib/platform';
+import { formatDateRange, getThemeColors, type ThemeMode } from '@/lib/platform';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
+
+interface SavedFestivalItem {
+  savedId: number;
+  festivalId: number;
+  name: string;
+  year: number;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  emoji: string;
+  color: string;
+  genreLabel: string | null;
+  createdAt: string;
+}
 
 interface ScheduleItem {
   preferenceId: number;
@@ -36,13 +50,19 @@ function dateLabel(dateString: string) {
   });
 }
 
+function festivalTitle(name: string, year: number) {
+  return name.includes(String(year)) ? name : `${name} ${year}`;
+}
+
 export default function MySchedulePage() {
   const router = useRouter();
   const { user, supabase } = useAuth();
   const [items, setItems] = useState<ScheduleItem[]>([]);
+  const [savedFestivals, setSavedFestivals] = useState<SavedFestivalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removingFestivalId, setRemovingFestivalId] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [theme] = useState<ThemeMode>('dark');
 
@@ -59,29 +79,64 @@ export default function MySchedulePage() {
       setError(null);
 
       try {
-        const { data, error } = await supabase
-          .from('user_performance_preferences')
-          .select(`
-            id,
-            performance_id,
-            status,
-            performances(
+        const [savedFestivalsResult, preferencesResult] = await Promise.all([
+          supabase
+            .from('saved_festivals')
+            .select(`
               id,
-              start_time,
-              end_time,
-              day_date,
-              festivals(id, name, year, emoji, color, location),
-              stages(name, color),
-              artists(name)
-            )
-          `)
-          .eq('user_id', user.id)
-          .in('status', ['going', 'maybe'])
-          .order('updated_at', { ascending: false });
+              created_at,
+              festival_id,
+              festivals(id, name, year, emoji, color, location, start_date, end_date, genre_label)
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('user_performance_preferences')
+            .select(`
+              id,
+              performance_id,
+              status,
+              performances(
+                id,
+                start_time,
+                end_time,
+                day_date,
+                festivals(id, name, year, emoji, color, location),
+                stages(name, color),
+                artists(name)
+              )
+            `)
+            .eq('user_id', user.id)
+            .in('status', ['going', 'maybe'])
+            .order('updated_at', { ascending: false })
+        ]);
 
-        if (error) throw error;
+        if (savedFestivalsResult.error) throw savedFestivalsResult.error;
+        if (preferencesResult.error) throw preferencesResult.error;
 
-        const mapped = (data || [])
+        const mappedFestivals = (savedFestivalsResult.data || [])
+          .map((row: any): SavedFestivalItem | null => {
+            const festival = row.festivals;
+            if (!festival) return null;
+            return {
+              savedId: row.id,
+              festivalId: festival.id,
+              name: festival.name || 'Festival',
+              year: festival.year || new Date().getFullYear(),
+              location: festival.location || null,
+              startDate: festival.start_date || null,
+              endDate: festival.end_date || null,
+              emoji: festival.emoji || '🎪',
+              color: festival.color || '#e85d26',
+              genreLabel: festival.genre_label || null,
+              createdAt: row.created_at
+            };
+          })
+          .filter(Boolean) as SavedFestivalItem[];
+
+        setSavedFestivals(mappedFestivals);
+
+        const mapped = (preferencesResult.data || [])
           .map((row: any): ScheduleItem | null => {
             const performance = row.performances;
             if (!performance) return null;
@@ -129,7 +184,7 @@ export default function MySchedulePage() {
 
     return Object.entries(result).map(([key, groupItems]) => ({
       key,
-      festival: `${groupItems[0].festivalEmoji} ${groupItems[0].festivalName} ${groupItems[0].festivalYear}`,
+      festival: `${groupItems[0].festivalEmoji} ${festivalTitle(groupItems[0].festivalName, groupItems[0].festivalYear)}`,
       festivalId: groupItems[0].festivalId,
       festivalColor: groupItems[0].festivalColor,
       dayDate: groupItems[0].dayDate,
@@ -155,6 +210,26 @@ export default function MySchedulePage() {
       setError(err instanceof Error ? err.message : 'Could not remove this item.');
     } finally {
       setRemovingId(null);
+    }
+  };
+
+  const removeSavedFestival = async (festival: SavedFestivalItem) => {
+    if (!user) return;
+    setRemovingFestivalId(festival.festivalId);
+
+    try {
+      const { error } = await supabase
+        .from('saved_festivals')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('festival_id', festival.festivalId);
+
+      if (error) throw error;
+      setSavedFestivals((current) => current.filter((item) => item.festivalId !== festival.festivalId));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not remove this festival.');
+    } finally {
+      setRemovingFestivalId(null);
     }
   };
 
@@ -185,53 +260,33 @@ export default function MySchedulePage() {
     <>
       <Navbar />
       <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
-        <section className="mx-auto max-w-5xl px-4 py-8">
+        <section className="mx-auto max-w-6xl px-4 py-8">
           <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</p>
                 <h1 className="text-4xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>My Schedule</h1>
                 <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                  All the acts you marked with a star, organized by festival and day.
+                  Your saved festivals and starred acts in one place.
                 </p>
               </div>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => router.push('/')}
-                  className="rounded-full px-4 py-2 text-sm font-black"
-                  style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
-                >
+                <button type="button" onClick={() => router.push('/')} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
                   Browse Events
                 </button>
                 {items.length > 0 && (
                   confirmClear ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold" style={{ color: c.muted }}>Remove everything?</span>
-                      <button
-                        type="button"
-                        onClick={clearSchedule}
-                        className="rounded-full px-3 py-1.5 text-xs font-black text-white"
-                        style={{ background: '#dc2626' }}
-                      >
+                      <span className="text-xs font-bold" style={{ color: c.muted }}>Remove acts?</span>
+                      <button type="button" onClick={clearSchedule} className="rounded-full px-3 py-1.5 text-xs font-black text-white" style={{ background: '#dc2626' }}>
                         Yes, clear all
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmClear(false)}
-                        className="rounded-full px-3 py-1.5 text-xs font-black"
-                        style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
-                      >
+                      <button type="button" onClick={() => setConfirmClear(false)} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>
                         Cancel
                       </button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmClear(true)}
-                      className="rounded-full px-4 py-2 text-sm font-black"
-                      style={{ background: c.surf2, border: '1px solid #dc262640', color: '#dc2626' }}
-                    >
+                    <button type="button" onClick={() => setConfirmClear(true)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: '1px solid #dc262640', color: '#dc2626' }}>
                       Clear All
                     </button>
                   )
@@ -243,6 +298,57 @@ export default function MySchedulePage() {
           {loading && <p style={{ color: c.muted }}>Loading your schedule…</p>}
           {error && <p className="mb-4 rounded-xl p-4 text-sm text-red-700" style={{ background: '#fee2e2', border: '1px solid #fecaca' }}>{error}</p>}
 
+          {!loading && !error && (
+            <section className="mb-7 rounded-[28px] p-5 shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="saved-festivals-section">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Saved Festivals</p>
+                  <h2 className="text-2xl font-black">Events you saved</h2>
+                </div>
+                <span className="rounded-full px-3 py-1 text-xs font-black" style={{ background: c.surf2, color: c.muted, border: `1px solid ${c.brd}` }}>
+                  {savedFestivals.length} saved
+                </span>
+              </div>
+
+              {savedFestivals.length === 0 ? (
+                <div className="rounded-3xl p-5 text-center" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                  <div className="text-4xl">🎪</div>
+                  <h3 className="mt-2 font-black">No saved festivals yet</h3>
+                  <p className="mt-1 text-sm" style={{ color: c.muted }}>Save a festival from the home page and it will appear here.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2" data-testid="saved-festival-list">
+                  {savedFestivals.map((festival) => (
+                    <article key={festival.festivalId} className="overflow-hidden rounded-3xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }} data-testid="saved-festival-card">
+                      <div className="h-2" style={{ background: festival.color }} />
+                      <div className="p-4">
+                        <div className="mb-3 flex items-start gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: `${festival.color}22` }}>
+                            {festival.emoji}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-black uppercase" style={{ color: festival.color }}>{festival.genreLabel || 'Festival'}</p>
+                            <h3 className="truncate text-xl font-black">{festivalTitle(festival.name, festival.year)}</h3>
+                            <p className="mt-1 text-sm" style={{ color: c.muted }}>📍 {festival.location || 'Location TBA'}</p>
+                            <p className="text-sm" style={{ color: c.muted }}>📅 {formatDateRange(festival.startDate, festival.endDate)}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => router.push(`/festival/${festival.festivalId}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: festival.color }}>
+                            Open Festival
+                          </button>
+                          <button type="button" disabled={removingFestivalId === festival.festivalId} onClick={() => removeSavedFestival(festival)} className="rounded-full px-4 py-2 text-sm font-black disabled:opacity-60" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.muted }}>
+                            {removingFestivalId === festival.festivalId ? 'Removing…' : 'Remove'}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
           {!loading && items.length === 0 && !error && (
             <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">☆</div>
@@ -250,66 +356,52 @@ export default function MySchedulePage() {
               <p className="mt-2 text-sm" style={{ color: c.muted }}>
                 Open a festival and tap the star next to artists you do not want to miss.
               </p>
-              <button
-                type="button"
-                onClick={() => router.push('/')}
-                className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white"
-                style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})` }}
-              >
+              <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})` }}>
                 Find Festivals
               </button>
             </div>
           )}
 
-          <div className="space-y-5">
-            {groupedItems.map((group) => (
-              <section key={group.key} className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <div className="h-2" style={{ background: group.festivalColor }} />
-                <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-xl font-black">{group.festival}</h2>
-                    <p className="text-sm" style={{ color: c.muted }}>{dateLabel(group.dayDate)}</p>
+          {items.length > 0 && (
+            <div className="space-y-5" data-testid="saved-acts-section">
+              {groupedItems.map((group) => (
+                <section key={group.key} className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                  <div className="h-2" style={{ background: group.festivalColor }} />
+                  <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-black">{group.festival}</h2>
+                      <p className="text-sm" style={{ color: c.muted }}>{dateLabel(group.dayDate)}</p>
+                    </div>
+                    <button type="button" onClick={() => router.push(`/festival/${group.festivalId}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: group.festivalColor }}>
+                      Open Festival
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/festival/${group.festivalId}`)}
-                    className="rounded-full px-4 py-2 text-sm font-black text-white"
-                    style={{ background: group.festivalColor }}
-                  >
-                    Open Festival
-                  </button>
-                </div>
 
-                <div className="divide-y" style={{ borderColor: c.brd }}>
-                  {group.items.map((item) => (
-                    <article key={item.performanceId} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ background: `${item.stageColor}22`, color: item.stageColor }}>
-                          ★
+                  <div className="divide-y" style={{ borderColor: c.brd }}>
+                    {group.items.map((item) => (
+                      <article key={item.performanceId} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ background: `${item.stageColor}22`, color: item.stageColor }}>
+                            ★
+                          </div>
+                          <div>
+                            <h3 className="font-black">{item.artistName}</h3>
+                            <p className="text-sm" style={{ color: c.muted }}>
+                              {timeLabel(item.startTime)} – {timeLabel(item.endTime)} · <span style={{ color: item.stageColor }}>{item.stageName}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-black">{item.artistName}</h3>
-                          <p className="text-sm" style={{ color: c.muted }}>
-                            {timeLabel(item.startTime)} – {timeLabel(item.endTime)} · <span style={{ color: item.stageColor }}>{item.stageName}</span>
-                          </p>
-                        </div>
-                      </div>
 
-                      <button
-                        type="button"
-                        disabled={removingId === item.performanceId}
-                        onClick={() => removeItem(item)}
-                        className="rounded-full px-4 py-2 text-sm font-black disabled:opacity-60"
-                        style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
-                      >
-                        {removingId === item.performanceId ? 'Removing…' : 'Remove'}
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+                        <button type="button" disabled={removingId === item.performanceId} onClick={() => removeItem(item)} className="rounded-full px-4 py-2 text-sm font-black disabled:opacity-60" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>
+                          {removingId === item.performanceId ? 'Removing…' : 'Remove'}
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </>
