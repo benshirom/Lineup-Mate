@@ -32,12 +32,8 @@ test.describe('my schedule management', () => {
     await page.getByRole('link', { name: /My Schedule/i }).click();
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
 
-    page.once('dialog', async (dialog) => {
-      expect(dialog.type()).toBe('confirm');
-      await dialog.accept();
-    });
-
     await page.getByRole('button', { name: /Clear All/i }).click();
+    await page.getByRole('button', { name: /Yes, clear all/i }).click();
     await expect(page.getByText(/No saved acts yet/i)).toBeVisible();
   });
 });

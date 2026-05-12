@@ -26,6 +26,6 @@ test.describe('public browsing', () => {
     await page.getByRole('button', { name: /Save Festival/i }).first().click();
 
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByRole('heading', { name: /Login|Create an Account/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Welcome back|Create an account/i })).toBeVisible();
   });
 });
