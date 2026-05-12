@@ -11,12 +11,15 @@ test.describe('authenticated flows', () => {
     await login(page, testEmail!, testPassword!);
   });
 
-  test('user can save a festival and open My Schedule', async ({ page }) => {
+  test('user can save a festival and see it on My Schedule', async ({ page }) => {
     await expect(page.getByRole('link', { name: /My Schedule/i })).toBeVisible();
     await ensureFirstFestivalIsSaved(page);
 
     await page.getByRole('link', { name: /My Schedule/i }).click();
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
+    await expect(page.getByTestId('saved-festivals-section')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('saved-festival-card').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /Open Festival/i }).first()).toBeVisible();
   });
 
   test('user can open groups area', async ({ page }) => {
@@ -30,5 +33,6 @@ test.describe('authenticated flows', () => {
 
     await page.getByRole('link', { name: /My Schedule/i }).click();
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
+    await expect(page.getByTestId('saved-acts-section')).toBeVisible({ timeout: 20_000 });
   });
 });
