@@ -57,7 +57,7 @@ function festivalTitle(festival: Festival) {
 
 export default function FestivalPage() {
   const router = useRouter();
-  const { festivalId } = router.query;
+  const { festivalId, day } = router.query;
   const { user, supabase } = useAuth();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [performances, setPerformances] = useState<PerformanceItem[]>([]);
@@ -131,10 +131,11 @@ export default function FestivalPage() {
 
         const nextDays = Array.from(new Set(mapped.map((performance) => performance.dayDate))).sort();
         const nextStages = Array.from(new Set(mapped.map((performance) => performance.stageName)));
+        const requestedDay = typeof day === 'string' ? day : '';
 
         setPerformances(mapped);
         setDays(nextDays);
-        setSelectedDay(nextDays[0] || '');
+        setSelectedDay(nextDays.includes(requestedDay) ? requestedDay : nextDays[0] || '');
         setActiveStages(Object.fromEntries(nextStages.map((stage) => [stage, true])));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Could not load festival data.');
@@ -144,7 +145,14 @@ export default function FestivalPage() {
     };
 
     loadData();
-  }, [festivalId, supabase, user]);
+  }, [festivalId, supabase, user, day]);
+
+  const selectDay = (nextDay: string) => {
+    setSelectedDay(nextDay);
+    if (festivalId) {
+      router.replace(`/festival/${festivalId}?day=${nextDay}`, undefined, { shallow: true });
+    }
+  };
 
   const selectedDayPerformances = useMemo(() => {
     return performances.filter((performance) => performance.dayDate === selectedDay);
@@ -336,12 +344,7 @@ export default function FestivalPage() {
                 <div className="rounded-3xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                   <h2 className="mb-2 font-black">Create a group</h2>
                   <p className="mb-4 text-sm" style={{ color: c.muted }}>Open a shared schedule and invite friends to compare picks.</p>
-                  <button
-                    type="button"
-                    onClick={() => { if (!requireLogin()) return; setShowCreateModal(true); }}
-                    className="rounded-2xl px-4 py-3 text-sm font-black text-white"
-                    style={{ background: festival.color || c.acc }}
-                  >
+                  <button type="button" onClick={() => { if (!requireLogin()) return; setShowCreateModal(true); }} className="rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: festival.color || c.acc }}>
                     {user ? 'Create Group' : 'Sign in to Create Group'}
                   </button>
                 </div>
@@ -350,13 +353,7 @@ export default function FestivalPage() {
                   <h2 className="mb-2 font-black">Join a group</h2>
                   <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend.</p>
                   <div className="flex gap-2">
-                    <input
-                      value={inviteCode}
-                      onChange={(event) => setInviteCode(event.target.value)}
-                      placeholder="Invite code"
-                      className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none"
-                      style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
-                    />
+                    <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
                     <button type="submit" className="rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: c.accB }}>
                       {user ? 'Join' : 'Sign in'}
                     </button>
@@ -367,17 +364,7 @@ export default function FestivalPage() {
 
               <div className="mb-5 flex flex-wrap gap-2">
                 {(['timeline', 'lineup', 'info'] as FestivalTab[]).map((nextTab) => (
-                  <button
-                    key={nextTab}
-                    type="button"
-                    onClick={() => setTab(nextTab)}
-                    className="rounded-full px-5 py-2 text-sm font-black capitalize"
-                    style={{
-                      background: tab === nextTab ? festival.color || c.acc : c.surf,
-                      color: tab === nextTab ? '#fff' : c.muted,
-                      border: `1px solid ${tab === nextTab ? festival.color || c.acc : c.brd}`
-                    }}
-                  >
+                  <button key={nextTab} type="button" onClick={() => setTab(nextTab)} className="rounded-full px-5 py-2 text-sm font-black capitalize" style={{ background: tab === nextTab ? festival.color || c.acc : c.surf, color: tab === nextTab ? '#fff' : c.muted, border: `1px solid ${tab === nextTab ? festival.color || c.acc : c.brd}` }}>
                     {nextTab}
                   </button>
                 ))}
@@ -385,27 +372,12 @@ export default function FestivalPage() {
 
               {days.length > 0 && (
                 <div className="relative mb-5">
-                  <div
-                    className="flex gap-2 overflow-x-auto scroll-hidden py-1 px-0.5"
-                    data-testid="festival-day-tabs"
-                    style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%)' }}
-                  >
-                  {days.map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      data-testid="festival-day-tab"
-                      onClick={() => setSelectedDay(day)}
-                      className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black"
-                      style={{
-                        background: selectedDay === day ? c.accB : c.surf,
-                        color: selectedDay === day ? '#fff' : c.muted,
-                        border: `1px solid ${selectedDay === day ? c.accB : c.brd}`
-                      }}
-                    >
-                      {new Date(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </button>
-                  ))}
+                  <div className="flex gap-2 overflow-x-auto scroll-hidden py-1 px-0.5" data-testid="festival-day-tabs" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%)' }}>
+                    {days.map((nextDay) => (
+                      <button key={nextDay} type="button" data-testid="festival-day-tab" onClick={() => selectDay(nextDay)} className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black" style={{ background: selectedDay === nextDay ? c.accB : c.surf, color: selectedDay === nextDay ? '#fff' : c.muted, border: `1px solid ${selectedDay === nextDay ? c.accB : c.brd}` }}>
+                        {new Date(nextDay).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -417,20 +389,7 @@ export default function FestivalPage() {
                       const isOn = activeStages[stage.name] !== false;
                       const hasShowsToday = selectedDayPerformances.some((performance) => performance.stageName === stage.name);
                       return (
-                        <button
-                          key={stage.name}
-                          type="button"
-                          data-testid="festival-stage-filter"
-                          onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))}
-                          className="rounded-full px-3 py-1 text-xs font-black"
-                          style={{
-                            background: isOn ? stage.color : c.surf2,
-                            color: isOn ? '#fff' : c.muted,
-                            border: `1px solid ${isOn ? stage.color : c.brd}`,
-                            opacity: hasShowsToday ? 1 : 0.45
-                          }}
-                          title={hasShowsToday ? stage.name : `${stage.name} has no shows on this day`}
-                        >
+                        <button key={stage.name} type="button" data-testid="festival-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }} title={hasShowsToday ? stage.name : `${stage.name} has no shows on this day`}>
                           {stage.name}
                         </button>
                       );
@@ -465,18 +424,10 @@ export default function FestivalPage() {
                                   const left = (hourNumber(performance.startTime) - minHour) * hourWidth;
                                   const width = Math.max(92, durationHours(performance.startTime, performance.endTime) * hourWidth - 6);
                                   return (
-                                    <div
-                                      key={performance.id}
-                                      data-testid="festival-performance-block"
-                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`}
-                                      className="absolute top-2 h-12 overflow-hidden rounded-xl px-3 pr-10 text-left text-xs font-black text-white shadow-lg"
-                                      style={{ left, width, background: performance.stageColor }}
-                                    >
+                                    <div key={performance.id} data-testid="festival-performance-block" title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`} className="absolute top-2 h-12 overflow-hidden rounded-xl px-3 pr-10 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stageColor }}>
                                       <span className="block truncate">{performance.artistName}</span>
                                       <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
-                                      <span className="absolute right-2 top-1/2 -translate-y-1/2">
-                                        {renderStarButton(performance, true)}
-                                      </span>
+                                      <span className="absolute right-2 top-1/2 -translate-y-1/2">{renderStarButton(performance, true)}</span>
                                     </div>
                                   );
                                 })}
@@ -531,46 +482,15 @@ export default function FestivalPage() {
               {!loading && performances.length === 0 && <p style={{ color: c.muted }}>No active performances found.</p>}
 
               {showCreateModal && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                  style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  <div
-                    className="w-full max-w-sm rounded-[28px] p-6 shadow-2xl"
-                    style={{ background: c.surf, border: `1px solid ${c.brd}` }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} onClick={() => setShowCreateModal(false)}>
+                  <div className="w-full max-w-sm rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} onClick={(e) => e.stopPropagation()}>
                     <h2 className="mb-1 text-2xl font-black">Create a group</h2>
                     <p className="mb-5 text-sm" style={{ color: c.muted }}>Give your group a name your friends will recognise.</p>
                     <form onSubmit={handleCreateGroup} className="space-y-4">
-                      <input
-                        autoFocus
-                        type="text"
-                        value={groupNameInput}
-                        onChange={(e) => setGroupNameInput(e.target.value)}
-                        placeholder="e.g. Ozora Squad 2026"
-                        className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
-                        style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
-                        maxLength={60}
-                      />
+                      <input autoFocus type="text" value={groupNameInput} onChange={(e) => setGroupNameInput(e.target.value)} placeholder="e.g. Ozora Squad 2026" className="w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} maxLength={60} />
                       <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => { setShowCreateModal(false); setGroupNameInput(''); }}
-                          className="flex-1 rounded-2xl px-4 py-3 text-sm font-black"
-                          style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={!groupNameInput.trim() || creatingGroup}
-                          className="flex-1 rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50"
-                          style={{ background: festival.color || c.acc }}
-                        >
-                          {creatingGroup ? 'Creating…' : 'Create'}
-                        </button>
+                        <button type="button" onClick={() => { setShowCreateModal(false); setGroupNameInput(''); }} className="flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>Cancel</button>
+                        <button type="submit" disabled={!groupNameInput.trim() || creatingGroup} className="flex-1 rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: festival.color || c.acc }}>{creatingGroup ? 'Creating…' : 'Create'}</button>
                       </div>
                     </form>
                   </div>
