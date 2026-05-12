@@ -63,9 +63,26 @@ export const genreFilters = [
   { key: 'multi', en: 'Multi-genre', he: 'מולטי-ז׳אנר' }
 ] as const;
 
+function getPersistedTheme(fallback: ThemeMode): ThemeMode {
+  if (typeof document !== 'undefined') {
+    const datasetTheme = document.documentElement.dataset.theme;
+    if (datasetTheme === 'light' || datasetTheme === 'dark') return datasetTheme;
+  }
+
+  if (typeof window !== 'undefined') {
+    const storedTheme = window.localStorage.getItem('lineup-mate-theme');
+    if (storedTheme === 'light' || storedTheme === 'dark') return storedTheme;
+  }
+
+  return fallback;
+}
+
 export function getThemeColors(theme: ThemeMode) {
-  return theme === 'dark'
+  const resolvedTheme = getPersistedTheme(theme);
+
+  return resolvedTheme === 'dark'
     ? {
+        mode: 'dark' as const,
         bg: '#0d0d1c',
         surf: '#14142a',
         surf2: '#1c1c34',
@@ -76,6 +93,7 @@ export function getThemeColors(theme: ThemeMode) {
         accB: '#7c4fd4'
       }
     : {
+        mode: 'light' as const,
         bg: '#f3f0ea',
         surf: '#ffffff',
         surf2: '#eceae3',
