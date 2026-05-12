@@ -68,6 +68,8 @@ export default function FestivalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
+  const [groupNameInput, setGroupNameInput] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -201,11 +203,11 @@ export default function FestivalPage() {
     }
   };
 
-  const handleCreateGroup = async () => {
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!festival || !requireLogin()) return;
-
-    const groupName = window.prompt('Enter a name for your group');
-    if (!groupName?.trim()) return;
+    const groupName = groupNameInput.trim();
+    if (!groupName) return;
 
     setCreatingGroup(true);
     setError(null);
@@ -213,7 +215,7 @@ export default function FestivalPage() {
     try {
       const { data: newGroup, error: groupError } = await supabase
         .from('groups')
-        .insert({ festival_id: festival.id, name: groupName.trim(), owner_user_id: user!.id })
+        .insert({ festival_id: festival.id, name: groupName, owner_user_id: user!.id })
         .select()
         .single();
 
@@ -229,6 +231,8 @@ export default function FestivalPage() {
       setError(err instanceof Error ? err.message : 'Could not create group.');
     } finally {
       setCreatingGroup(false);
+      setShowCreateModal(false);
+      setGroupNameInput('');
     }
   };
 
@@ -334,12 +338,11 @@ export default function FestivalPage() {
                   <p className="mb-4 text-sm" style={{ color: c.muted }}>Open a shared schedule and invite friends to compare picks.</p>
                   <button
                     type="button"
-                    disabled={creatingGroup}
-                    onClick={handleCreateGroup}
-                    className="rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+                    onClick={() => { if (!requireLogin()) return; setShowCreateModal(true); }}
+                    className="rounded-2xl px-4 py-3 text-sm font-black text-white"
                     style={{ background: festival.color || c.acc }}
                   >
-                    {creatingGroup ? 'Creating…' : user ? 'Create Group' : 'Sign in to Create Group'}
+                    {user ? 'Create Group' : 'Sign in to Create Group'}
                   </button>
                 </div>
 
@@ -381,7 +384,12 @@ export default function FestivalPage() {
               </div>
 
               {days.length > 0 && (
-                <div className="mb-5 flex gap-2 overflow-x-auto pb-2" data-testid="festival-day-tabs">
+                <div className="relative mb-5">
+                  <div
+                    className="flex gap-2 overflow-x-auto scroll-hidden py-1 px-0.5"
+                    data-testid="festival-day-tabs"
+                    style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%)' }}
+                  >
                   {days.map((day) => (
                     <button
                       key={day}
@@ -398,6 +406,7 @@ export default function FestivalPage() {
                       {new Date(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
                     </button>
                   ))}
+                  </div>
                 </div>
               )}
 
@@ -431,7 +440,7 @@ export default function FestivalPage() {
                   {visiblePerformances.length === 0 ? (
                     <p style={{ color: c.muted }}>No shows this day.</p>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto scroll-thin">
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
                           {hours.map((hour) => (
@@ -520,6 +529,53 @@ export default function FestivalPage() {
               )}
 
               {!loading && performances.length === 0 && <p style={{ color: c.muted }}>No active performances found.</p>}
+
+              {showCreateModal && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                  style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  <div
+                    className="w-full max-w-sm rounded-[28px] p-6 shadow-2xl"
+                    style={{ background: c.surf, border: `1px solid ${c.brd}` }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h2 className="mb-1 text-2xl font-black">Create a group</h2>
+                    <p className="mb-5 text-sm" style={{ color: c.muted }}>Give your group a name your friends will recognise.</p>
+                    <form onSubmit={handleCreateGroup} className="space-y-4">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={groupNameInput}
+                        onChange={(e) => setGroupNameInput(e.target.value)}
+                        placeholder="e.g. Ozora Squad 2026"
+                        className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                        style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+                        maxLength={60}
+                      />
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => { setShowCreateModal(false); setGroupNameInput(''); }}
+                          className="flex-1 rounded-2xl px-4 py-3 text-sm font-black"
+                          style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!groupNameInput.trim() || creatingGroup}
+                          className="flex-1 rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50"
+                          style={{ background: festival.color || c.acc }}
+                        >
+                          {creatingGroup ? 'Creating…' : 'Create'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </section>
