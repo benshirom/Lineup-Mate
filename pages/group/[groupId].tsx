@@ -87,8 +87,8 @@ function statusLabel(status: string) {
 export default function GroupPage() {
   const router = useRouter();
   const { groupId } = router.query;
-  const { user, supabase } = useAuth();
-  const c = getThemeColors('dark');
+  const { user, authReady, supabase, theme } = useAuth();
+  const c = getThemeColors(theme);
 
   const [group, setGroup] = useState<GroupData | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -102,6 +102,7 @@ export default function GroupPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!user) { router.push('/login'); return; }
     if (!groupId) return;
 
@@ -192,6 +193,7 @@ export default function GroupPage() {
           .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
           .in('id', uniquePerfIds)
           .eq('is_active', true)
+          .eq('festival_id', mappedGroup.festival_id)
           .order('start_time');
 
         if (perfError) throw perfError;
@@ -223,7 +225,7 @@ export default function GroupPage() {
     };
 
     loadData();
-  }, [groupId, supabase, user, router, c.acc]);
+  }, [authReady, groupId, supabase, user, router, c.acc]);
 
   const performancePreferenceMap = useMemo(() => {
     const result: Record<number, GroupMemberPref[]> = {};
@@ -316,7 +318,7 @@ export default function GroupPage() {
                 <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: group?.festival?.color || c.acc }}>
                   Group Schedule
                 </p>
-                <h1 className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
+                <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
                   {group ? group.name : 'Loading…'}
                 </h1>
                 {group?.festival && (
@@ -331,6 +333,16 @@ export default function GroupPage() {
                   <div>👥 {members.length} members</div>
                   {group?.festival && <div>📍 {group.festival.location || 'Location TBA'}</div>}
                   {group?.festival && <div>📅 {formatDateRange(group.festival.start_date, group.festival.end_date)}</div>}
+                  {group && (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/festival/${group.festival_id}`)}
+                      className="mt-2 rounded-full px-4 py-2 text-sm font-black"
+                      style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}
+                    >
+                      Open Festival
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => router.push('/groups')}
@@ -346,7 +358,7 @@ export default function GroupPage() {
 
           {loading && <p style={{ color: c.muted }}>Loading group schedule…</p>}
           {error && (
-            <p className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>
+            <p data-testid="group-schedule-error" className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>
               {error}
             </p>
           )}
@@ -355,9 +367,9 @@ export default function GroupPage() {
             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <h2 className="mb-1 font-black">Invite friends</h2>
-                <p className="mb-4 text-sm" style={{ color: c.muted }}>Share this code so friends can join from the festival page.</p>
+                <p className="mb-4 text-sm" style={{ color: c.muted }}>Share this code so friends can join from the Groups page or the festival page.</p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}>
+                  <code data-testid="group-page-invite-code" className="flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}>
                     {group.invite_code}
                   </code>
                   <button type="button" onClick={copyInviteCode} className="rounded-full px-4 py-3 text-sm font-black text-white" style={{ background: copied ? '#16a34a' : c.accB }}>
@@ -388,11 +400,11 @@ export default function GroupPage() {
           )}
 
           {!loading && !error && sortedListPerformances.length === 0 && (
-            <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+            <div data-testid="group-empty-picks" className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">🎶</div>
               <h2 className="mt-3 text-2xl font-black">No preferences yet</h2>
               <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                Group members haven't starred any acts yet. Open the festival and tap ★ on artists you want to see.
+                Group members haven't starred any acts for this festival yet. Open the festival and tap ★ on artists you want to see.
               </p>
             </div>
           )}
