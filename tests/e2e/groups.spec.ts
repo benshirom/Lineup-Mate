@@ -78,9 +78,17 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('group-performance-picks').first()).toBeVisible({ timeout: 20_000 });
 
+    const timelineBlocks = await page.getByTestId('group-performance-block').count();
+    const pickedBlocks = await page.getByTestId('group-performance-picks').count();
+    expect(timelineBlocks).toBeGreaterThan(pickedBlocks);
+
+    const stageLabels = await page.getByTestId('group-stage-row').locator('div').first().allTextContents();
+    expect(stageLabels.length).toBeGreaterThan(0);
+
     await page.getByRole('button', { name: /^List$/i }).click();
     await expect(page.getByTestId('group-schedule-list')).toBeVisible();
-    await expect(page.getByText(/Going/i)).toBeVisible();
+    await expect(page.getByText(/Group picks/i)).toBeVisible();
+    await expect(page.getByText(/No group picks/i).first()).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole('button', { name: /My Groups/i }).click();
     await expect(page.getByTestId('group-card').filter({ hasText: groupName })).toBeVisible({ timeout: 20_000 });
