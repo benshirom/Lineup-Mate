@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
@@ -16,18 +16,9 @@ interface ProfileData {
   created_at: string | null;
 }
 
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, supabase, language: currentLanguage, theme: currentTheme, setLocalPreferences, refreshProfile, t } = useAuth();
+  const { user, authReady, supabase, language: currentLanguage, theme: currentTheme, setLocalPreferences, refreshProfile, t } = useAuth();
   const c = getThemeColors(currentTheme);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -37,11 +28,12 @@ export default function ProfilePage() {
   const [language, setLanguage] = useState<Language>(currentLanguage);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!user) {
       router.push('/login');
       return;
@@ -84,7 +76,7 @@ export default function ProfilePage() {
     };
 
     loadProfile();
-  }, [router, supabase, user]);
+  }, [authReady, router, supabase, user]);
 
   const handleLanguageChange = (nextLanguage: Language) => {
     setLanguage(nextLanguage);
@@ -94,46 +86,6 @@ export default function ProfilePage() {
   const handleThemeChange = (nextTheme: ThemeMode) => {
     setTheme(nextTheme);
     setLocalPreferences({ theme: nextTheme, language });
-  };
-
-  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!user) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file.');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be smaller than 5MB.');
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const dataUrl = await fileToDataUrl(file);
-      const response = await fetch('/api/upload-avatar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file: dataUrl, userId: user.id })
-      });
-
-      const data = await response.json();
-      if (!response.ok || data.error) throw new Error(data.error || 'Upload failed.');
-
-      setAvatarUrl(data.secureUrl);
-      setMessage('Avatar uploaded. Click Save Profile to keep it.');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not upload avatar.');
-    } finally {
-      setUploading(false);
-      event.target.value = '';
-    }
   };
 
   const handleSave = async (event: FormEvent) => {
@@ -186,20 +138,15 @@ export default function ProfilePage() {
             <p className="mt-2 text-sm" style={{ color: c.muted }}>Manage your display name, avatar and account preferences.</p>
           </header>
 
-          {loading && <p style={{ color: c.muted }}>Loading profile…</p>}
+          {(!authReady || loading) && <p style={{ color: c.muted }}>Loading profile…</p>}
           {error && <p className="mb-4 rounded-xl p-4 text-sm text-red-700" style={{ background: '#fee2e2', border: '1px solid #fecaca' }}>{error}</p>}
           {message && <p className="mb-4 rounded-xl p-4 text-sm text-green-700" style={{ background: '#dcfce7', border: '1px solid #bbf7d0' }}>{message}</p>}
 
-          {!loading && profile && (
+          {authReady && !loading && profile && (
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
               <aside className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] text-4xl font-black" style={{ background: `${c.acc}22`, color: c.acc }}>
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    (displayName || profile.email || 'U').slice(0, 1).toUpperCase()
-                  )}
+                  {avatarUrl ? <img src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" /> : (displayName || profile.email || 'U').slice(0, 1).toUpperCase()}
                 </div>
                 <h2 className="text-xl font-black">{displayName || profile.email || 'User'}</h2>
                 <p className="mt-1 text-sm" style={{ color: c.muted }}>{profile.email}</p>
@@ -226,9 +173,8 @@ export default function ProfilePage() {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1 block text-sm font-black">Profile Photo</span>
-                    <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} className="w-full rounded-2xl px-4 py-3 text-sm outline-none file:mr-4 file:rounded-full file:border-0 file:px-4 file:py-2 file:font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
-                    <p className="mt-1 text-xs" style={{ color: c.muted }}>{uploading ? 'Uploading to Cloudinary…' : 'Upload a profile image. It will be stored in Cloudinary.'}</p>
+                    <span className="mb-1 block text-sm font-black">Avatar URL</span>
+                    <input value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://..." className="w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
                   </label>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -251,7 +197,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6 flex justify-end">
-                  <button type="submit" disabled={saving || uploading} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.acc }}>
+                  <button type="submit" disabled={saving} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.acc }}>
                     {saving ? 'Saving…' : 'Save Profile'}
                   </button>
                 </div>
