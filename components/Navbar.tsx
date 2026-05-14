@@ -15,8 +15,8 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav style={{ background: c.surf, borderBottom: `1px solid ${c.brd}`, color: c.txt }} className="flex items-center justify-between px-5 py-3">
-      <div className="flex items-center gap-5">
+    <nav style={{ background: c.surf, borderBottom: `1px solid ${c.brd}`, color: c.txt }} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+      <div className="flex flex-wrap items-center gap-4">
         <Link href="/" className="text-sm font-black tracking-tight" style={{ color: c.acc }}>
           {t.appName}
         </Link>
@@ -37,13 +37,13 @@ const Navbar: React.FC = () => {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {user ? (
           <>
             <Link
               href="/profile"
               data-testid="user-profile-link"
-              className="hidden sm:inline text-xs font-black px-3 py-1 rounded-full hover:opacity-80"
+              className="inline-flex max-w-[120px] truncate rounded-full px-3 py-1 text-xs font-black hover:opacity-80 sm:max-w-[180px]"
               style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
               title={user.email ?? undefined}
               aria-label="Open profile"
