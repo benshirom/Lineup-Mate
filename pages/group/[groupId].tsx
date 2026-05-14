@@ -84,6 +84,15 @@ function statusLabel(status: string) {
   return '×';
 }
 
+function stageSortValue(stageName: string, performances: PerformanceInfo[]) {
+  const stagePerformances = performances.filter((performance) => performance.stage_name === stageName);
+  const firstStart = stagePerformances.map((performance) => performance.start_time).sort()[0] || '';
+  const firstSameTimeIndex = performances.findIndex(
+    (performance) => performance.stage_name === stageName && performance.start_time === firstStart
+  );
+  return { firstStart, firstSameTimeIndex: firstSameTimeIndex === -1 ? 9999 : firstSameTimeIndex };
+}
+
 export default function GroupPage() {
   const router = useRouter();
   const { groupId } = router.query;
@@ -159,42 +168,12 @@ export default function GroupPage() {
 
         setMembers(memberList);
 
-        if (memberIds.length === 0) {
-          setPerformancePrefs([]);
-          setPerformances({});
-          return;
-        }
-
-        const { data: prefs, error: prefsError } = await supabase
-          .from('user_performance_preferences')
-          .select('performance_id, status, user_id')
-          .in('user_id', memberIds)
-          .neq('status', null);
-
-        if (prefsError) throw prefsError;
-
-        const prefWithLabel: GroupMemberPref[] = (prefs ?? []).map((p: any) => {
-          const match = memberList.find((m) => m.user_id === p.user_id);
-          return {
-            performance_id: p.performance_id,
-            status: p.status,
-            user_id: p.user_id,
-            user_label: match ? memberLabel(match) : `User·${p.user_id.slice(0, 6)}`
-          };
-        });
-
-        setPerformancePrefs(prefWithLabel);
-
-        const uniquePerfIds = Array.from(new Set((prefs ?? []).map((p: any) => p.performance_id)));
-        if (uniquePerfIds.length === 0) { setPerformances({}); return; }
-
         const { data: perfData, error: perfError } = await supabase
           .from('performances')
           .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
-          .in('id', uniquePerfIds)
-          .eq('is_active', true)
           .eq('festival_id', mappedGroup.festival_id)
-          .order('start_time');
+          .eq('is_active', true)
+          .order('start_time', { ascending: true });
 
         if (perfError) throw perfError;
 
@@ -212,10 +191,42 @@ export default function GroupPage() {
         });
         setPerformances(perfMap);
 
-        const loadedPerformances = Object.values(perfMap);
+        if (memberIds.length === 0) {
+          setPerformancePrefs([]);
+        } else {
+          const { data: prefs, error: prefsError } = await supabase
+            .from('user_performance_preferences')
+            .select('performance_id, status, user_id')
+            .in('user_id', memberIds)
+            .neq('status', null);
+
+          if (prefsError) throw prefsError;
+
+          const perfIds = new Set(Object.keys(perfMap).map(Number));
+          const prefWithLabel: GroupMemberPref[] = (prefs ?? [])
+            .filter((p: any) => perfIds.has(p.performance_id))
+            .map((p: any) => {
+              const match = memberList.find((m) => m.user_id === p.user_id);
+              return {
+                performance_id: p.performance_id,
+                status: p.status,
+                user_id: p.user_id,
+                user_label: match ? memberLabel(match) : `User·${p.user_id.slice(0, 6)}`
+              };
+            });
+
+          setPerformancePrefs(prefWithLabel);
+        }
+
+        const loadedPerformances = Object.values(perfMap).sort((a, b) => a.start_time.localeCompare(b.start_time));
         const nextDays = Array.from(new Set(loadedPerformances.map((performance) => performance.day_date))).sort();
-        const nextStages = Array.from(new Set(loadedPerformances.map((performance) => performance.stage_name)));
-        setSelectedDay(nextDays[0] ?? '');
+        const stageNames = Array.from(new Set(loadedPerformances.map((performance) => performance.stage_name)));
+        const nextStages = stageNames.sort((a, b) => {
+          const aSort = stageSortValue(a, loadedPerformances);
+          const bSort = stageSortValue(b, loadedPerformances);
+          return aSort.firstStart.localeCompare(bSort.firstStart) || aSort.firstSameTimeIndex - bSort.firstSameTimeIndex || a.localeCompare(b);
+        });
+        setSelectedDay((current) => current && nextDays.includes(current) ? current : nextDays[0] ?? '');
         setActiveStages(Object.fromEntries(nextStages.map((stage) => [stage, true])));
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Could not load group schedule.');
@@ -226,6 +237,19 @@ export default function GroupPage() {
 
     loadData();
   }, [authReady, groupId, supabase, user, router, c.acc]);
+
+  const sortedPerformances = useMemo(() => {
+    return Object.values(performances).sort((a, b) => a.start_time.localeCompare(b.start_time));
+  }, [performances]);
+
+  const stageOrder = useMemo(() => {
+    const stageNames = Array.from(new Set(sortedPerformances.map((performance) => performance.stage_name)));
+    return stageNames.sort((a, b) => {
+      const aSort = stageSortValue(a, sortedPerformances);
+      const bSort = stageSortValue(b, sortedPerformances);
+      return aSort.firstStart.localeCompare(bSort.firstStart) || aSort.firstSameTimeIndex - bSort.firstSameTimeIndex || a.localeCompare(b);
+    });
+  }, [sortedPerformances]);
 
   const performancePreferenceMap = useMemo(() => {
     const result: Record<number, GroupMemberPref[]> = {};
@@ -238,27 +262,26 @@ export default function GroupPage() {
   }, [performancePrefs, performances]);
 
   const selectedDayPerformances = useMemo(() => {
-    return Object.values(performances)
-      .filter((performance) => performance.day_date === selectedDay)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
-  }, [performances, selectedDay]);
+    return sortedPerformances.filter((performance) => performance.day_date === selectedDay);
+  }, [sortedPerformances, selectedDay]);
 
   const visiblePerformances = useMemo(() => {
     return selectedDayPerformances.filter((performance) => activeStages[performance.stage_name] !== false);
   }, [selectedDayPerformances, activeStages]);
 
-  const days = useMemo(() => Array.from(new Set(Object.values(performances).map((p) => p.day_date))).sort(), [performances]);
+  const days = useMemo(() => Array.from(new Set(sortedPerformances.map((p) => p.day_date))).sort(), [sortedPerformances]);
+
   const allStages = useMemo(() => {
     const stageMap = new Map<string, string>();
-    Object.values(performances).forEach((performance) => stageMap.set(performance.stage_name, performance.stage_color));
-    return Array.from(stageMap.entries()).map(([name, color]) => ({ name, color }));
-  }, [performances]);
+    sortedPerformances.forEach((performance) => stageMap.set(performance.stage_name, performance.stage_color));
+    return stageOrder.map((name) => ({ name, color: stageMap.get(name) || c.acc }));
+  }, [sortedPerformances, stageOrder, c.acc]);
 
   const dayStages = useMemo(() => {
     const stageMap = new Map<string, string>();
     selectedDayPerformances.forEach((performance) => stageMap.set(performance.stage_name, performance.stage_color));
-    return Array.from(stageMap.entries()).map(([name, color]) => ({ name, color }));
-  }, [selectedDayPerformances]);
+    return stageOrder.filter((name) => stageMap.has(name)).map((name) => ({ name, color: stageMap.get(name) || c.acc }));
+  }, [selectedDayPerformances, stageOrder, c.acc]);
 
   const hours = useMemo(() => {
     if (visiblePerformances.length === 0) return Array.from({ length: 8 }, (_, index) => index);
@@ -266,10 +289,6 @@ export default function GroupPage() {
     const max = Math.ceil(Math.max(...visiblePerformances.map((performance) => hourNumber(performance.end_time))));
     return Array.from({ length: Math.max(1, max - min) }, (_, index) => min + index);
   }, [visiblePerformances]);
-
-  const sortedListPerformances = useMemo(() => {
-    return Object.values(performances).sort((a, b) => a.start_time.localeCompare(b.start_time));
-  }, [performances]);
 
   const copyInviteCode = async () => {
     if (!group?.invite_code) return;
@@ -284,7 +303,7 @@ export default function GroupPage() {
 
   const renderPeoplePills = (performanceId: number) => {
     const prefs = performancePreferenceMap[performanceId] ?? [];
-    if (prefs.length === 0) return <span className="text-xs" style={{ color: c.muted }}>No picks</span>;
+    if (prefs.length === 0) return <span className="text-[10px] font-bold opacity-70">No group picks</span>;
 
     return (
       <div className="flex flex-wrap gap-1" data-testid="group-performance-picks">
@@ -399,17 +418,17 @@ export default function GroupPage() {
             </div>
           )}
 
-          {!loading && !error && sortedListPerformances.length === 0 && (
+          {!loading && !error && sortedPerformances.length === 0 && (
             <div data-testid="group-empty-picks" className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">🎶</div>
-              <h2 className="mt-3 text-2xl font-black">No preferences yet</h2>
+              <h2 className="mt-3 text-2xl font-black">No lineup yet</h2>
               <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                Group members haven't starred any acts for this festival yet. Open the festival and tap ★ on artists you want to see.
+                This festival has no imported performances yet.
               </p>
             </div>
           )}
 
-          {!loading && sortedListPerformances.length > 0 && (
+          {!loading && sortedPerformances.length > 0 && (
             <>
               <div className="mb-5 flex flex-wrap gap-2">
                 <button type="button" onClick={() => setViewMode('timeline')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'timeline' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'timeline' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'timeline' ? group?.festival?.color || c.acc : c.brd}` }}>
@@ -432,12 +451,12 @@ export default function GroupPage() {
 
               {viewMode === 'timeline' && (
                 <section className="rounded-[28px] p-4 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-timeline">
-                  <div className="mb-4 flex flex-wrap gap-2" data-testid="group-stage-filters">
+                  <div className="mb-4 flex gap-2 overflow-x-auto pb-2" data-testid="group-stage-filters">
                     {allStages.map((stage) => {
                       const isOn = activeStages[stage.name] !== false;
                       const hasShowsToday = selectedDayPerformances.some((performance) => performance.stage_name === stage.name);
                       return (
-                        <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>
+                        <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>
                           {stage.name}
                         </button>
                       );
@@ -445,9 +464,9 @@ export default function GroupPage() {
                   </div>
 
                   {visiblePerformances.length === 0 ? (
-                    <p style={{ color: c.muted }}>No group picks this day.</p>
+                    <p style={{ color: c.muted }}>No performances this day with the selected stage filters.</p>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto overflow-y-hidden pb-3" data-testid="group-timeline-scroll">
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
                           {hours.map((hour) => (
@@ -461,21 +480,22 @@ export default function GroupPage() {
                           const stageItems = visiblePerformances.filter((performance) => performance.stage_name === stage.name);
                           return (
                             <div key={stage.name} className="mb-2 flex" data-testid="group-stage-row">
-                              <div className="shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color }}>
+                              <div className="sticky left-0 z-10 shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color, background: c.surf }}>
                                 {stage.name}
                               </div>
-                              <div className="relative h-20 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                              <div className="relative h-24 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                                 {hours.map((hour) => (
                                   <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
                                 ))}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.start_time) - minHour) * hourWidth;
                                   const width = Math.max(118, durationHours(performance.start_time, performance.end_time) * hourWidth - 6);
+                                  const hasPicks = (performancePreferenceMap[performance.id] ?? []).length > 0;
                                   return (
-                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 min-h-16 overflow-hidden rounded-xl px-3 py-2 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color }}>
+                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 min-h-20 overflow-hidden rounded-xl px-3 py-2 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color, opacity: hasPicks ? 1 : 0.72 }}>
                                       <span className="block truncate">{performance.artist_name}</span>
                                       <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.start_time)} – {timeLabel(performance.end_time)}</span>
-                                      <div className="mt-1 max-h-7 overflow-hidden">{renderPeoplePills(performance.id)}</div>
+                                      <div className="mt-1 max-h-9 overflow-hidden">{renderPeoplePills(performance.id)}</div>
                                     </div>
                                   );
                                 })}
@@ -499,11 +519,11 @@ export default function GroupPage() {
                           <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th>
                           <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th>
                           <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th>
-                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Going / Maybe</th>
+                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Group picks</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedListPerformances.map((perf, idx) => (
+                        {sortedPerformances.map((perf, idx) => (
                           <tr key={perf.id} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }} className="transition hover:opacity-80">
                             <td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td>
                             <td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>{timeLabel(perf.start_time)}</td>
