@@ -34,6 +34,11 @@ interface GroupData {
   id: number;
   name: string;
   invite_code: string;
+  festival_id: number;
+  festival_name: string;
+  festival_year: number;
+  festival_emoji: string;
+  festival_color: string;
 }
 
 function memberLabel(member: GroupMember): string {
@@ -54,6 +59,10 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  const myRole = members.find((m) => m.user_id === user?.id)?.role ?? null;
 
   useEffect(() => {
     if (!user) { router.push('/login'); return; }
@@ -66,12 +75,24 @@ export default function GroupPage() {
       try {
         const { data: groupData, error: groupError } = await supabase
           .from('groups')
-          .select('id, name, invite_code')
+          .select('id, name, invite_code, festival_id, festivals(id, name, year, emoji, color)')
           .eq('id', groupId)
           .single();
 
         if (groupError) throw groupError;
-        setGroup(groupData as GroupData);
+
+        const g = groupData as any;
+        const mappedGroup: GroupData = {
+          id: g.id,
+          name: g.name,
+          invite_code: g.invite_code,
+          festival_id: g.festival_id,
+          festival_name: g.festivals?.name ?? 'Festival',
+          festival_year: g.festivals?.year ?? new Date().getFullYear(),
+          festival_emoji: g.festivals?.emoji ?? '🎪',
+          festival_color: g.festivals?.color ?? '#e85d26',
+        };
+        setGroup(mappedGroup);
 
         const { data: memberData, error: membersError } = await supabase
           .from('group_members')
@@ -136,7 +157,8 @@ export default function GroupPage() {
         const { data: perfData, error: perfError } = await supabase
           .from('performances')
           .select('id, start_time, end_time, day_date, stages(name), artists(name)')
-          .in('id', uniquePerfIds);
+          .in('id', uniquePerfIds)
+          .eq('festival_id', mappedGroup.festival_id);
 
         if (perfError) throw perfError;
 
@@ -186,27 +208,113 @@ export default function GroupPage() {
     setTimeout(() => setCopied(false), 1600);
   };
 
+  const shareToWhatsApp = () => {
+    if (!group) return;
+    const message = `Join my Lineup-Mate group "${group.name}" for ${group.festival_name} ${group.festival_year}. Invite code: ${group.invite_code}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleLeaveOrDelete = async () => {
+    if (!user || !group) return;
+    setLeaving(true);
+    setError(null);
+
+    try {
+      if (myRole === 'owner') {
+        const { error } = await supabase.from('groups').delete().eq('id', group.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('group_members')
+          .delete()
+          .eq('group_id', group.id)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      }
+      router.push('/groups');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not leave the group.');
+      setLeaving(false);
+      setConfirmLeave(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
       <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-6xl px-4 py-8">
-          <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
+          <header className="mb-6 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+            {group && <div className="h-2" style={{ background: group.festival_color }} />}
+            <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between">
               <div>
+                {group && (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/festival/${group.festival_id}`)}
+                    className="mb-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black"
+                    style={{ background: `${group.festival_color}22`, color: group.festival_color, border: `1px solid ${group.festival_color}44` }}
+                    data-testid="group-festival-link"
+                  >
+                    {group.festival_emoji} {group.festival_name} {group.festival_year}
+                  </button>
+                )}
                 <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Group Schedule</p>
                 <h1 className="text-4xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
                   {group ? group.name : 'Loading…'}
                 </h1>
               </div>
-              <button
-                type="button"
-                onClick={() => router.push('/groups')}
-                className="rounded-full px-4 py-2 text-sm font-black"
-                style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
-              >
-                ← My Groups
-              </button>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push('/groups')}
+                  className="rounded-full px-4 py-2 text-sm font-black"
+                  style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+                  data-testid="back-to-groups"
+                >
+                  ← My Groups
+                </button>
+
+                {group && !confirmLeave && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmLeave(true)}
+                    className="rounded-full px-4 py-2 text-sm font-black"
+                    style={{ background: c.surf2, border: '1px solid #dc262640', color: '#dc2626' }}
+                    data-testid="leave-group-btn"
+                  >
+                    {myRole === 'owner' ? 'Delete Group' : 'Leave Group'}
+                  </button>
+                )}
+
+                {confirmLeave && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold" style={{ color: c.muted }}>
+                      {myRole === 'owner' ? 'Delete group for everyone?' : 'Leave this group?'}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={leaving}
+                      onClick={handleLeaveOrDelete}
+                      className="rounded-full px-3 py-1.5 text-xs font-black text-white disabled:opacity-60"
+                      style={{ background: '#dc2626' }}
+                      data-testid="confirm-leave-btn"
+                    >
+                      {leaving ? 'Please wait…' : myRole === 'owner' ? 'Yes, delete' : 'Yes, leave'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmLeave(false)}
+                      className="rounded-full px-3 py-1.5 text-xs font-black"
+                      style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
@@ -226,6 +334,7 @@ export default function GroupPage() {
                   <code
                     className="flex-1 rounded-2xl px-4 py-3 text-sm font-black"
                     style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
+                    data-testid="invite-code"
                   >
                     {group.invite_code}
                   </code>
@@ -234,10 +343,20 @@ export default function GroupPage() {
                     onClick={copyInviteCode}
                     className="rounded-full px-4 py-3 text-sm font-black text-white"
                     style={{ background: copied ? '#16a34a' : c.accB }}
+                    data-testid="copy-invite-code"
                   >
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={shareToWhatsApp}
+                  className="mt-3 w-full rounded-2xl px-4 py-2.5 text-sm font-black"
+                  style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+                  data-testid="share-whatsapp"
+                >
+                  Share via WhatsApp
+                </button>
               </div>
 
               <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
@@ -245,7 +364,7 @@ export default function GroupPage() {
                 {members.length === 0 ? (
                   <p className="text-sm" style={{ color: c.muted }}>No members yet.</p>
                 ) : (
-                  <ul className="space-y-2">
+                  <ul className="space-y-2" data-testid="members-list">
                     {members.map((member) => (
                       <li
                         key={member.user_id}
@@ -275,20 +394,28 @@ export default function GroupPage() {
             </div>
           )}
 
-          {!loading && !error && sortedKeys.length === 0 && (
+          {!loading && !error && sortedKeys.length === 0 && group && (
             <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">🎶</div>
               <h2 className="mt-3 text-2xl font-black">No preferences yet</h2>
               <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                Group members haven't starred any acts yet. Open the festival and tap ★ on artists you want to see.
+                Group members haven't starred any acts yet.
               </p>
+              <button
+                type="button"
+                onClick={() => router.push(`/festival/${group.festival_id}`)}
+                className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white"
+                style={{ background: `linear-gradient(135deg, ${group.festival_color}, ${c.accB})` }}
+              >
+                Open Festival & Star Acts
+              </button>
             </div>
           )}
 
           {!loading && sortedKeys.length > 0 && (
-            <div className="rounded-[28px] overflow-hidden shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+            <div className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="overflow-x-auto scroll-thin">
-                <table className="min-w-full">
+                <table className="min-w-full" data-testid="shared-schedule-table">
                   <thead>
                     <tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}>
                       <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th>
