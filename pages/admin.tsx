@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
+import { getThemeColors } from '@/lib/platform';
 
 type RawShape =
   | {
@@ -67,7 +68,8 @@ function formatDay(day: string) {
 }
 
 export default function AdminPage() {
-  const { user, session, supabase } = useAuth();
+  const { user, session, supabase, theme } = useAuth();
+  const c = getThemeColors(theme);
   const [slug, setSlug] = useState('ozora2026');
   const [loadingAction, setLoadingAction] = useState<'preview' | 'import' | 'events' | null>(null);
   const [result, setResult] = useState<AdminResponse | null>(null);
@@ -96,6 +98,10 @@ export default function AdminPage() {
   }, [user, supabase]);
 
   const selectedEvent = useMemo(() => events.find((event) => event.slug === slug), [events, slug]);
+
+  const inputStyle = { background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt };
+  const cardStyle = { background: c.surf, border: `1px solid ${c.brd}`, color: c.txt };
+  const mutedStyle = { color: c.muted };
 
   const getToken = () => {
     const token = session?.access_token;
@@ -170,9 +176,11 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
-        <main className="p-4 max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold mb-4">Admin</h1>
-          <p>You must be signed in to use the admin tools.</p>
+        <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+          <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
+            <h1 className="text-3xl font-bold mb-4">Admin</h1>
+            <p style={mutedStyle}>You must be signed in to use the admin tools.</p>
+          </section>
         </main>
       </>
     );
@@ -182,9 +190,11 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
-        <main className="p-4 max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold mb-4">Admin</h1>
-          <p>Checking permissions…</p>
+        <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+          <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
+            <h1 className="text-3xl font-bold mb-4">Admin</h1>
+            <p style={mutedStyle}>Checking permissions…</p>
+          </section>
         </main>
       </>
     );
@@ -194,11 +204,13 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
-        <main className="p-4 max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold mb-4">Admin</h1>
-          <p className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">
-            You do not have permission to access the admin tools.
-          </p>
+        <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+          <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
+            <h1 className="text-3xl font-bold mb-4">Admin</h1>
+            <p data-testid="admin-permission-error" className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">
+              You do not have permission to access the admin tools.
+            </p>
+          </section>
         </main>
       </>
     );
@@ -207,228 +219,225 @@ export default function AdminPage() {
   return (
     <>
       <Navbar />
-      <main className="p-4 max-w-6xl mx-auto">
-        <div className="mb-6">
-          <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">Lineup-Mate Admin</p>
-          <h1 className="text-3xl font-bold text-gray-900">Clashfinder Import & Sync</h1>
-          <p className="mt-2 text-gray-600">
-            Browse Clashfinder events, select one, preview all detected days/stages, then import or sync it into Supabase.
-          </p>
-        </div>
-
-        <section className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="events-search">
-                Search Clashfinder events
-              </label>
-              <input
-                id="events-search"
-                data-testid="clashfinder-events-search"
-                value={eventsSearch}
-                onChange={(event) => setEventsSearch(event.target.value)}
-                placeholder="Example: Ozora, Boom, Glastonbury..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="events-scope">
-                List type
-              </label>
-              <select
-                id="events-scope"
-                data-testid="clashfinder-events-scope"
-                value={eventsScope}
-                onChange={(event) => setEventsScope(event.target.value as 'core' | 'all')}
-                className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All clashfinders</option>
-                <option value="core">Core clashfinders</option>
-              </select>
-            </div>
-
-            <button
-              type="button"
-              data-testid="load-clashfinder-events"
-              disabled={loadingAction !== null}
-              onClick={loadClashfinderEvents}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {loadingAction === 'events' ? 'Loading events…' : 'Load Events'}
-            </button>
-          </div>
-
-          {eventsError && <p className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">{eventsError}</p>}
-
-          {events.length > 0 && (
-            <div data-testid="clashfinder-events-results">
-              <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
-                <span>Showing {events.length} events{eventsCount !== null ? ` out of ${eventsCount}` : ''}</span>
-                {selectedEvent && <span data-testid="selected-clashfinder-event">Selected: <strong>{selectedEvent.name}</strong></span>}
-              </div>
-              <div className="max-h-80 overflow-auto rounded-lg border border-gray-200">
-                <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 bg-gray-50">
-                    <tr>
-                      <th className="text-left px-3 py-2">Name</th>
-                      <th className="text-left px-3 py-2">Slug / ID</th>
-                      <th className="text-left px-3 py-2">Year</th>
-                      <th className="text-left px-3 py-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {events.map((event) => (
-                      <tr key={event.slug} data-testid="clashfinder-event-row" className={`border-t border-gray-100 ${event.slug === slug ? 'bg-blue-50' : ''}`}>
-                        <td className="px-3 py-2 font-medium">{event.name}</td>
-                        <td className="px-3 py-2"><code>{event.slug}</code></td>
-                        <td className="px-3 py-2">{event.year || '—'}</td>
-                        <td className="px-3 py-2">
-                          <button
-                            type="button"
-                            data-testid={`select-clashfinder-event-${event.slug}`}
-                            onClick={() => selectEvent(event)}
-                            className="rounded-lg bg-gray-900 px-3 py-1 text-white hover:bg-black"
-                          >
-                            Select
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <form onSubmit={handlePreview} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="slug">
-              Clashfinder slug / ID
-            </label>
-            <input
-              id="slug"
-              data-testid="clashfinder-slug-input"
-              value={slug}
-              onChange={(event) => setSlug(event.target.value)}
-              placeholder="Example: ozora2026"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Select from the event list above or use the part from the URL, for example /s/ozora2026 or /m/ozora2026 → ozora2026.
+      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6">
+            <p className="text-sm uppercase tracking-wide font-semibold" style={{ color: c.acc }}>Lineup-Mate Admin</p>
+            <h1 className="text-3xl font-bold">Clashfinder Import & Sync</h1>
+            <p className="mt-2" style={mutedStyle}>
+              Browse Clashfinder events, select one, preview all detected days/stages, then import or sync it into Supabase.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              data-testid="preview-clashfinder"
-              disabled={!slug || loadingAction !== null}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-white hover:bg-black disabled:opacity-60"
-            >
-              {loadingAction === 'preview' ? 'Previewing…' : 'Preview'}
-            </button>
-            <button
-              type="button"
-              data-testid="import-clashfinder"
-              disabled={!slug || loadingAction !== null}
-              onClick={handleImport}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {loadingAction === 'import' ? 'Syncing…' : 'Import / Sync'}
-            </button>
-          </div>
-        </form>
-
-        {result && (
-          <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm" data-testid="clashfinder-preview-result">
-            <h2 className="text-xl font-semibold mb-3">Result</h2>
-
-            {result.error && <p className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3 mb-4">{result.error}</p>}
-            {result.warning && <p className="rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 p-3 mb-4">{result.warning}</p>}
-
-            {result.festival && (
-              <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><strong>Name:</strong> {result.festival.name}</div>
-                <div><strong>Year:</strong> {result.festival.year}</div>
-                <div><strong>Start:</strong> {result.festival.startDate || '—'}</div>
-                <div><strong>End:</strong> {result.festival.endDate || '—'}</div>
-                {result.festival.id && <div><strong>Festival ID:</strong> {result.festival.id}</div>}
-                {result.festival.slug && <div><strong>Slug:</strong> {result.festival.slug}</div>}
+          <section className="mb-6 rounded-xl p-5 shadow-sm space-y-4" style={cardStyle}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1" htmlFor="events-search">
+                  Search Clashfinder events
+                </label>
+                <input
+                  id="events-search"
+                  data-testid="clashfinder-events-search"
+                  value={eventsSearch}
+                  onChange={(event) => setEventsSearch(event.target.value)}
+                  placeholder="Example: Ozora, Boom, Glastonbury..."
+                  className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2"
+                  style={inputStyle}
+                />
               </div>
-            )}
 
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
-              {typeof result.detectedPerformances === 'number' && (
-                <div className="rounded-lg bg-gray-50 p-3"><strong>Detected:</strong> {result.detectedPerformances}</div>
-              )}
-              {typeof result.detectedStages === 'number' && (
-                <div className="rounded-lg bg-blue-50 p-3" data-testid="detected-stages"><strong>Stages:</strong> {result.detectedStages}</div>
-              )}
-              {typeof result.detectedDays === 'number' && (
-                <div className="rounded-lg bg-purple-50 p-3" data-testid="detected-days"><strong>Days:</strong> {result.detectedDays}</div>
-              )}
-              {typeof result.imported === 'number' && (
-                <div className="rounded-lg bg-green-50 p-3"><strong>Imported/Synced:</strong> {result.imported}</div>
-              )}
-              {typeof result.skipped === 'number' && (
-                <div className="rounded-lg bg-yellow-50 p-3"><strong>Skipped:</strong> {result.skipped}</div>
-              )}
-              {typeof result.deactivated === 'number' && (
-                <div className="rounded-lg bg-red-50 p-3"><strong>Deactivated:</strong> {result.deactivated}</div>
-              )}
+              <div>
+                <label className="block text-sm font-medium mb-1" htmlFor="events-scope">
+                  List type
+                </label>
+                <select
+                  id="events-scope"
+                  data-testid="clashfinder-events-scope"
+                  value={eventsScope}
+                  onChange={(event) => setEventsScope(event.target.value as 'core' | 'all')}
+                  className="rounded-lg px-3 py-2 focus:outline-none focus:ring-2"
+                  style={inputStyle}
+                >
+                  <option value="all">All clashfinders</option>
+                  <option value="core">Core clashfinders</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                data-testid="load-clashfinder-events"
+                disabled={loadingAction !== null}
+                onClick={loadClashfinderEvents}
+                className="rounded-lg px-4 py-2 text-white disabled:opacity-60"
+                style={{ background: c.acc }}
+              >
+                {loadingAction === 'events' ? 'Loading events…' : 'Load Events'}
+              </button>
             </div>
 
-            {result.sampleStages && result.sampleStages.length > 0 && (
-              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm" data-testid="sample-stages">
-                <strong>Sample stages:</strong> {result.sampleStages.join(', ')}
-              </div>
-            )}
+            {eventsError && <p data-testid="clashfinder-events-error" className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">{eventsError}</p>}
 
-            {result.sampleDays && result.sampleDays.length > 0 && (
-              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm" data-testid="sample-days">
-                <strong>Sample days:</strong> {result.sampleDays.map(formatDay).join(', ')}
-              </div>
-            )}
-
-            {result.samplePerformances && result.samplePerformances.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full text-sm" data-testid="sample-performances-table">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left px-3 py-2">Artist</th>
-                      <th className="text-left px-3 py-2">Stage</th>
-                      <th className="text-left px-3 py-2">Day</th>
-                      <th className="text-left px-3 py-2">Start</th>
-                      <th className="text-left px-3 py-2">End</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.samplePerformances.map((performance, index) => (
-                      <tr key={`${performance.artistName}-${performance.startTime}-${index}`} className="border-t border-gray-100" data-testid="sample-performance-row">
-                        <td className="px-3 py-2">{performance.artistName}</td>
-                        <td className="px-3 py-2">{performance.stageName}</td>
-                        <td className="px-3 py-2">{formatDay(performance.dayDate)}</td>
-                        <td className="px-3 py-2">{new Date(performance.startTime).toLocaleString()}</td>
-                        <td className="px-3 py-2">{new Date(performance.endTime).toLocaleString()}</td>
+            {events.length > 0 && (
+              <div data-testid="clashfinder-events-results">
+                <div className="mb-2 flex items-center justify-between text-sm" style={mutedStyle}>
+                  <span>Showing {events.length} events{eventsCount !== null ? ` out of ${eventsCount}` : ''}</span>
+                  {selectedEvent && <span data-testid="selected-clashfinder-event">Selected: <strong>{selectedEvent.name}</strong></span>}
+                </div>
+                <div className="max-h-80 overflow-auto rounded-lg" style={{ border: `1px solid ${c.brd}` }}>
+                  <table className="min-w-full text-sm">
+                    <thead style={{ background: c.surf2 }}>
+                      <tr>
+                        <th className="text-left px-3 py-2">Name</th>
+                        <th className="text-left px-3 py-2">Slug / ID</th>
+                        <th className="text-left px-3 py-2">Year</th>
+                        <th className="text-left px-3 py-2">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {events.map((event) => (
+                        <tr key={event.slug} data-testid="clashfinder-event-row" style={{ borderTop: `1px solid ${c.brd}`, background: event.slug === slug ? `${c.acc}22` : 'transparent' }}>
+                          <td className="px-3 py-2 font-medium">{event.name}</td>
+                          <td className="px-3 py-2"><code>{event.slug}</code></td>
+                          <td className="px-3 py-2">{event.year || '—'}</td>
+                          <td className="px-3 py-2">
+                            <button
+                              type="button"
+                              data-testid={`select-clashfinder-event-${event.slug}`}
+                              onClick={() => selectEvent(event)}
+                              className="rounded-lg px-3 py-1 text-white"
+                              style={{ background: c.accB }}
+                            >
+                              Select
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            )}
-
-            {!!result.rawShape && (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-medium text-gray-700">Raw response shape</summary>
-                <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-gray-900 p-3 text-xs text-white">
-                  {JSON.stringify(result.rawShape, null, 2)}
-                </pre>
-              </details>
             )}
           </section>
-        )}
+
+          <form onSubmit={handlePreview} className="rounded-xl p-5 shadow-sm space-y-4" style={cardStyle}>
+            <div>
+              <label className="block text-sm font-medium mb-1" htmlFor="slug">
+                Clashfinder slug / ID
+              </label>
+              <input
+                id="slug"
+                data-testid="clashfinder-slug-input"
+                value={slug}
+                onChange={(event) => setSlug(event.target.value)}
+                placeholder="Example: ozora2026"
+                className="w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2"
+                style={inputStyle}
+              />
+              <p className="text-xs mt-1" style={mutedStyle}>
+                Select from the event list above or use the part from the URL, for example /s/ozora2026 or /m/ozora2026 → ozora2026.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                data-testid="preview-clashfinder"
+                disabled={!slug || loadingAction !== null}
+                className="rounded-lg px-4 py-2 text-white disabled:opacity-60"
+                style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+              >
+                {loadingAction === 'preview' ? 'Previewing…' : 'Preview'}
+              </button>
+              <button
+                type="button"
+                data-testid="import-clashfinder"
+                disabled={!slug || loadingAction !== null}
+                onClick={handleImport}
+                className="rounded-lg px-4 py-2 text-white disabled:opacity-60"
+                style={{ background: c.acc }}
+              >
+                {loadingAction === 'import' ? 'Syncing…' : 'Import / Sync'}
+              </button>
+            </div>
+          </form>
+
+          {result && (
+            <section className="mt-6 rounded-xl p-5 shadow-sm" style={cardStyle} data-testid="clashfinder-preview-result">
+              <h2 className="text-xl font-semibold mb-3">Result</h2>
+
+              {result.error && <p data-testid="clashfinder-preview-error" className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3 mb-4">{result.error}</p>}
+              {result.warning && <p data-testid="clashfinder-preview-warning" className="rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 p-3 mb-4">{result.warning}</p>}
+
+              {result.festival && (
+                <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div><strong>Name:</strong> {result.festival.name}</div>
+                  <div><strong>Year:</strong> {result.festival.year}</div>
+                  <div><strong>Start:</strong> {result.festival.startDate || '—'}</div>
+                  <div><strong>End:</strong> {result.festival.endDate || '—'}</div>
+                  {result.festival.id && <div><strong>Festival ID:</strong> {result.festival.id}</div>}
+                  {result.festival.slug && <div><strong>Slug:</strong> {result.festival.slug}</div>}
+                </div>
+              )}
+
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
+                {typeof result.detectedPerformances === 'number' && <div className="rounded-lg p-3" style={{ background: c.surf2 }}><strong>Detected:</strong> {result.detectedPerformances}</div>}
+                {typeof result.detectedStages === 'number' && <div className="rounded-lg p-3" style={{ background: c.surf2 }} data-testid="detected-stages"><strong>Stages:</strong> {result.detectedStages}</div>}
+                {typeof result.detectedDays === 'number' && <div className="rounded-lg p-3" style={{ background: c.surf2 }} data-testid="detected-days"><strong>Days:</strong> {result.detectedDays}</div>}
+                {typeof result.imported === 'number' && <div className="rounded-lg p-3" style={{ background: c.surf2 }}><strong>Imported/Synced:</strong> {result.imported}</div>}
+                {typeof result.skipped === 'number' && <div className="rounded-lg p-3" style={{ background: c.surf2 }}><strong>Skipped:</strong> {result.skipped}</div>}
+                {typeof result.deactivated === 'number' && <div className="rounded-lg p-3" style={{ background: c.surf2 }}><strong>Deactivated:</strong> {result.deactivated}</div>}
+              </div>
+
+              {result.sampleStages && result.sampleStages.length > 0 && (
+                <div className="mb-4 rounded-lg p-3 text-sm" style={{ background: c.surf2 }} data-testid="sample-stages">
+                  <strong>Sample stages:</strong> {result.sampleStages.join(', ')}
+                </div>
+              )}
+
+              {result.sampleDays && result.sampleDays.length > 0 && (
+                <div className="mb-4 rounded-lg p-3 text-sm" style={{ background: c.surf2 }} data-testid="sample-days">
+                  <strong>Sample days:</strong> {result.sampleDays.map(formatDay).join(', ')}
+                </div>
+              )}
+
+              {result.samplePerformances && result.samplePerformances.length > 0 && (
+                <div className="overflow-x-auto rounded-lg" style={{ border: `1px solid ${c.brd}` }}>
+                  <table className="min-w-full text-sm" data-testid="sample-performances-table">
+                    <thead style={{ background: c.surf2 }}>
+                      <tr>
+                        <th className="text-left px-3 py-2">Artist</th>
+                        <th className="text-left px-3 py-2">Stage</th>
+                        <th className="text-left px-3 py-2">Day</th>
+                        <th className="text-left px-3 py-2">Start</th>
+                        <th className="text-left px-3 py-2">End</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.samplePerformances.map((performance, index) => (
+                        <tr key={`${performance.artistName}-${performance.startTime}-${index}`} style={{ borderTop: `1px solid ${c.brd}` }} data-testid="sample-performance-row">
+                          <td className="px-3 py-2">{performance.artistName}</td>
+                          <td className="px-3 py-2">{performance.stageName}</td>
+                          <td className="px-3 py-2">{formatDay(performance.dayDate)}</td>
+                          <td className="px-3 py-2">{new Date(performance.startTime).toLocaleString()}</td>
+                          <td className="px-3 py-2">{new Date(performance.endTime).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {!!result.rawShape && (
+                <details className="mt-4">
+                  <summary className="cursor-pointer text-sm font-medium" style={mutedStyle}>Raw response shape</summary>
+                  <pre className="mt-2 max-h-72 overflow-auto rounded-lg p-3 text-xs" style={{ background: c.surf2, color: c.txt }}>
+                    {JSON.stringify(result.rawShape, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </section>
+          )}
+        </div>
       </main>
     </>
   );
