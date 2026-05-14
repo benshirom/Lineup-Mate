@@ -70,7 +70,7 @@ test.describe('authenticated flows', () => {
 
   test('user can open Profile page from the user badge', async ({ page }) => {
     await expect(page.getByRole('link', { name: /^Profile$/i })).toHaveCount(0);
-    await page.getByRole('link', { name: /@|\w+/ }).last().click();
+    await page.getByTestId('user-profile-link').click();
     await expect(page).toHaveURL(/\/profile/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Account details/i)).toBeVisible();
@@ -78,7 +78,7 @@ test.describe('authenticated flows', () => {
     await expect(page.getByLabel(/^Email$/i)).toBeVisible();
     await expect(page.getByLabel(/Theme/i)).toBeVisible();
     await expect(page.getByLabel(/Language/i)).toBeVisible();
-    await expect(page.getByLabel(/Profile Photo/i)).toBeVisible();
+    await expect(page.getByLabel(/Avatar URL|Profile Photo/i)).toBeVisible();
   });
 
   test('profile language and theme preferences update the UI immediately', async ({ page }) => {
@@ -101,7 +101,7 @@ test.describe('authenticated flows', () => {
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   });
 
-  test('saved light theme is applied across festival, groups and schedule pages', async ({ page }) => {
+  test('saved light theme is applied across festival, groups, schedule and admin pages', async ({ page }) => {
     await page.goto('/profile');
     await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
     await page.getByLabel(/Language/i).selectOption('en');
@@ -119,6 +119,13 @@ test.describe('authenticated flows', () => {
     await page.getByRole('link', { name: /My Schedule/i }).click();
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
     expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
+
+    const adminLink = page.getByRole('link', { name: /Admin/i });
+    if (await adminLink.isVisible()) {
+      await adminLink.click();
+      await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
+      expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
+    }
 
     await page.goto('/profile');
     await page.getByLabel(/Theme/i).selectOption('dark');
