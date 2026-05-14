@@ -42,6 +42,7 @@ const Navbar: React.FC = () => {
           <>
             <Link
               href="/profile"
+              data-testid="user-profile-link"
               className="hidden sm:inline text-xs font-black px-3 py-1 rounded-full hover:opacity-80"
               style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
               title={user.email ?? undefined}
