@@ -17,6 +17,7 @@ interface UserProfile {
 interface AuthContextProps {
   user: User | null;
   session: Session | null;
+  authReady: boolean;
   profile: UserProfile | null;
   language: Language;
   theme: ThemeMode;
@@ -32,6 +33,7 @@ const DEFAULT_THEME: ThemeMode = 'dark';
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   session: null,
+  authReady: false,
   profile: null,
   language: DEFAULT_LANGUAGE,
   theme: DEFAULT_THEME,
@@ -52,6 +54,7 @@ function normalizeTheme(value: unknown): ThemeMode {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
   const [theme, setTheme] = useState<ThemeMode>(DEFAULT_THEME);
@@ -91,6 +94,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         theme: nextTheme,
         language: nextLanguage
       });
+    } else {
+      setProfile(null);
     }
 
     applyPreferences(nextLanguage, nextTheme);
@@ -116,18 +121,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const setData = async () => {
-      const {
-        data: { session }
-      } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) await loadProfile(session.user.id);
+      try {
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+      } finally {
+        setAuthReady(true);
+      }
     };
     setData();
 
     const {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthReady(true);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -145,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextProps = {
     user,
     session,
+    authReady,
     profile,
     language,
     theme,
