@@ -133,13 +133,27 @@ export default function Home() {
     if (!requireLogin()) return;
 
     const isSaved = savedFestivalIds[festivalId];
+    const previousSavedFestivalIds = savedFestivalIds;
     setSavedFestivalIds((current) => ({ ...current, [festivalId]: !isSaved }));
 
-    if (isSaved) {
-      await supabase.from('saved_festivals').delete().eq('user_id', user!.id).eq('festival_id', festivalId);
-    } else {
-      await supabase.from('saved_festivals').insert({ user_id: user!.id, festival_id: festivalId });
+    const { error: saveError } = isSaved
+      ? await supabase.from('saved_festivals').delete().eq('user_id', user!.id).eq('festival_id', festivalId)
+      : await supabase
+          .from('saved_festivals')
+          .upsert({ user_id: user!.id, festival_id: festivalId }, { onConflict: 'user_id,festival_id' });
+
+    if (saveError) {
+      setSavedFestivalIds(previousSavedFestivalIds);
+      setError(saveError.message);
+      return;
     }
+
+    const { data: savedRows } = await supabase
+      .from('saved_festivals')
+      .select('festival_id')
+      .eq('user_id', user!.id);
+
+    setSavedFestivalIds(Object.fromEntries((savedRows || []).map((row) => [row.festival_id, true])));
   };
 
   const getFestivalName = (festival: Festival) => language === 'he' && festival.name_he ? festival.name_he : festival.name;
