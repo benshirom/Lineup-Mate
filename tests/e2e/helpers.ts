@@ -83,13 +83,27 @@ export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
   await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
 
-  const firstSaveOrSavedButton = page.getByRole('button', { name: /Save Festival|Saved!|שמור פסטיבל|נשמר/i }).first();
+  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved/i }).first();
   await expect(firstSaveOrSavedButton).toBeVisible({ timeout: 20_000 });
 
   const label = (await firstSaveOrSavedButton.innerText()).trim();
-  if (/Save Festival|שמור פסטיבל/i.test(label)) {
+  if (/\+ Save/i.test(label)) {
     await firstSaveOrSavedButton.click();
   }
 
-  await expect(page.getByRole('button', { name: /Saved!|נשמר/i }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /✓ Saved/i }).first()).toBeVisible({ timeout: 20_000 });
+}
+
+/** Wait for the festival dropdown to have real options and select the first one. */
+export async function selectFirstFestivalInForm(page: Page) {
+  const select = page.getByTestId('group-festival-select');
+  await expect(select).toBeVisible({ timeout: 15_000 });
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-testid="group-festival-select"]') as HTMLSelectElement | null;
+      return el !== null && el.options.length > 0 && el.options[0].value !== '';
+    },
+    { timeout: 15_000 }
+  );
+  await select.selectOption({ index: 0 });
 }

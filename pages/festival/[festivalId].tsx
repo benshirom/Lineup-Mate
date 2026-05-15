@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
@@ -55,6 +55,66 @@ function festivalTitle(festival: Festival) {
   return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`;
 }
 
+function detectConflicts(performances: PerformanceItem[]): Set<number> {
+  const conflictIds = new Set<number>();
+  const going = performances.filter((p) => p.status === 'going');
+  going.forEach((a, i) => {
+    going.slice(i + 1).forEach((b) => {
+      const aStart = new Date(a.startTime).getTime();
+      const aEnd = new Date(a.endTime).getTime();
+      const bStart = new Date(b.startTime).getTime();
+      const bEnd = new Date(b.endTime).getTime();
+      if (aStart < bEnd && bStart < aEnd) {
+        conflictIds.add(a.id);
+        conflictIds.add(b.id);
+      }
+    });
+  });
+  return conflictIds;
+}
+
+function useNowLine(hours: number[], minHour: number, hourWidth: number, selectedDay: string) {
+  const [nowLeft, setNowLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const todayStr = now.toLocaleDateString('sv'); // YYYY-MM-DD in local time
+      if (selectedDay && todayStr !== selectedDay) { setNowLeft(null); return; }
+      const nowHour = now.getHours() + now.getMinutes() / 60;
+      if (hours.length === 0 || nowHour < hours[0] || nowHour > hours[hours.length - 1] + 1) { setNowLeft(null); return; }
+      setNowLeft((nowHour - minHour) * hourWidth);
+    };
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, [hours, minHour, hourWidth, selectedDay]);
+
+  return nowLeft;
+}
+
+function useHourWidth() {
+  const [w, setW] = useState(118);
+  useEffect(() => {
+    const update = () => setW(window.innerWidth < 640 ? 72 : 118);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return w;
+}
+
+function useStageLabelWidth() {
+  const [w, setW] = useState(132);
+  useEffect(() => {
+    const update = () => setW(window.innerWidth < 640 ? 80 : 132);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return w;
+}
+
 export default function FestivalPage() {
   const router = useRouter();
   const { festivalId, day } = router.query;
@@ -73,8 +133,12 @@ export default function FestivalPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [popId, setPopId] = useState<number | null>(null);
+  const nowLineRef = useRef<HTMLDivElement | null>(null);
 
   const c = getThemeColors(theme);
+  const hourWidth = useHourWidth();
+  const stageLabelWidth = useStageLabelWidth();
 
   useEffect(() => {
     if (!festivalId) return;
@@ -192,6 +256,9 @@ export default function FestivalPage() {
     if (!requireLogin()) return;
 
     setSavingId(performanceId);
+    setPopId(performanceId);
+    setTimeout(() => setPopId(null), 280);
+
     try {
       const { error: rpcError } = await supabase.rpc('upsert_user_preference', {
         p_user_id: user!.id,
@@ -266,11 +333,24 @@ export default function FestivalPage() {
   };
 
   const minHour = hours[0] || 0;
-  const hourWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 72 : 118;
-  const stageLabelWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 80 : 132;
+  const nowLeft = useNowLine(hours, minHour, hourWidth, selectedDay);
+
+  const conflictIds = useMemo(() => detectConflicts(performances), [performances]);
+  const dayConflictCount = useMemo(
+    () => selectedDayPerformances.filter((p) => conflictIds.has(p.id)).length,
+    [selectedDayPerformances, conflictIds]
+  );
+
+  // auto-scroll to now-line when timeline mounts on today's day
+  useEffect(() => {
+    if (nowLeft !== null && nowLineRef.current) {
+      nowLineRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [nowLeft, tab]);
 
   const renderStarButton = (performance: PerformanceItem, compact = false) => {
     const isGoing = performance.status === 'going';
+    const isPopping = popId === performance.id;
     return (
       <button
         type="button"
@@ -280,14 +360,15 @@ export default function FestivalPage() {
           updatePreference(performance.id, isGoing ? null : 'going');
         }}
         aria-label={isGoing ? 'Remove from my schedule' : 'Add to my schedule'}
-        className="inline-flex items-center justify-center rounded-full font-black transition hover:scale-110 disabled:opacity-60"
+        className={`inline-flex items-center justify-center rounded-full font-black transition disabled:opacity-60 ${isPopping ? 'star-pop' : ''}`}
         style={{
-          width: compact ? 30 : 36,
-          height: compact ? 30 : 36,
-          background: isGoing ? '#ffd166' : 'rgba(0,0,0,.35)',
-          color: isGoing ? '#1a1a10' : '#fff',
-          border: `1px solid ${isGoing ? '#ffd166' : 'rgba(255,255,255,.35)'}`,
-          boxShadow: isGoing ? '0 0 18px rgba(255, 209, 102, .35)' : 'none'
+          width: compact ? 28 : 36,
+          height: compact ? 28 : 36,
+          background: isGoing ? '#ffd166' : 'rgba(0,0,0,.38)',
+          color: isGoing ? '#1a1a10' : 'rgba(255,255,255,0.9)',
+          border: `1.5px solid ${isGoing ? '#ffd166' : 'rgba(255,255,255,.28)'}`,
+          boxShadow: isGoing ? '0 0 16px rgba(255,209,102,.5), inset 0 1px 0 rgba(255,255,255,.2)' : 'none',
+          flexShrink: 0
         }}
       >
         {isGoing ? '★' : '☆'}
@@ -306,34 +387,33 @@ export default function FestivalPage() {
           {festival && (
             <>
               {/* ── Festival header ─────────────────────────────── */}
-              <header className="mb-5 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <div className="h-2" style={{ background: festival.color || c.acc }} />
-                <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_300px] lg:items-end">
+              <header className="fade-up mb-5 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                <div className="relative h-1.5" style={{ background: `linear-gradient(90deg, ${festival.color || c.acc}, ${c.accB})` }} />
+                <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_280px] lg:items-center">
                   <div>
                     <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl text-3xl" style={{ background: `${festival.color || c.acc}22` }}>
+                      <div
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl shadow-lg"
+                        style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}33, ${festival.color || c.acc}11)`, border: `1px solid ${festival.color || c.acc}44` }}
+                      >
                         {festival.emoji || '🎪'}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: festival.color || c.acc }}>
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: festival.color || c.acc }}>
                           {festival.genre_label || festival.genre || 'Festival'}
                         </p>
-                        <h1 className="truncate text-2xl font-black sm:text-4xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
+                        <h1 className="truncate text-2xl font-black leading-tight sm:text-4xl" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.02em' }}>
                           {festivalTitle(festival)}
                         </h1>
                       </div>
                     </div>
-                    <p className="max-w-2xl text-sm leading-6" style={{ color: c.muted }}>
-                      {festival.description || 'Browse the lineup, save your favorite artists and plan with friends.'}
-                    </p>
-                    {!user && <p className="mt-2 text-xs font-bold" style={{ color: c.acc }}>Browse freely — sign in to save acts or create groups.</p>}
+                    {!user && <p className="mt-1 text-xs font-semibold" style={{ color: c.muted }}>Browse freely — sign in to save acts or create groups.</p>}
                   </div>
                   <div className="rounded-2xl p-4 text-sm" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>
                     <div className="space-y-1.5">
-                      <div>📍 {festival.location || 'Location TBA'}</div>
-                      <div>📅 {formatDateRange(festival.start_date, festival.end_date)}</div>
-                      {festival.website && <div>🌐 {festival.website}</div>}
-                      {festival.last_synced_at && <div className="text-xs">🔄 {new Date(festival.last_synced_at).toLocaleString()}</div>}
+                      <div className="flex items-center gap-2"><span>📍</span><span>{festival.location || 'Location TBA'}</span></div>
+                      <div className="flex items-center gap-2"><span>📅</span><span>{formatDateRange(festival.start_date, festival.end_date)}</span></div>
+                      {festival.website && <div className="flex items-center gap-2"><span>🌐</span><span className="truncate">{festival.website}</span></div>}
                     </div>
                   </div>
                 </div>
@@ -344,7 +424,7 @@ export default function FestivalPage() {
                 className="sticky z-30 -mx-4 mb-5 px-4 py-3"
                 style={{ top: 57, background: c.bg, borderBottom: `1px solid ${c.brd}` }}
               >
-                <div className="flex gap-2 overflow-x-auto scroll-hidden pb-2">
+                <div className="flex items-center gap-2 overflow-x-auto scroll-hidden pb-2">
                   {(['timeline', 'lineup', 'info'] as FestivalTab[]).map((nextTab) => (
                     <button
                       key={nextTab}
@@ -356,22 +436,36 @@ export default function FestivalPage() {
                       {nextTab}
                     </button>
                   ))}
+                  {dayConflictCount > 0 && tab === 'timeline' && (
+                    <span className="shrink-0 ml-auto rounded-full px-3 py-1 text-xs font-black" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.35)' }}>
+                      ⚠ {dayConflictCount} conflict{dayConflictCount > 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
 
                 {days.length > 0 && tab !== 'info' && (
                   <div className="flex gap-2 overflow-x-auto scroll-hidden pt-2" data-testid="festival-day-tabs">
-                    {days.map((nextDay) => (
-                      <button
-                        key={nextDay}
-                        type="button"
-                        data-testid="festival-day-tab"
-                        onClick={() => selectDay(nextDay)}
-                        className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-black"
-                        style={{ background: selectedDay === nextDay ? c.accB : c.surf, color: selectedDay === nextDay ? '#fff' : c.muted, border: `1px solid ${selectedDay === nextDay ? c.accB : c.brd}` }}
-                      >
-                        {new Date(nextDay).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                      </button>
-                    ))}
+                    {days.map((nextDay) => {
+                      const savedOnDay = performances.filter((p) => p.dayDate === nextDay && p.status === 'going').length;
+                      return (
+                        <button
+                          key={nextDay}
+                          type="button"
+                          data-testid="festival-day-tab"
+                          onClick={() => selectDay(nextDay)}
+                          className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-black"
+                          style={{ background: selectedDay === nextDay ? c.accB : c.surf, color: selectedDay === nextDay ? '#fff' : c.muted, border: `1px solid ${selectedDay === nextDay ? c.accB : c.brd}` }}
+                        >
+                          {new Date(nextDay).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                          {savedOnDay > 0 && (
+                            <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-black leading-none"
+                              style={{ background: selectedDay === nextDay ? 'rgba(255,255,255,0.25)' : '#ffd16633', color: selectedDay === nextDay ? '#fff' : '#ffd166' }}>
+                              {savedOnDay}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -389,9 +483,9 @@ export default function FestivalPage() {
                           type="button"
                           data-testid="festival-stage-filter"
                           onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))}
-                          className="shrink-0 rounded-full px-3 py-1 text-xs font-black"
-                          style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}
-                          title={hasShowsToday ? stage.name : `${stage.name} has no shows on this day`}
+                          className="shrink-0 rounded-full px-3 py-1 text-xs font-black transition-all"
+                          style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.4, boxShadow: isOn && hasShowsToday ? `0 0 10px ${stage.color}55` : 'none' }}
+                          title={hasShowsToday ? stage.name : `${stage.name} — no shows today`}
                         >
                           {stage.name}
                         </button>
@@ -403,8 +497,9 @@ export default function FestivalPage() {
                     <p style={{ color: c.muted }}>No shows this day.</p>
                   ) : (
                     <div className="relative overflow-x-auto scroll-thin">
-                      <p className="mb-2 text-xs sm:hidden" style={{ color: c.muted }}>← scroll to see full timeline →</p>
+                      <p className="mb-2 text-[10px] font-bold sm:hidden" style={{ color: c.muted }}>← swipe to see full timeline →</p>
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
+                        {/* Hour header */}
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
                           {hours.map((hour) => (
                             <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>
@@ -416,28 +511,53 @@ export default function FestivalPage() {
                         {dayStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
                           const stageItems = visiblePerformances.filter((performance) => performance.stageName === stage.name);
                           return (
-                            <div key={stage.name} className="mb-2 flex" data-testid="festival-stage-row">
-                              <div className="shrink-0 pr-2 text-right text-xs font-black leading-tight" style={{ width: stageLabelWidth, color: stage.color, paddingTop: 20 }}>
-                                {stage.name}
+                            <div key={stage.name} className="mb-2 flex items-stretch" data-testid="festival-stage-row">
+                              {/* Sticky stage label */}
+                              <div
+                                className="shrink-0 pr-2 text-right text-xs font-black leading-tight flex items-center justify-end"
+                                style={{ width: stageLabelWidth, color: stage.color, position: 'sticky', left: 0, zIndex: 2, background: c.surf }}
+                              >
+                                <span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}15` }}>{stage.name}</span>
                               </div>
-                              <div className="relative h-14 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                              <div className="relative h-14 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}08`, border: `1px solid ${c.brd}` }}>
+                                {/* Hour grid lines */}
                                 {hours.map((hour) => (
                                   <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
                                 ))}
+                                {/* Now line */}
+                                {nowLeft !== null && (
+                                  <div
+                                    ref={nowLineRef}
+                                    className="now-line absolute top-0 h-full z-10 pointer-events-none"
+                                    style={{ left: nowLeft, width: 2, background: '#ef4444', borderRadius: 2 }}
+                                  />
+                                )}
+                                {/* Performance blocks */}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.startTime) - minHour) * hourWidth;
                                   const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
+                                  const isGoing = performance.status === 'going';
+                                  const hasConflict = conflictIds.has(performance.id);
                                   return (
                                     <div
                                       key={performance.id}
                                       data-testid="festival-performance-block"
-                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`}
-                                      className="absolute top-1.5 h-11 overflow-hidden rounded-xl px-2 pr-9 text-left text-xs font-black text-white shadow-lg"
-                                      style={{ left, width, background: performance.stageColor }}
+                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}–${timeLabel(performance.endTime)}${hasConflict ? ' ⚠ Time conflict!' : ''}`}
+                                      className={`perf-block absolute top-1.5 h-11 overflow-hidden rounded-xl px-2 text-left text-xs font-black text-white shadow-md ${isGoing && hasConflict ? 'conflict-block' : ''}`}
+                                      style={{
+                                        left,
+                                        width,
+                                        background: `linear-gradient(135deg, ${performance.stageColor}, ${performance.stageColor}cc)`,
+                                        paddingRight: 34,
+                                        boxShadow: isGoing ? `0 2px 12px ${performance.stageColor}55` : undefined
+                                      }}
                                     >
                                       <span className="block truncate leading-4 pt-1">{performance.artistName}</span>
-                                      <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
-                                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2">{renderStarButton(performance, true)}</span>
+                                      <span className="block truncate text-[10px] opacity-75">{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
+                                      {hasConflict && isGoing && (
+                                        <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: '#fca5a5' }}>⚠</span>
+                                      )}
+                                      <span className="absolute right-1 top-1/2 -translate-y-1/2">{renderStarButton(performance, true)}</span>
                                     </div>
                                   );
                                 })}
@@ -453,19 +573,35 @@ export default function FestivalPage() {
 
               {/* ── Lineup tab ───────────────────────────────────── */}
               {tab === 'lineup' && (
-                <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {visiblePerformances.map((performance) => (
-                    <article key={performance.id} className="rounded-3xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate font-black">{performance.artistName}</h3>
-                          <p className="text-xs" style={{ color: performance.stageColor }}>{performance.stageName}</p>
+                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {visiblePerformances.map((performance) => {
+                    const isGoing = performance.status === 'going';
+                    const hasConflict = conflictIds.has(performance.id);
+                    return (
+                      <article
+                        key={performance.id}
+                        className="overflow-hidden rounded-2xl transition-all"
+                        style={{
+                          background: c.surf,
+                          border: `1px solid ${isGoing && hasConflict ? 'rgba(239,68,68,0.5)' : isGoing ? 'rgba(255,209,102,0.35)' : c.brd}`,
+                          boxShadow: isGoing ? `0 0 14px ${isGoing && hasConflict ? 'rgba(239,68,68,0.15)' : 'rgba(255,209,102,0.1)'}` : 'none'
+                        }}
+                      >
+                        <div className="h-0.5" style={{ background: `linear-gradient(90deg, ${performance.stageColor}, transparent)` }} />
+                        <div className="flex items-center gap-3 p-4">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate font-black leading-snug">{performance.artistName}</h3>
+                            <p className="text-[11px] font-bold" style={{ color: performance.stageColor }}>{performance.stageName}</p>
+                            <p className="text-xs mt-0.5" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {hasConflict && isGoing && <span className="text-xs font-black" style={{ color: '#ef4444' }}>⚠</span>}
+                            {renderStarButton(performance)}
+                          </div>
                         </div>
-                        {renderStarButton(performance)}
-                      </div>
-                      <p className="text-sm" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</p>
-                    </article>
-                  ))}
+                      </article>
+                    );
+                  })}
                 </section>
               )}
 

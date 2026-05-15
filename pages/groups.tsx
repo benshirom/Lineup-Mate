@@ -152,9 +152,17 @@ export default function GroupsPage() {
     window.setTimeout(() => setCopiedCode(null), 1600);
   };
 
-  const shareToWhatsApp = (group: UserGroup) => {
-    const shareMessage = `Join my Lineup-Mate group "${group.name}" for ${group.festival_name}. Invite code: ${group.invite_code}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage)}`, '_blank', 'noopener,noreferrer');
+  const shareGroup = async (group: UserGroup) => {
+    const shareText = `Join my Lineup-Mate group "${group.name}" for ${group.festival_name}! Invite code: ${group.invite_code}`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: group.name, text: shareText });
+        return;
+      } catch {
+        // fall through to WhatsApp
+      }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleCreateGroup = async (event: FormEvent) => {
@@ -306,17 +314,40 @@ export default function GroupsPage() {
           {groups.length > 0 && <h2 className="mb-4 text-2xl font-black">Your groups</h2>}
           <div data-testid="groups-list" className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {groups.map((group) => (
-              <article key={group.id} data-testid="group-card" className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <div className="h-2" style={{ background: group.festival_color }} />
+              <article key={group.id} data-testid="group-card" className="fade-up overflow-hidden rounded-[28px] shadow-xl transition-all hover:shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${group.festival_color}, ${c.accB})` }} />
                 <div className="p-5">
                   <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3"><div className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl" style={{ background: `${group.festival_color}22` }}>{group.festival_emoji}</div><div><p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: group.festival_color }}>{group.festival_name} {group.festival_year}</p><h3 className="text-xl font-black">{group.name}</h3><p className="mt-1 text-xs" style={{ color: c.muted }}>{group.festival_location || 'Location TBA'} · {formatDateRange(group.festival_start_date, group.festival_end_date)}</p></div></div>
-                    <span className="rounded-full px-3 py-1 text-xs font-black capitalize" style={{ background: c.surf2, color: c.muted, border: `1px solid ${c.brd}` }}>{group.member_role}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: `linear-gradient(135deg, ${group.festival_color}33, ${group.festival_color}11)`, border: `1px solid ${group.festival_color}33` }}>{group.festival_emoji}</div>
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.15em]" style={{ color: group.festival_color }}>{group.festival_name} {group.festival_year}</p>
+                        <h3 className="text-xl font-black leading-snug" style={{ letterSpacing: '-0.01em' }}>{group.name}</h3>
+                        <p className="mt-0.5 text-xs" style={{ color: c.muted }}>{group.festival_location || 'Location TBA'}</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black capitalize" style={{ background: c.surf2, color: c.muted, border: `1px solid ${c.brd}` }}>{group.member_role}</span>
                   </div>
 
-                  <div className="mb-4 grid grid-cols-2 gap-3 text-sm"><div className="rounded-2xl p-3" style={{ background: c.surf2 }}><b className="block text-lg" style={{ color: c.txt }}>{group.member_count}</b><span style={{ color: c.muted }}>members</span></div><div className="rounded-2xl p-3" style={{ background: c.surf2 }}><b className="block text-lg" style={{ color: c.txt }}>{new Date(group.created_at).toLocaleDateString()}</b><span style={{ color: c.muted }}>created</span></div></div>
-                  <div className="mb-4 rounded-2xl p-3" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}><div className="mb-1 text-xs font-black uppercase tracking-widest" style={{ color: c.muted }}>Invite code</div><div className="flex items-center gap-2"><code data-testid="group-invite-code" className="min-w-0 flex-1 truncate text-sm font-black" style={{ color: c.txt }}>{group.invite_code}</code><button type="button" data-testid="copy-invite-code" onClick={() => copyInviteCode(group.invite_code)} className="rounded-full px-3 py-1 text-xs font-black text-white" style={{ background: copiedCode === group.invite_code ? '#18a87a' : c.accB }}>{copiedCode === group.invite_code ? 'Copied' : 'Copy'}</button></div></div>
-                  <div className="flex flex-wrap gap-2"><button type="button" data-testid="open-group-schedule" onClick={() => router.push(`/group/${group.id}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: group.festival_color }}>Open Group Schedule</button><button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Open Festival</button><button type="button" onClick={() => shareToWhatsApp(group)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Share WhatsApp</button></div>
+                  {/* Invite code – prominent */}
+                  <div className="mb-3 flex items-center gap-2 rounded-2xl px-3 py-2.5" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                    <code data-testid="group-invite-code" className="min-w-0 flex-1 text-sm font-black" style={{ color: c.txt, letterSpacing: '0.06em' }}>{group.invite_code}</code>
+                    <button type="button" data-testid="copy-invite-code" onClick={() => copyInviteCode(group.invite_code)} className="shrink-0 rounded-full px-3 py-1 text-xs font-black text-white transition" style={{ background: copiedCode === group.invite_code ? '#16a34a' : c.accB }}>
+                      {copiedCode === group.invite_code ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+
+                  <div className="mb-3 flex items-center gap-3 text-sm" style={{ color: c.muted }}>
+                    <span className="font-bold" style={{ color: c.txt }}>{group.member_count}</span> members
+                    <span className="mx-1 opacity-40">·</span>
+                    <span>{new Date(group.created_at).toLocaleDateString()}</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" data-testid="open-group-schedule" onClick={() => router.push(`/group/${group.id}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: group.festival_color }}>Open Schedule</button>
+                    <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Festival</button>
+                    <button type="button" onClick={() => shareGroup(group)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Share</button>
+                  </div>
                 </div>
               </article>
             ))}

@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
@@ -84,6 +84,46 @@ function statusLabel(status: string) {
   return '×';
 }
 
+function useNowLine(hours: number[], minHour: number, hourWidth: number, selectedDay: string) {
+  const [nowLeft, setNowLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const todayStr = now.toLocaleDateString('sv');
+      if (selectedDay && todayStr !== selectedDay) { setNowLeft(null); return; }
+      const nowHour = now.getHours() + now.getMinutes() / 60;
+      if (hours.length === 0 || nowHour < hours[0] || nowHour > hours[hours.length - 1] + 1) { setNowLeft(null); return; }
+      setNowLeft((nowHour - minHour) * hourWidth);
+    };
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, [hours, minHour, hourWidth, selectedDay]);
+  return nowLeft;
+}
+
+function useHourWidth() {
+  const [w, setW] = useState(118);
+  useEffect(() => {
+    const update = () => setW(window.innerWidth < 640 ? 72 : 118);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return w;
+}
+
+function useStageLabelWidth() {
+  const [w, setW] = useState(132);
+  useEffect(() => {
+    const update = () => setW(window.innerWidth < 640 ? 80 : 132);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  return w;
+}
+
 function stageSortValue(stageName: string, performances: PerformanceInfo[]) {
   const stagePerformances = performances.filter((performance) => performance.stage_name === stageName);
   const firstStart = stagePerformances.map((performance) => performance.start_time).sort()[0] || '';
@@ -109,6 +149,7 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const nowLineRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!authReady) return;
@@ -286,8 +327,15 @@ export default function GroupPage() {
   };
 
   const minHour = hours[0] || 0;
-  const hourWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 72 : 118;
-  const stageLabelWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 80 : 132;
+  const hourWidth = useHourWidth();
+  const stageLabelWidth = useStageLabelWidth();
+  const nowLeft = useNowLine(hours, minHour, hourWidth, selectedDay);
+
+  useEffect(() => {
+    if (nowLeft !== null && nowLineRef.current) {
+      nowLineRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [nowLeft, viewMode]);
 
   const renderPeoplePills = (performanceId: number) => {
     const prefs = performancePreferenceMap[performanceId] ?? [];
@@ -309,21 +357,38 @@ export default function GroupPage() {
       <Navbar />
       <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-7xl px-4 py-8">
-          <header className="mb-6 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-            <div className="h-2" style={{ background: group?.festival?.color || c.acc }} />
-            <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_300px] lg:items-end">
+          <header className="fade-up mb-6 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+            <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${group?.festival?.color || c.acc}, ${c.accB})` }} />
+            <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_280px] lg:items-center">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: group?.festival?.color || c.acc }}>Group Schedule</p>
-                <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{group ? group.name : 'Loading…'}</h1>
-                {group?.festival && <p className="mt-2 text-sm" style={{ color: c.muted }}>{festivalTitle(group.festival)} · {formatDateRange(group.festival.start_date, group.festival.end_date)}</p>}
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: group?.festival?.color || c.acc }}>Group Schedule</p>
+                  {group?.invite_code && (
+                    <button
+                      type="button"
+                      onClick={copyInviteCode}
+                      title="Copy invite code"
+                      className="rounded-full px-2 py-0.5 text-[10px] font-black transition"
+                      style={{ background: copied ? '#16a34a22' : `${c.accB}22`, color: copied ? '#16a34a' : c.accB, border: `1px solid ${copied ? '#16a34a44' : `${c.accB}44`}` }}
+                    >
+                      {copied ? '✓ Copied' : `# ${group.invite_code}`}
+                    </button>
+                  )}
+                </div>
+                <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.02em' }}>
+                  {group ? group.name : 'Loading…'}
+                </h1>
+                {group?.festival && <p className="mt-1.5 text-sm" style={{ color: c.muted }}>{festivalTitle(group.festival)} · {formatDateRange(group.festival.start_date, group.festival.end_date)}</p>}
               </div>
-              <div className="rounded-3xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+              <div className="rounded-2xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                 <div className="space-y-2 text-sm" style={{ color: c.muted }}>
-                  <div>👥 {members.length} members</div>
-                  {group?.festival && <div>📍 {group.festival.location || 'Location TBA'}</div>}
-                  {group?.festival && <div>📅 {formatDateRange(group.festival.start_date, group.festival.end_date)}</div>}
-                  {group && <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="mt-2 rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>Open Festival</button>}
-                  <button type="button" onClick={() => router.push('/groups')} className="mt-2 rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>← My Groups</button>
+                  <div className="flex items-center gap-2"><span>👥</span><span className="font-bold" style={{ color: c.txt }}>{members.length}</span><span>members</span></div>
+                  {group?.festival && <div className="flex items-center gap-2"><span>📍</span><span>{group.festival.location || 'Location TBA'}</span></div>}
+                  {group?.festival && <div className="flex items-center gap-2"><span>📅</span><span>{formatDateRange(group.festival.start_date, group.festival.end_date)}</span></div>}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {group && <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>Open Festival</button>}
+                  <button type="button" onClick={() => router.push('/groups')} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>← Groups</button>
                 </div>
               </div>
             </div>
@@ -411,18 +476,40 @@ export default function GroupPage() {
                         {dayStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
                           const stageItems = visiblePerformances.filter((performance) => performance.stage_name === stage.name);
                           return (
-                            <div key={stage.name} className="mb-2 flex" data-testid="group-stage-row">
-                              <div className="shrink-0 pr-2 text-right text-xs font-black leading-tight" style={{ width: stageLabelWidth, color: stage.color, paddingTop: 20 }}>{stage.name}</div>
-                              <div className="relative h-20 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                            <div key={stage.name} className="mb-2 flex items-stretch" data-testid="group-stage-row">
+                              <div
+                                className="shrink-0 pr-2 text-right text-xs font-black leading-tight flex items-center justify-end"
+                                style={{ width: stageLabelWidth, color: stage.color, position: 'sticky', left: 0, zIndex: 2, background: c.surf }}
+                              >
+                                <span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}15` }}>{stage.name}</span>
+                              </div>
+                              <div className="relative h-20 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}08`, border: `1px solid ${c.brd}` }}>
                                 {hours.map((hour) => <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />)}
+                                {nowLeft !== null && (
+                                  <div
+                                    ref={nowLineRef}
+                                    className="now-line absolute top-0 h-full z-10 pointer-events-none"
+                                    style={{ left: nowLeft, width: 2, background: '#ef4444', borderRadius: 2 }}
+                                  />
+                                )}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.start_time) - minHour) * hourWidth;
                                   const width = Math.max(60, durationHours(performance.start_time, performance.end_time) * hourWidth - 4);
                                   const hasPicks = (performancePreferenceMap[performance.id] ?? []).length > 0;
                                   return (
-                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 h-16 overflow-hidden rounded-xl px-2 py-1.5 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color, opacity: hasPicks ? 1 : 0.72 }}>
+                                    <div
+                                      key={performance.id}
+                                      data-testid="group-performance-block"
+                                      title={`${performance.artist_name} · ${timeLabel(performance.start_time)}–${timeLabel(performance.end_time)}`}
+                                      className="perf-block absolute top-2 h-16 overflow-hidden rounded-xl px-2 py-1.5 text-left text-xs font-black text-white shadow-lg"
+                                      style={{
+                                        left, width,
+                                        background: `linear-gradient(135deg, ${performance.stage_color}, ${performance.stage_color}cc)`,
+                                        opacity: hasPicks ? 1 : 0.6
+                                      }}
+                                    >
                                       <span className="block truncate leading-4">{performance.artist_name}</span>
-                                      <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.start_time)} – {timeLabel(performance.end_time)}</span>
+                                      <span className="block truncate text-[10px] opacity-75">{timeLabel(performance.start_time)} – {timeLabel(performance.end_time)}</span>
                                       <div className="mt-1 max-h-5 overflow-hidden">{renderPeoplePills(performance.id)}</div>
                                     </div>
                                   );
