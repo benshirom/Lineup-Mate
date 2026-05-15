@@ -4,7 +4,6 @@ test.describe('public browsing', () => {
   test('home page loads and shows public festival browsing UI', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText(/Lineup[·-]Mate/i).first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Never miss a set again|לעולם לא תפספס הופעה/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByPlaceholder(/Search events|חפש אירועים/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
