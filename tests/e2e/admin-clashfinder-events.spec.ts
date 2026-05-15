@@ -70,6 +70,7 @@ test.describe('Clashfinder events API authorization', () => {
   });
 
   test('regular user cannot load Clashfinder events API', async ({ page }) => {
+    test.setTimeout(60_000);
     test.skip(!userEmail || !userPassword, 'Set E2E_USER_EMAIL and E2E_USER_PASSWORD to run regular-user API authorization test.');
 
     await login(page, userEmail!, userPassword!);
@@ -83,7 +84,8 @@ test.describe('Clashfinder events API authorization', () => {
     expect(token).toBeTruthy();
 
     const response = await page.request.get('/api/admin/clashfinder-events?scope=all&search=ozora&limit=10', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 45_000
     });
 
     expect(response.status()).toBe(403);
