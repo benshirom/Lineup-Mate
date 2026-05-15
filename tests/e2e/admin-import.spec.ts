@@ -12,6 +12,8 @@ test.describe('admin Clashfinder import tools', () => {
   });
 
   test('admin can run Clashfinder Preview without importing data', async ({ page }) => {
+    test.setTimeout(60_000);
+
     await page.goto('/admin');
     await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
 
@@ -20,7 +22,10 @@ test.describe('admin Clashfinder import tools', () => {
 
     await page.getByTestId('preview-clashfinder').or(page.getByRole('button', { name: /^Preview$/i })).click();
 
-    await expect(page.getByRole('heading', { name: /Result/i })).toBeVisible({ timeout: 45_000 });
-    await expect(page.getByText(/Detected:/i)).toBeVisible();
+    await expect(
+      page.getByTestId('clashfinder-preview-result'),
+      'Preview should render the stable preview result container. If this fails, the Clashfinder preview API is slow or returned an error.'
+    ).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/Detected:/i)).toBeVisible({ timeout: 10_000 });
   });
 });
