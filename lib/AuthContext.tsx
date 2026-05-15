@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import supabase from './supabaseClient';
 import { translations, type ThemeMode } from './platform';
@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(DEFAULT_THEME);
 
-  const applyPreferences = (nextTheme: ThemeMode) => {
+  const applyPreferences = useCallback((nextTheme: ThemeMode) => {
     setTheme(nextTheme);
 
     if (typeof document !== 'undefined') {
@@ -63,9 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.localStorage.removeItem('lineup-mate-language');
       window.localStorage.setItem('lineup-mate-theme', nextTheme);
     }
-  };
+  }, []);
 
-  const loadProfile = async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
       .select('email, display_name, avatar_url, role, theme')
@@ -87,17 +87,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     applyPreferences(nextTheme);
-  };
+  }, [applyPreferences]);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user?.id) await loadProfile(user.id);
-  };
+  }, [loadProfile, user?.id]);
 
-  const setLocalPreferences = (next: Partial<Pick<UserProfile, 'theme'>>) => {
+  const setLocalPreferences = useCallback((next: Partial<Pick<UserProfile, 'theme'>>) => {
     const nextTheme = normalizeTheme(next.theme ?? theme);
     applyPreferences(nextTheme);
     setProfile((current) => current ? { ...current, theme: nextTheme } : current);
-  };
+  }, [applyPreferences, theme]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applyPreferences, loadProfile]);
 
   const value: AuthContextProps = {
     user,
