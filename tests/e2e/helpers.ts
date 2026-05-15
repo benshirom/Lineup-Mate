@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export function localPart(email: string) {
   return email.split('@')[0];
@@ -23,7 +23,7 @@ export async function expectAuthenticated(page: Page) {
 export async function login(page: Page, email: string, password: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password').fill(password);
+  await page.getByRole('textbox', { name: /password/i }).fill(password);
   await page.getByRole('button', { name: /^Sign in$/i }).click();
   await expect(page, `Login failed for ${email}. Check GitHub Secrets and Supabase email confirmation.`).toHaveURL('/', { timeout: 20_000 });
   await expectAuthenticated(page);
@@ -118,26 +118,69 @@ export async function ensureFirstFestivalIsSaved(page: Page) {
   ).toBeVisible({ timeout: 20_000 });
 }
 
-export async function selectFirstFestivalInForm(page: Page) {
-  const select = page.getByTestId('group-festival-select');
-  await expect(select, 'Create group form should include a festival dropdown').toBeVisible({ timeout: 15_000 });
+async function getGroupFormDiagnostics(page: Page) {
+  return page.evaluate(() => {
+    const panels = Array.from(document.querySelectorAll('[data-testid="create-group-panel"]'));
+    const selects = Array.from(document.querySelectorAll('[data-testid="group-festival-select"]'));
+    const error = document.querySelector('[data-testid="groups-error"]')?.textContent?.trim() || null;
 
-  await expect
-    .poll(
-      async () => {
-        return select.evaluate((el) => {
-          const selectEl = el as HTMLSelectElement;
-          return Array.from(selectEl.options)
-            .map((option) => ({ value: option.value, label: option.textContent?.trim() || '' }))
-            .filter((option) => option.value !== '');
-        });
-      },
-      {
-        timeout: 20_000,
-        message: 'Expected group-festival-select to contain at least one real festival option. If empty, check /groups festival loading and Supabase RLS for public.festivals.'
-      }
-    )
-    .not.toHaveLength(0);
+    return {
+      groupsError: error,
+      panelCount: panels.length,
+      visiblePanels: panels.map((panel, index) => {
+        const rect = panel.getBoundingClientRect();
+        const style = window.getComputedStyle(panel);
+        return {
+          index,
+          visible: rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none',
+          text: panel.textContent?.replace(/\s+/g, ' ').trim().slice(0, 240) || ''
+        };
+      }),
+      selects: selects.map((select, index) => {
+        const selectEl = select as HTMLSelectElement;
+        const rect = selectEl.getBoundingClientRect();
+        const style = window.getComputedStyle(selectEl);
+        return {
+          index,
+          visible: rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none',
+          value: selectEl.value,
+          options: Array.from(selectEl.options).map((option) => ({ value: option.value, label: option.textContent?.trim() || '' }))
+        };
+      })
+    };
+  });
+}
+
+export async function selectFirstFestivalInForm(page: Page, form?: Locator) {
+  const visibleForm = form ?? page.locator('[data-testid="create-group-panel"]:visible').last();
+  await expect(visibleForm, 'Create group form should be visible before selecting a festival.').toBeVisible({ timeout: 15_000 });
+
+  const select = visibleForm.getByTestId('group-festival-select');
+  await expect(select, 'The visible create group form should include a festival dropdown.').toBeVisible({ timeout: 15_000 });
+
+  try {
+    await expect
+      .poll(
+        async () => {
+          return select.evaluate((el) => {
+            const selectEl = el as HTMLSelectElement;
+            return Array.from(selectEl.options)
+              .map((option) => ({ value: option.value, label: option.textContent?.trim() || '' }))
+              .filter((option) => option.value !== '');
+          });
+        },
+        {
+          timeout: 30_000,
+          message: 'Expected the visible group-festival-select to contain at least one real festival option.'
+        }
+      )
+      .not.toHaveLength(0);
+  } catch (error) {
+    const diagnostics = await getGroupFormDiagnostics(page).catch((diagError) => ({ diagnosticsError: String(diagError) }));
+    throw new Error(
+      `No festival options found in the visible create group form. This usually means the test selected a hidden/stale form or /groups did not load festivals. Diagnostics: ${JSON.stringify(diagnostics, null, 2)}`
+    );
+  }
 
   const options = await select.evaluate((el) => {
     const selectEl = el as HTMLSelectElement;
@@ -147,6 +190,6 @@ export async function selectFirstFestivalInForm(page: Page) {
   });
 
   const firstValue = options[0]?.value;
-  if (!firstValue) throw new Error(`No festival options found in group form. Current options: ${JSON.stringify(options)}`);
+  if (!firstValue) throw new Error(`No festival options found in group form after polling. Current options: ${JSON.stringify(options)}`);
   await select.selectOption(firstValue);
 }
