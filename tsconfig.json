@@ -19,7 +19,7 @@
     "jsx": "react-jsx",
     "incremental": true,
     "types": ["node"],
-    "ignoreDeprecations": "5.0",
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/components/*": ["components/*"],
