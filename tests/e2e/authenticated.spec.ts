@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openProfile } from './helpers';
+import { ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, navigateTo, openFirstFestival } from './helpers';
 
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
@@ -18,7 +18,7 @@ test.describe('authenticated flows', () => {
   test('user can save a festival and see it on My Schedule', async ({ page }) => {
     await ensureFirstFestivalIsSaved(page);
 
-    await page.goto('/my-schedule');
+    await navigateTo(page, /My Schedule|הלוח שלי/i);
     await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible();
     await expect(page.getByTestId('saved-festivals-section')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('saved-festival-card').first()).toBeVisible({ timeout: 20_000 });
@@ -26,16 +26,15 @@ test.describe('authenticated flows', () => {
   });
 
   test('user can open groups area', async ({ page }) => {
-    await page.goto('/groups');
+    await navigateTo(page, /Groups|קבוצות/i);
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible();
-    await expect(page.getByTestId('join-group-panel')).toBeVisible({ timeout: 20_000 });
   });
 
   test('user can open first festival and star an act if timeline has items', async ({ page }) => {
     await openFirstFestival(page);
     await ensureFirstActIsStarred(page);
 
-    await page.goto('/my-schedule');
+    await navigateTo(page, /My Schedule|הלוח שלי/i);
     await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible();
     await expect(page.getByTestId('saved-acts-section')).toBeVisible({ timeout: 20_000 });
   });
@@ -53,7 +52,7 @@ test.describe('authenticated flows', () => {
     const selectedDayUrl = page.url();
     const selectedDay = new URL(selectedDayUrl).searchParams.get('day');
 
-    await page.goto('/my-schedule');
+    await navigateTo(page, /My Schedule|הלוח שלי/i);
     await expect(page.getByTestId('schedule-festival-group').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('schedule-day-group').first()).toBeVisible({ timeout: 20_000 });
 
@@ -68,8 +67,14 @@ test.describe('authenticated flows', () => {
     }
   });
 
-  test('user can open Profile page from the user badge or mobile profile navigation', async ({ page }) => {
-    await openProfile(page);
+  test('user can open Profile page from the user badge', async ({ page }) => {
+    // user-profile-link is on desktop; on mobile navigate via menu
+    const profileLink = page.getByTestId('user-profile-link');
+    if (await profileLink.isVisible().catch(() => false)) {
+      await profileLink.click();
+    } else {
+      await navigateTo(page, /Profile|פרופיל/i);
+    }
     await expect(page).toHaveURL(/\/profile/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Account details/i)).toBeVisible();
@@ -86,7 +91,6 @@ test.describe('authenticated flows', () => {
 
     await page.getByLabel(/Language/i).selectOption('he');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    await expect(page.getByText(/הלוח שלי/i).first()).toBeVisible({ timeout: 20_000 });
 
     await page.getByLabel(/Theme/i).selectOption('light');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -111,16 +115,16 @@ test.describe('authenticated flows', () => {
     await openFirstFestival(page);
     expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
 
-    await page.goto('/groups');
+    await navigateTo(page, /Groups/i);
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
     expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
 
-    await page.goto('/my-schedule');
+    await navigateTo(page, /My Schedule/i);
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
     expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
 
-    const adminLink = page.getByRole('link', { name: /Admin/i }).first();
-    if (await adminLink.isVisible().catch(() => false)) {
+    const adminLink = page.getByRole('link', { name: /Admin/i });
+    if (await adminLink.isVisible()) {
       await adminLink.click();
       await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
       expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');

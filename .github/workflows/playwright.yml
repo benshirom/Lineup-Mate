@@ -25,7 +25,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright tests
-        run: npm run test:e2e
+        run: npx playwright test --max-failures=8
         env:
           PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL || 'https://lineup-mate.netlify.app' }}
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}

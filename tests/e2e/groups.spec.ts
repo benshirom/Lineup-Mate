@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ensureFirstActIsStarred, login, openFirstFestival, signOut } from './helpers';
+import { ensureFirstActIsStarred, login, openFirstFestival, selectFirstFestivalInForm, signOut } from './helpers';
 
 const ownerEmail = process.env.E2E_ADMIN_EMAIL;
 const ownerPassword = process.env.E2E_ADMIN_PASSWORD;
@@ -31,8 +31,9 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('join-group-panel')).toBeVisible();
 
     await openCreateGroupForm(page);
-    await expect(page.getByTestId('group-festival-select')).toBeVisible();
+    await selectFirstFestivalInForm(page);
     await page.getByTestId('group-name-input').fill(groupName);
+    await expect(page.getByTestId('create-group-submit')).toBeEnabled({ timeout: 5_000 });
     await page.getByTestId('create-group-submit').click();
 
     await expect(page).toHaveURL(/\/group\/\d+/, { timeout: 20_000 });
@@ -58,7 +59,9 @@ test.describe.serial('group collaboration flows', () => {
 
     await page.goto('/groups');
     await openCreateGroupForm(page);
+    await selectFirstFestivalInForm(page);
     await page.getByTestId('group-name-input').fill(groupName);
+    await expect(page.getByTestId('create-group-submit')).toBeEnabled({ timeout: 5_000 });
     await page.getByTestId('create-group-submit').click();
 
     await expect(page).toHaveURL(/\/group\/\d+/, { timeout: 20_000 });
