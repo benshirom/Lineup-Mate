@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
-import { formatDateRange, getThemeColors, type ThemeMode } from '@/lib/platform';
+import { formatDateRange, getThemeColors } from '@/lib/platform';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 type FestivalTab = 'timeline' | 'lineup' | 'info';
@@ -58,7 +58,7 @@ function festivalTitle(festival: Festival) {
 export default function FestivalPage() {
   const router = useRouter();
   const { festivalId, day } = router.query;
-  const { user, supabase } = useAuth();
+  const { user, supabase, theme } = useAuth();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [performances, setPerformances] = useState<PerformanceItem[]>([]);
   const [days, setDays] = useState<string[]>([]);
@@ -73,7 +73,6 @@ export default function FestivalPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
-  const [theme] = useState<ThemeMode>('dark');
 
   const c = getThemeColors(theme);
 
@@ -267,8 +266,8 @@ export default function FestivalPage() {
   };
 
   const minHour = hours[0] || 0;
-  const hourWidth = 118;
-  const stageLabelWidth = 132;
+  const hourWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 72 : 118;
+  const stageLabelWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 80 : 132;
 
   const renderStarButton = (performance: PerformanceItem, compact = false) => {
     const isGoing = performance.status === 'going';
@@ -306,90 +305,94 @@ export default function FestivalPage() {
 
           {festival && (
             <>
-              <header className="mb-6 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+              {/* ── Festival header ─────────────────────────────── */}
+              <header className="mb-5 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <div className="h-2" style={{ background: festival.color || c.acc }} />
-                <div className="grid gap-5 p-6 lg:grid-cols-[1fr_360px] lg:items-end">
+                <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_300px] lg:items-end">
                   <div>
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-3xl text-4xl" style={{ background: `${festival.color || c.acc}22` }}>
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl text-3xl" style={{ background: `${festival.color || c.acc}22` }}>
                         {festival.emoji || '🎪'}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: festival.color || c.acc }}>
                           {festival.genre_label || festival.genre || 'Festival'}
                         </p>
-                        <h1 className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
+                        <h1 className="truncate text-2xl font-black sm:text-4xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
                           {festivalTitle(festival)}
                         </h1>
                       </div>
                     </div>
-                    <p className="max-w-3xl text-sm leading-7 sm:text-base" style={{ color: c.muted }}>
+                    <p className="max-w-2xl text-sm leading-6" style={{ color: c.muted }}>
                       {festival.description || 'Browse the lineup, save your favorite artists and plan with friends.'}
                     </p>
-                    {!user && <p className="mt-3 text-sm font-bold" style={{ color: c.acc }}>Browse freely. Sign in only when you want to save acts or create groups.</p>}
+                    {!user && <p className="mt-2 text-xs font-bold" style={{ color: c.acc }}>Browse freely — sign in to save acts or create groups.</p>}
                   </div>
-
-                  <div className="rounded-3xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
-                    <div className="space-y-2 text-sm" style={{ color: c.muted }}>
+                  <div className="rounded-2xl p-4 text-sm" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>
+                    <div className="space-y-1.5">
                       <div>📍 {festival.location || 'Location TBA'}</div>
                       <div>📅 {formatDateRange(festival.start_date, festival.end_date)}</div>
                       {festival.website && <div>🌐 {festival.website}</div>}
-                      {festival.last_synced_at && <div>🔄 Last sync: {new Date(festival.last_synced_at).toLocaleString()}</div>}
+                      {festival.last_synced_at && <div className="text-xs">🔄 {new Date(festival.last_synced_at).toLocaleString()}</div>}
                     </div>
                   </div>
                 </div>
               </header>
 
-              <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="rounded-3xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <h2 className="mb-2 font-black">Create a group</h2>
-                  <p className="mb-4 text-sm" style={{ color: c.muted }}>Open a shared schedule and invite friends to compare picks.</p>
-                  <button type="button" onClick={() => { if (!requireLogin()) return; setShowCreateModal(true); }} className="rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: festival.color || c.acc }}>
-                    {user ? 'Create Group' : 'Sign in to Create Group'}
-                  </button>
+              {/* ── Sticky tab bar + day selector ───────────────── */}
+              <div
+                className="sticky z-30 -mx-4 mb-5 px-4 py-3"
+                style={{ top: 57, background: c.bg, borderBottom: `1px solid ${c.brd}` }}
+              >
+                <div className="flex gap-2 overflow-x-auto scroll-hidden pb-2">
+                  {(['timeline', 'lineup', 'info'] as FestivalTab[]).map((nextTab) => (
+                    <button
+                      key={nextTab}
+                      type="button"
+                      onClick={() => setTab(nextTab)}
+                      className="shrink-0 rounded-full px-5 py-2 text-sm font-black capitalize"
+                      style={{ background: tab === nextTab ? festival.color || c.acc : c.surf, color: tab === nextTab ? '#fff' : c.muted, border: `1px solid ${tab === nextTab ? festival.color || c.acc : c.brd}` }}
+                    >
+                      {nextTab}
+                    </button>
+                  ))}
                 </div>
 
-                <form onSubmit={handleJoinGroup} className="rounded-3xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <h2 className="mb-2 font-black">Join a group</h2>
-                  <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend.</p>
-                  <div className="flex gap-2">
-                    <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
-                    <button type="submit" className="rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: c.accB }}>
-                      {user ? 'Join' : 'Sign in'}
-                    </button>
-                  </div>
-                  {joinError && <p className="mt-2 text-sm text-red-500">{joinError}</p>}
-                </form>
-              </section>
-
-              <div className="mb-5 flex flex-wrap gap-2">
-                {(['timeline', 'lineup', 'info'] as FestivalTab[]).map((nextTab) => (
-                  <button key={nextTab} type="button" onClick={() => setTab(nextTab)} className="rounded-full px-5 py-2 text-sm font-black capitalize" style={{ background: tab === nextTab ? festival.color || c.acc : c.surf, color: tab === nextTab ? '#fff' : c.muted, border: `1px solid ${tab === nextTab ? festival.color || c.acc : c.brd}` }}>
-                    {nextTab}
-                  </button>
-                ))}
-              </div>
-
-              {days.length > 0 && (
-                <div className="relative mb-5">
-                  <div className="flex gap-2 overflow-x-auto scroll-hidden py-1 px-0.5" data-testid="festival-day-tabs" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%)' }}>
+                {days.length > 0 && tab !== 'info' && (
+                  <div className="flex gap-2 overflow-x-auto scroll-hidden pt-2" data-testid="festival-day-tabs">
                     {days.map((nextDay) => (
-                      <button key={nextDay} type="button" data-testid="festival-day-tab" onClick={() => selectDay(nextDay)} className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black" style={{ background: selectedDay === nextDay ? c.accB : c.surf, color: selectedDay === nextDay ? '#fff' : c.muted, border: `1px solid ${selectedDay === nextDay ? c.accB : c.brd}` }}>
-                        {new Date(nextDay).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                      <button
+                        key={nextDay}
+                        type="button"
+                        data-testid="festival-day-tab"
+                        onClick={() => selectDay(nextDay)}
+                        className="shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-black"
+                        style={{ background: selectedDay === nextDay ? c.accB : c.surf, color: selectedDay === nextDay ? '#fff' : c.muted, border: `1px solid ${selectedDay === nextDay ? c.accB : c.brd}` }}
+                      >
+                        {new Date(nextDay).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
+              {/* ── Timeline tab ─────────────────────────────────── */}
               {tab === 'timeline' && (
                 <section className="rounded-[28px] p-4 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <div className="mb-4 flex flex-wrap gap-2" data-testid="festival-stage-filters">
+                  <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="festival-stage-filters">
                     {allStages.map((stage) => {
                       const isOn = activeStages[stage.name] !== false;
                       const hasShowsToday = selectedDayPerformances.some((performance) => performance.stageName === stage.name);
                       return (
-                        <button key={stage.name} type="button" data-testid="festival-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }} title={hasShowsToday ? stage.name : `${stage.name} has no shows on this day`}>
+                        <button
+                          key={stage.name}
+                          type="button"
+                          data-testid="festival-stage-filter"
+                          onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))}
+                          className="shrink-0 rounded-full px-3 py-1 text-xs font-black"
+                          style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}
+                          title={hasShowsToday ? stage.name : `${stage.name} has no shows on this day`}
+                        >
                           {stage.name}
                         </button>
                       );
@@ -399,7 +402,8 @@ export default function FestivalPage() {
                   {visiblePerformances.length === 0 ? (
                     <p style={{ color: c.muted }}>No shows this day.</p>
                   ) : (
-                    <div className="overflow-x-auto scroll-thin">
+                    <div className="relative overflow-x-auto scroll-thin">
+                      <p className="mb-2 text-xs sm:hidden" style={{ color: c.muted }}>← scroll to see full timeline →</p>
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
                           {hours.map((hour) => (
@@ -413,21 +417,27 @@ export default function FestivalPage() {
                           const stageItems = visiblePerformances.filter((performance) => performance.stageName === stage.name);
                           return (
                             <div key={stage.name} className="mb-2 flex" data-testid="festival-stage-row">
-                              <div className="shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color }}>
+                              <div className="shrink-0 pr-2 text-right text-xs font-black leading-tight" style={{ width: stageLabelWidth, color: stage.color, paddingTop: 20 }}>
                                 {stage.name}
                               </div>
-                              <div className="relative h-16 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                              <div className="relative h-14 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                                 {hours.map((hour) => (
                                   <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
                                 ))}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.startTime) - minHour) * hourWidth;
-                                  const width = Math.max(92, durationHours(performance.startTime, performance.endTime) * hourWidth - 6);
+                                  const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
                                   return (
-                                    <div key={performance.id} data-testid="festival-performance-block" title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`} className="absolute top-2 h-12 overflow-hidden rounded-xl px-3 pr-10 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stageColor }}>
-                                      <span className="block truncate">{performance.artistName}</span>
+                                    <div
+                                      key={performance.id}
+                                      data-testid="festival-performance-block"
+                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}-${timeLabel(performance.endTime)}`}
+                                      className="absolute top-1.5 h-11 overflow-hidden rounded-xl px-2 pr-9 text-left text-xs font-black text-white shadow-lg"
+                                      style={{ left, width, background: performance.stageColor }}
+                                    >
+                                      <span className="block truncate leading-4 pt-1">{performance.artistName}</span>
                                       <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
-                                      <span className="absolute right-2 top-1/2 -translate-y-1/2">{renderStarButton(performance, true)}</span>
+                                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2">{renderStarButton(performance, true)}</span>
                                     </div>
                                   );
                                 })}
@@ -441,13 +451,14 @@ export default function FestivalPage() {
                 </section>
               )}
 
+              {/* ── Lineup tab ───────────────────────────────────── */}
               {tab === 'lineup' && (
-                <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {visiblePerformances.map((performance) => (
                     <article key={performance.id} className="rounded-3xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                       <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="font-black">{performance.artistName}</h3>
+                        <div className="min-w-0">
+                          <h3 className="truncate font-black">{performance.artistName}</h3>
                           <p className="text-xs" style={{ color: performance.stageColor }}>{performance.stageName}</p>
                         </div>
                         {renderStarButton(performance)}
@@ -458,25 +469,49 @@ export default function FestivalPage() {
                 </section>
               )}
 
+              {/* ── Info tab (About + Groups) ─────────────────────── */}
               {tab === 'info' && (
-                <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-                  <article className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                    <h2 className="mb-3 text-xl font-black">About</h2>
-                    <p className="leading-8" style={{ color: c.muted }}>{festival.description || 'No description yet.'}</p>
-                  </article>
-                  <aside className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                    <h2 className="mb-3 text-xl font-black">Festival details</h2>
-                    <div className="space-y-3 text-sm" style={{ color: c.muted }}>
-                      <div><b style={{ color: c.txt }}>Location:</b> {festival.location || 'TBA'}</div>
-                      <div><b style={{ color: c.txt }}>Dates:</b> {formatDateRange(festival.start_date, festival.end_date)}</div>
-                      <div><b style={{ color: c.txt }}>Stages:</b> {allStages.length}</div>
-                      <div><b style={{ color: c.txt }}>Days:</b> {days.length}</div>
-                      <div><b style={{ color: c.txt }}>Performances:</b> {performances.length}</div>
-                      {festival.website && <div><b style={{ color: c.txt }}>Website:</b> {festival.website}</div>}
-                      {festival.clashfinder_slug && <div><b style={{ color: c.txt }}>Source:</b> {festival.clashfinder_slug}</div>}
+                <div className="space-y-4">
+                  <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[1fr_300px]">
+                    <article className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-3 text-xl font-black">About</h2>
+                      <p className="leading-7 text-sm" style={{ color: c.muted }}>{festival.description || 'No description yet.'}</p>
+                    </article>
+                    <aside className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-3 text-xl font-black">Festival details</h2>
+                      <div className="space-y-2.5 text-sm" style={{ color: c.muted }}>
+                        <div><b style={{ color: c.txt }}>Location:</b> {festival.location || 'TBA'}</div>
+                        <div><b style={{ color: c.txt }}>Dates:</b> {formatDateRange(festival.start_date, festival.end_date)}</div>
+                        <div><b style={{ color: c.txt }}>Stages:</b> {allStages.length}</div>
+                        <div><b style={{ color: c.txt }}>Days:</b> {days.length}</div>
+                        <div><b style={{ color: c.txt }}>Performances:</b> {performances.length}</div>
+                        {festival.website && <div><b style={{ color: c.txt }}>Website:</b> {festival.website}</div>}
+                        {festival.clashfinder_slug && <div><b style={{ color: c.txt }}>Source:</b> {festival.clashfinder_slug}</div>}
+                      </div>
+                    </aside>
+                  </section>
+
+                  <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-2 font-black">Create a group</h2>
+                      <p className="mb-4 text-sm" style={{ color: c.muted }}>Open a shared schedule and invite friends to compare picks.</p>
+                      <button type="button" onClick={() => { if (!requireLogin()) return; setShowCreateModal(true); }} className="rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: festival.color || c.acc }}>
+                        {user ? 'Create Group' : 'Sign in to Create Group'}
+                      </button>
                     </div>
-                  </aside>
-                </section>
+                    <form onSubmit={handleJoinGroup} className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-2 font-black">Join a group</h2>
+                      <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend.</p>
+                      <div className="flex gap-2">
+                        <input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
+                        <button type="submit" className="rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: c.accB }}>
+                          {user ? 'Join' : 'Sign in'}
+                        </button>
+                      </div>
+                      {joinError && <p className="mt-2 text-sm text-red-500">{joinError}</p>}
+                    </form>
+                  </section>
+                </div>
               )}
 
               {!loading && performances.length === 0 && <p style={{ color: c.muted }}>No active performances found.</p>}

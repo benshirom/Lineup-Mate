@@ -304,7 +304,7 @@ export default function GroupsPage() {
           {!loading && groups.length === 0 && !error && <div data-testid="no-groups-state" className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}><div className="text-5xl">👥</div><h2 className="mt-3 text-2xl font-black">No groups yet</h2><p className="mt-2 text-sm" style={{ color: c.muted }}>Create your first group above, or join one with an invite code.</p></div>}
 
           {groups.length > 0 && <h2 className="mb-4 text-2xl font-black">Your groups</h2>}
-          <div data-testid="groups-list" className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div data-testid="groups-list" className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {groups.map((group) => (
               <article key={group.id} data-testid="group-card" className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <div className="h-2" style={{ background: group.festival_color }} />

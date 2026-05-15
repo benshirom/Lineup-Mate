@@ -1,13 +1,29 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
-import { AuthProvider } from '@/lib/AuthContext';
+import React from 'react';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import BottomNav from '@/components/BottomNav';
 
-function MyApp({ Component, pageProps }: AppProps) {
+function AppShell({ Component, pageProps }: AppProps) {
+  const { user } = useAuth();
   return (
-    <AuthProvider>
+    <>
       <Component {...pageProps} />
-    </AuthProvider>
+      {user && (
+        <>
+          <BottomNav />
+          {/* spacer so content is not hidden behind the fixed bottom bar */}
+          <div className="md:hidden h-14" aria-hidden="true" />
+        </>
+      )}
+    </>
   );
 }
 
-export default MyApp;
+export default function MyApp(props: AppProps) {
+  return (
+    <AuthProvider>
+      <AppShell {...props} />
+    </AuthProvider>
+  );
+}
