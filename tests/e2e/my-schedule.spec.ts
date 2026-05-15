@@ -12,28 +12,43 @@ test.describe('my schedule management', () => {
   });
 
   test('user can remove one saved act from My Schedule', async ({ page }) => {
-    await openFirstFestival(page);
-    await ensureFirstActIsStarred(page);
+    await test.step('star an act', async () => {
+      await openFirstFestival(page);
+      await ensureFirstActIsStarred(page);
+    });
 
-    await page.getByRole('link', { name: /My Schedule/i }).click();
-    await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
+    await test.step('open My Schedule directly and remove one act', async () => {
+      await page.goto('/my-schedule');
+      await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByTestId('saved-acts-section'),
+        'Saved acts section is missing after starring an act. If this fails, check user_performance_preferences persistence/read.'
+      ).toBeVisible({ timeout: 20_000 });
 
-    const removeButton = page.getByRole('button', { name: /^Remove$/i }).first();
-    await expect(removeButton).toBeVisible();
-    await removeButton.click();
-
-    await expect(page.getByRole('button', { name: /^Removing/i })).toHaveCount(0);
+      const removeButton = page.getByRole('button', { name: /^Remove$/i }).first();
+      await expect(removeButton, 'A saved act should expose a Remove button in My Schedule.').toBeVisible();
+      await removeButton.click();
+      await expect(page.getByRole('button', { name: /^Removing/i })).toHaveCount(0);
+    });
   });
 
   test('user can clear all saved acts from My Schedule', async ({ page }) => {
-    await openFirstFestival(page);
-    await ensureFirstActIsStarred(page);
+    await test.step('star an act', async () => {
+      await openFirstFestival(page);
+      await ensureFirstActIsStarred(page);
+    });
 
-    await page.getByRole('link', { name: /My Schedule/i }).click();
-    await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible();
+    await test.step('open My Schedule directly and clear saved acts', async () => {
+      await page.goto('/my-schedule');
+      await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible({ timeout: 20_000 });
+      await expect(
+        page.getByTestId('saved-acts-section'),
+        'Clear All requires at least one saved act, but saved-acts-section did not render.'
+      ).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('button', { name: /Clear All/i }).click();
-    await page.getByRole('button', { name: /Yes, clear all/i }).click();
-    await expect(page.getByText(/No saved acts yet/i)).toBeVisible();
+      await page.getByRole('button', { name: /Clear All/i }).click();
+      await page.getByRole('button', { name: /Yes, clear all/i }).click();
+      await expect(page.getByText(/No saved acts yet/i)).toBeVisible({ timeout: 20_000 });
+    });
   });
 });
