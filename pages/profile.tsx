@@ -176,8 +176,8 @@ export default function ProfilePage() {
         theme
       } : current);
 
-      setLocalPreferences({ theme });
       await refreshProfile();
+      setLocalPreferences({ theme });
       setMessage('Profile saved successfully.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not save your profile.');
