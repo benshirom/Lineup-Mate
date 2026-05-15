@@ -224,7 +224,7 @@ export default function Home() {
           {error && <p className="rounded-xl p-4 text-sm text-red-700" style={{ background: '#fee2e2', border: '1px solid #fecaca' }}>{error}</p>}
           {!loading && !error && filteredFestivals.length === 0 && <p style={{ color: c.muted }}>No festivals available yet.</p>}
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredFestivals.map((festival) => {
               const festivalStats = stats[festival.id] || { performances: 0, stages: 0, days: 0, festival_id: festival.id };
               const isSaved = savedFestivalIds[festival.id];

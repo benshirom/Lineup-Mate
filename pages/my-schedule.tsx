@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
-import { formatDateRange, getThemeColors, type ThemeMode } from '@/lib/platform';
+import { formatDateRange, getThemeColors } from '@/lib/platform';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 
@@ -67,7 +67,7 @@ function festivalTitle(name: string, year: number) {
 
 export default function MySchedulePage() {
   const router = useRouter();
-  const { user, supabase } = useAuth();
+  const { user, supabase, theme } = useAuth();
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [savedFestivals, setSavedFestivals] = useState<SavedFestivalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,6 @@ export default function MySchedulePage() {
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [removingFestivalId, setRemovingFestivalId] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
-  const [theme] = useState<ThemeMode>('dark');
 
   const c = getThemeColors(theme);
 
@@ -339,7 +338,7 @@ export default function MySchedulePage() {
                   <p className="mt-1 text-sm" style={{ color: c.muted }}>Save a festival from the home page and it will appear here.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2" data-testid="saved-festival-list">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="saved-festival-list">
                   {savedFestivals.map((festival) => (
                     <article key={festival.festivalId} className="overflow-hidden rounded-3xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }} data-testid="saved-festival-card">
                       <div className="h-2" style={{ background: festival.color }} />

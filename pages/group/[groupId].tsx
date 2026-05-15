@@ -286,8 +286,8 @@ export default function GroupPage() {
   };
 
   const minHour = hours[0] || 0;
-  const hourWidth = 118;
-  const stageLabelWidth = 132;
+  const hourWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 72 : 118;
+  const stageLabelWidth = typeof window !== 'undefined' && window.innerWidth < 640 ? 80 : 132;
 
   const renderPeoplePills = (performanceId: number) => {
     const prefs = performancePreferenceMap[performanceId] ?? [];
@@ -311,7 +311,7 @@ export default function GroupPage() {
         <section className="mx-auto max-w-7xl px-4 py-8">
           <header className="mb-6 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <div className="h-2" style={{ background: group?.festival?.color || c.acc }} />
-            <div className="grid gap-5 p-6 lg:grid-cols-[1fr_360px] lg:items-end">
+            <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_300px] lg:items-end">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: group?.festival?.color || c.acc }}>Group Schedule</p>
                 <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{group ? group.name : 'Loading…'}</h1>
@@ -388,12 +388,12 @@ export default function GroupPage() {
 
               {viewMode === 'timeline' && (
                 <section className="rounded-[28px] p-4 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-timeline">
-                  <div className="mb-4 flex flex-wrap gap-2" data-testid="group-stage-filters">
+                  <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="group-stage-filters">
                     {allStages.map((stage) => {
                       const isOn = activeStages[stage.name] !== false;
                       const hasShowsToday = selectedDayPerformances.some((performance) => performance.stage_name === stage.name);
                       return (
-                        <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>
+                        <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>
                           {stage.name}
                         </button>
                       );
@@ -401,7 +401,8 @@ export default function GroupPage() {
                   </div>
 
                   {visiblePerformances.length === 0 ? <p style={{ color: c.muted }}>No performances this day with the selected stage filters.</p> : (
-                    <div className="overflow-x-auto scroll-thin" data-testid="group-timeline-scroll">
+                    <div className="relative overflow-x-auto scroll-thin" data-testid="group-timeline-scroll">
+                      <p className="mb-2 text-xs sm:hidden" style={{ color: c.muted }}>← scroll to see full timeline →</p>
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
                           {hours.map((hour) => <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>{`${String(hour % 24).padStart(2, '0')}:00`}</div>)}
@@ -411,18 +412,18 @@ export default function GroupPage() {
                           const stageItems = visiblePerformances.filter((performance) => performance.stage_name === stage.name);
                           return (
                             <div key={stage.name} className="mb-2 flex" data-testid="group-stage-row">
-                              <div className="shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color }}>{stage.name}</div>
+                              <div className="shrink-0 pr-2 text-right text-xs font-black leading-tight" style={{ width: stageLabelWidth, color: stage.color, paddingTop: 20 }}>{stage.name}</div>
                               <div className="relative h-20 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                                 {hours.map((hour) => <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />)}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.start_time) - minHour) * hourWidth;
-                                  const width = Math.max(118, durationHours(performance.start_time, performance.end_time) * hourWidth - 6);
+                                  const width = Math.max(60, durationHours(performance.start_time, performance.end_time) * hourWidth - 4);
                                   const hasPicks = (performancePreferenceMap[performance.id] ?? []).length > 0;
                                   return (
-                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 h-16 overflow-hidden rounded-xl px-3 py-2 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color, opacity: hasPicks ? 1 : 0.72 }}>
-                                      <span className="block truncate">{performance.artist_name}</span>
+                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 h-16 overflow-hidden rounded-xl px-2 py-1.5 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color, opacity: hasPicks ? 1 : 0.72 }}>
+                                      <span className="block truncate leading-4">{performance.artist_name}</span>
                                       <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.start_time)} – {timeLabel(performance.end_time)}</span>
-                                      <div className="mt-1 max-h-6 overflow-hidden">{renderPeoplePills(performance.id)}</div>
+                                      <div className="mt-1 max-h-5 overflow-hidden">{renderPeoplePills(performance.id)}</div>
                                     </div>
                                   );
                                 })}
@@ -437,12 +438,31 @@ export default function GroupPage() {
               )}
 
               {viewMode === 'list' && (
-                <div className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-schedule-list">
-                  <div className="overflow-x-auto scroll-thin">
-                    <table className="min-w-full">
-                      <thead><tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Group picks</th></tr></thead>
-                      <tbody>{sortedPerformances.map((perf, idx) => <tr key={perf.id} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }} className="transition hover:opacity-80"><td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td><td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>{timeLabel(perf.start_time)}</td><td className="px-4 py-3 text-sm" style={{ color: c.muted }}>{perf.stage_name}</td><td className="px-4 py-3 text-sm font-black" style={{ color: c.txt }}>{perf.artist_name}</td><td className="px-4 py-3 text-sm font-bold">{renderPeoplePills(perf.id)}</td></tr>)}</tbody>
-                    </table>
+                <div data-testid="group-schedule-list">
+                  {/* desktop table */}
+                  <div className="hidden sm:block overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                    <div className="overflow-x-auto scroll-thin">
+                      <table className="min-w-full">
+                        <thead><tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Group picks</th></tr></thead>
+                        <tbody>{sortedPerformances.map((perf, idx) => <tr key={perf.id} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }} className="transition hover:opacity-80"><td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td><td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>{timeLabel(perf.start_time)}</td><td className="px-4 py-3 text-sm" style={{ color: c.muted }}>{perf.stage_name}</td><td className="px-4 py-3 text-sm font-black" style={{ color: c.txt }}>{perf.artist_name}</td><td className="px-4 py-3 text-sm font-bold">{renderPeoplePills(perf.id)}</td></tr>)}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {/* mobile cards */}
+                  <div className="sm:hidden space-y-3">
+                    {sortedPerformances.map((perf) => (
+                      <article key={perf.id} className="rounded-2xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="truncate font-black" style={{ color: c.txt }}>{perf.artist_name}</h3>
+                            <p className="text-xs" style={{ color: perf.stage_color }}>{perf.stage_name}</p>
+                          </div>
+                          <span className="shrink-0 text-xs font-bold" style={{ color: c.muted }}>{timeLabel(perf.start_time)}</span>
+                        </div>
+                        <p className="mb-2 text-xs" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                        <div>{renderPeoplePills(perf.id)}</div>
+                      </article>
+                    ))}
                   </div>
                 </div>
               )}

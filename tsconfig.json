@@ -15,12 +15,13 @@
     "jsx": "preserve",
     "incremental": true,
     "types": ["node"],
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["next-env.d.ts", "typings/**/*.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
 }
