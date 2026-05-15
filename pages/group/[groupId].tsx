@@ -161,11 +161,7 @@ export default function GroupPage() {
           );
         }
 
-        const memberList: GroupMember[] = rawMembers.map((m) => ({
-          ...m,
-          profile: profilesById[m.user_id] ?? null
-        }));
-
+        const memberList: GroupMember[] = rawMembers.map((m) => ({ ...m, profile: profilesById[m.user_id] ?? null }));
         setMembers(memberList);
 
         const { data: perfData, error: perfError } = await supabase
@@ -238,9 +234,7 @@ export default function GroupPage() {
     loadData();
   }, [authReady, groupId, supabase, user, router, c.acc]);
 
-  const sortedPerformances = useMemo(() => {
-    return Object.values(performances).sort((a, b) => a.start_time.localeCompare(b.start_time));
-  }, [performances]);
+  const sortedPerformances = useMemo(() => Object.values(performances).sort((a, b) => a.start_time.localeCompare(b.start_time)), [performances]);
 
   const stageOrder = useMemo(() => {
     const stageNames = Array.from(new Set(sortedPerformances.map((performance) => performance.stage_name)));
@@ -261,14 +255,8 @@ export default function GroupPage() {
     return result;
   }, [performancePrefs, performances]);
 
-  const selectedDayPerformances = useMemo(() => {
-    return sortedPerformances.filter((performance) => performance.day_date === selectedDay);
-  }, [sortedPerformances, selectedDay]);
-
-  const visiblePerformances = useMemo(() => {
-    return selectedDayPerformances.filter((performance) => activeStages[performance.stage_name] !== false);
-  }, [selectedDayPerformances, activeStages]);
-
+  const selectedDayPerformances = useMemo(() => sortedPerformances.filter((performance) => performance.day_date === selectedDay), [sortedPerformances, selectedDay]);
+  const visiblePerformances = useMemo(() => selectedDayPerformances.filter((performance) => activeStages[performance.stage_name] !== false), [selectedDayPerformances, activeStages]);
   const days = useMemo(() => Array.from(new Set(sortedPerformances.map((p) => p.day_date))).sort(), [sortedPerformances]);
 
   const allStages = useMemo(() => {
@@ -308,16 +296,7 @@ export default function GroupPage() {
     return (
       <div className="flex flex-wrap gap-1" data-testid="group-performance-picks">
         {prefs.map((pref) => (
-          <span
-            key={`${pref.user_id}-${pref.status}`}
-            className="rounded-full px-2 py-1 text-[10px] font-black"
-            style={{
-              background: pref.status === 'going' ? '#ffd16622' : `${c.accB}22`,
-              color: pref.status === 'going' ? '#ffd166' : c.accB,
-              border: `1px solid ${pref.status === 'going' ? '#ffd16655' : `${c.accB}55`}`
-            }}
-            title={`${pref.user_label} · ${pref.status}`}
-          >
+          <span key={`${pref.user_id}-${pref.status}`} className="rounded-full px-2 py-1 text-[10px] font-black" style={{ background: pref.status === 'going' ? '#ffd16622' : `${c.accB}22`, color: pref.status === 'going' ? '#ffd166' : c.accB, border: `1px solid ${pref.status === 'going' ? '#ffd16655' : `${c.accB}55`}` }} title={`${pref.user_label} · ${pref.status}`}>
             {statusLabel(pref.status)} {pref.user_label}
           </span>
         ))}
@@ -334,53 +313,24 @@ export default function GroupPage() {
             <div className="h-2" style={{ background: group?.festival?.color || c.acc }} />
             <div className="grid gap-5 p-6 lg:grid-cols-[1fr_360px] lg:items-end">
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: group?.festival?.color || c.acc }}>
-                  Group Schedule
-                </p>
-                <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>
-                  {group ? group.name : 'Loading…'}
-                </h1>
-                {group?.festival && (
-                  <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                    {festivalTitle(group.festival)} · {formatDateRange(group.festival.start_date, group.festival.end_date)}
-                  </p>
-                )}
+                <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: group?.festival?.color || c.acc }}>Group Schedule</p>
+                <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{group ? group.name : 'Loading…'}</h1>
+                {group?.festival && <p className="mt-2 text-sm" style={{ color: c.muted }}>{festivalTitle(group.festival)} · {formatDateRange(group.festival.start_date, group.festival.end_date)}</p>}
               </div>
-
               <div className="rounded-3xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                 <div className="space-y-2 text-sm" style={{ color: c.muted }}>
                   <div>👥 {members.length} members</div>
                   {group?.festival && <div>📍 {group.festival.location || 'Location TBA'}</div>}
                   {group?.festival && <div>📅 {formatDateRange(group.festival.start_date, group.festival.end_date)}</div>}
-                  {group && (
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/festival/${group.festival_id}`)}
-                      className="mt-2 rounded-full px-4 py-2 text-sm font-black"
-                      style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}
-                    >
-                      Open Festival
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => router.push('/groups')}
-                    className="mt-2 rounded-full px-4 py-2 text-sm font-black"
-                    style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}
-                  >
-                    ← My Groups
-                  </button>
+                  {group && <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="mt-2 rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>Open Festival</button>}
+                  <button type="button" onClick={() => router.push('/groups')} className="mt-2 rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>← My Groups</button>
                 </div>
               </div>
             </div>
           </header>
 
           {loading && <p style={{ color: c.muted }}>Loading group schedule…</p>}
-          {error && (
-            <p data-testid="group-schedule-error" className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>
-              {error}
-            </p>
-          )}
+          {error && <p data-testid="group-schedule-error" className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>{error}</p>}
 
           {!loading && group && (
             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -388,26 +338,17 @@ export default function GroupPage() {
                 <h2 className="mb-1 font-black">Invite friends</h2>
                 <p className="mb-4 text-sm" style={{ color: c.muted }}>Share this code so friends can join from the Groups page or the festival page.</p>
                 <div className="flex items-center gap-2">
-                  <code data-testid="group-page-invite-code" className="flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}>
-                    {group.invite_code}
-                  </code>
-                  <button type="button" onClick={copyInviteCode} className="rounded-full px-4 py-3 text-sm font-black text-white" style={{ background: copied ? '#16a34a' : c.accB }}>
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
+                  <code data-testid="group-page-invite-code" className="flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}>{group.invite_code}</code>
+                  <button type="button" onClick={copyInviteCode} className="rounded-full px-4 py-3 text-sm font-black text-white" style={{ background: copied ? '#16a34a' : c.accB }}>{copied ? 'Copied!' : 'Copy'}</button>
                 </div>
               </div>
-
               <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <h2 className="mb-3 font-black">Members ({members.length})</h2>
-                {members.length === 0 ? (
-                  <p className="text-sm" style={{ color: c.muted }}>No members yet.</p>
-                ) : (
+                {members.length === 0 ? <p className="text-sm" style={{ color: c.muted }}>No members yet.</p> : (
                   <ul className="flex flex-wrap gap-2">
                     {members.map((member) => (
                       <li key={member.user_id} className="flex items-center gap-2 rounded-full px-3 py-2" style={{ background: c.surf2 }} data-testid="group-member-pill">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black" style={{ background: `${c.acc}33`, color: c.acc }}>
-                          {memberLabel(member).slice(0, 1).toUpperCase()}
-                        </span>
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black" style={{ background: `${c.acc}33`, color: c.acc }}>{memberLabel(member).slice(0, 1).toUpperCase()}</span>
                         <span className="text-sm font-bold">{memberLabel(member)}</span>
                         <span className="text-[10px] font-black uppercase" style={{ color: c.muted }}>{member.role}</span>
                       </li>
@@ -422,80 +363,66 @@ export default function GroupPage() {
             <div data-testid="group-empty-picks" className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">🎶</div>
               <h2 className="mt-3 text-2xl font-black">No lineup yet</h2>
-              <p className="mt-2 text-sm" style={{ color: c.muted }}>
-                This festival has no imported performances yet.
-              </p>
+              <p className="mt-2 text-sm" style={{ color: c.muted }}>This festival has no imported performances yet.</p>
             </div>
           )}
 
           {!loading && sortedPerformances.length > 0 && (
             <>
               <div className="mb-5 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setViewMode('timeline')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'timeline' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'timeline' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'timeline' ? group?.festival?.color || c.acc : c.brd}` }}>
-                  Timeline
-                </button>
-                <button type="button" onClick={() => setViewMode('list')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'list' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'list' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'list' ? group?.festival?.color || c.acc : c.brd}` }}>
-                  List
-                </button>
+                <button type="button" onClick={() => setViewMode('timeline')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'timeline' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'timeline' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'timeline' ? group?.festival?.color || c.acc : c.brd}` }}>Timeline</button>
+                <button type="button" onClick={() => setViewMode('list')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'list' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'list' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'list' ? group?.festival?.color || c.acc : c.brd}` }}>List</button>
               </div>
 
               {days.length > 0 && (
-                <div className="mb-5 flex gap-2 overflow-x-auto pb-2" data-testid="group-day-tabs">
-                  {days.map((day) => (
-                    <button key={day} type="button" data-testid="group-day-tab" onClick={() => setSelectedDay(day)} className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black" style={{ background: selectedDay === day ? c.accB : c.surf, color: selectedDay === day ? '#fff' : c.muted, border: `1px solid ${selectedDay === day ? c.accB : c.brd}` }}>
-                      {new Date(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </button>
-                  ))}
+                <div className="relative mb-5">
+                  <div className="flex gap-2 overflow-x-auto scroll-hidden py-1 px-0.5" data-testid="group-day-tabs" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%)' }}>
+                    {days.map((day) => (
+                      <button key={day} type="button" data-testid="group-day-tab" onClick={() => setSelectedDay(day)} className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black" style={{ background: selectedDay === day ? c.accB : c.surf, color: selectedDay === day ? '#fff' : c.muted, border: `1px solid ${selectedDay === day ? c.accB : c.brd}` }}>
+                        {new Date(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {viewMode === 'timeline' && (
                 <section className="rounded-[28px] p-4 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-timeline">
-                  <div className="mb-4 flex gap-2 overflow-x-auto pb-2" data-testid="group-stage-filters">
+                  <div className="mb-4 flex flex-wrap gap-2" data-testid="group-stage-filters">
                     {allStages.map((stage) => {
                       const isOn = activeStages[stage.name] !== false;
                       const hasShowsToday = selectedDayPerformances.some((performance) => performance.stage_name === stage.name);
                       return (
-                        <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>
+                        <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>
                           {stage.name}
                         </button>
                       );
                     })}
                   </div>
 
-                  {visiblePerformances.length === 0 ? (
-                    <p style={{ color: c.muted }}>No performances this day with the selected stage filters.</p>
-                  ) : (
-                    <div className="overflow-x-auto overflow-y-hidden pb-3" data-testid="group-timeline-scroll">
+                  {visiblePerformances.length === 0 ? <p style={{ color: c.muted }}>No performances this day with the selected stage filters.</p> : (
+                    <div className="overflow-x-auto scroll-thin" data-testid="group-timeline-scroll">
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
-                          {hours.map((hour) => (
-                            <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>
-                              {`${String(hour % 24).padStart(2, '0')}:00`}
-                            </div>
-                          ))}
+                          {hours.map((hour) => <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>{`${String(hour % 24).padStart(2, '0')}:00`}</div>)}
                         </div>
 
                         {dayStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
                           const stageItems = visiblePerformances.filter((performance) => performance.stage_name === stage.name);
                           return (
                             <div key={stage.name} className="mb-2 flex" data-testid="group-stage-row">
-                              <div className="sticky left-0 z-10 shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color, background: c.surf }}>
-                                {stage.name}
-                              </div>
-                              <div className="relative h-24 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
-                                {hours.map((hour) => (
-                                  <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
-                                ))}
+                              <div className="shrink-0 pr-3 text-right text-xs font-black" style={{ width: stageLabelWidth, color: stage.color }}>{stage.name}</div>
+                              <div className="relative h-20 flex-1 rounded-2xl" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+                                {hours.map((hour) => <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />)}
                                 {stageItems.map((performance) => {
                                   const left = (hourNumber(performance.start_time) - minHour) * hourWidth;
                                   const width = Math.max(118, durationHours(performance.start_time, performance.end_time) * hourWidth - 6);
                                   const hasPicks = (performancePreferenceMap[performance.id] ?? []).length > 0;
                                   return (
-                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 min-h-20 overflow-hidden rounded-xl px-3 py-2 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color, opacity: hasPicks ? 1 : 0.72 }}>
+                                    <div key={performance.id} data-testid="group-performance-block" title={`${performance.artist_name} · ${timeLabel(performance.start_time)}-${timeLabel(performance.end_time)}`} className="absolute top-2 h-16 overflow-hidden rounded-xl px-3 py-2 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: performance.stage_color, opacity: hasPicks ? 1 : 0.72 }}>
                                       <span className="block truncate">{performance.artist_name}</span>
                                       <span className="block truncate text-[10px] opacity-80">{timeLabel(performance.start_time)} – {timeLabel(performance.end_time)}</span>
-                                      <div className="mt-1 max-h-9 overflow-hidden">{renderPeoplePills(performance.id)}</div>
+                                      <div className="mt-1 max-h-6 overflow-hidden">{renderPeoplePills(performance.id)}</div>
                                     </div>
                                   );
                                 })}
@@ -510,29 +437,11 @@ export default function GroupPage() {
               )}
 
               {viewMode === 'list' && (
-                <div className="rounded-[28px] overflow-hidden shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-schedule-list">
+                <div className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-schedule-list">
                   <div className="overflow-x-auto scroll-thin">
                     <table className="min-w-full">
-                      <thead>
-                        <tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}>
-                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th>
-                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th>
-                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th>
-                          <th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Group picks</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedPerformances.map((perf, idx) => (
-                          <tr key={perf.id} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }} className="transition hover:opacity-80">
-                            <td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td>
-                            <td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>{timeLabel(perf.start_time)}</td>
-                            <td className="px-4 py-3 text-sm" style={{ color: c.muted }}>{perf.stage_name}</td>
-                            <td className="px-4 py-3 text-sm font-black" style={{ color: c.txt }}>{perf.artist_name}</td>
-                            <td className="px-4 py-3 text-sm font-bold">{renderPeoplePills(perf.id)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
+                      <thead><tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Group picks</th></tr></thead>
+                      <tbody>{sortedPerformances.map((perf, idx) => <tr key={perf.id} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }} className="transition hover:opacity-80"><td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td><td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>{timeLabel(perf.start_time)}</td><td className="px-4 py-3 text-sm" style={{ color: c.muted }}>{perf.stage_name}</td><td className="px-4 py-3 text-sm font-black" style={{ color: c.txt }}>{perf.artist_name}</td><td className="px-4 py-3 text-sm font-bold">{renderPeoplePills(perf.id)}</td></tr>)}</tbody>
                     </table>
                   </div>
                 </div>
