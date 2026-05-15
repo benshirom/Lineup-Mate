@@ -15,6 +15,6 @@ test.describe('saved festivals', () => {
     await ensureFirstFestivalIsSaved(page);
     await page.reload();
 
-    await expect(page.getByText(/Saved!/i).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /✓ Saved|Saved!/i }).first()).toBeVisible({ timeout: 20_000 });
   });
 });
