@@ -4,9 +4,15 @@ import { login, selectFirstFestivalInForm } from './helpers';
 const email = process.env.E2E_ADMIN_EMAIL || process.env.E2E_USER_EMAIL;
 const password = process.env.E2E_ADMIN_PASSWORD || process.env.E2E_USER_PASSWORD;
 
+async function waitForGroupsPageReady(page: import('@playwright/test').Page) {
+  await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
+  await page.getByText(/Loading groups/i).waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => undefined);
+  await expect(page.getByTestId('join-group-panel')).toBeVisible({ timeout: 20_000 });
+}
+
 async function openOrCreateGroup(page: import('@playwright/test').Page) {
   await page.goto('/groups');
-  await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
+  await waitForGroupsPageReady(page);
 
   const existingGroup = page.getByTestId('group-card').first();
   if (await existingGroup.isVisible().catch(() => false)) {
@@ -16,12 +22,16 @@ async function openOrCreateGroup(page: import('@playwright/test').Page) {
   }
 
   const openModal = page.getByTestId('open-create-group-modal');
-  if (await openModal.isVisible().catch(() => false)) await openModal.click();
+  if (await openModal.isVisible().catch(() => false)) {
+    await openModal.click();
+    await expect(page.getByTestId('create-group-modal')).toBeVisible({ timeout: 20_000 });
+  }
 
   const form = page.locator('[data-testid="create-group-panel"]:visible').last();
   await expect(form).toBeVisible({ timeout: 20_000 });
   await selectFirstFestivalInForm(page, form);
   await form.getByTestId('group-name-input').fill(`E2E List Filters ${Date.now()}`);
+  await expect(form.getByTestId('create-group-submit')).toBeEnabled({ timeout: 5_000 });
   await form.getByTestId('create-group-submit').click();
   await expect(page).toHaveURL(/\/group\/\d+/, { timeout: 20_000 });
 }
