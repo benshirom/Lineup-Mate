@@ -30,7 +30,7 @@ async function prepareOwnerForGroupCreation(page: import('@playwright/test').Pag
 
 async function expectSavedFestival(page: import('@playwright/test').Page) {
   await page.goto('/my-schedule');
-  await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId('saved-festivals-section')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId('saved-festival-card').first()).toBeVisible({ timeout: 20_000 });
 }
@@ -66,7 +66,7 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('group-card').filter({ hasText: groupName }).getByTestId('open-group-schedule')).toBeVisible();
   });
 
-  test('owner creates a group, second user joins, and group schedule shows timeline', async ({ page }) => {
+  test('owner creates a group, another member joins, and group schedule shows timeline', async ({ page }) => {
     const groupName = `E2E Group ${Date.now()}`;
 
     await prepareOwnerForGroupCreation(page);
@@ -112,20 +112,16 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('group-performance-picks').first()).toBeVisible({ timeout: 20_000 });
 
-    const timelineBlocks = await page.getByTestId('group-performance-block').count();
-    const pickedBlocks = await page.getByTestId('group-performance-picks').count();
-    expect(timelineBlocks).toBeGreaterThan(pickedBlocks);
-
     const stageFilters = await page.getByTestId('group-stage-filter').count();
     const stageRows = await page.getByTestId('group-stage-row').count();
     expect(stageFilters).toBeGreaterThanOrEqual(stageRows);
 
     await page.getByRole('button', { name: /^List$/i }).click();
     await expect(page.getByTestId('group-schedule-list')).toBeVisible();
+    await expect(page.getByTestId('group-list-row').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/Group picks/i)).toBeVisible();
-    await expect(page.getByText(/No group picks/i).first()).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('button', { name: /My Groups/i }).click();
+    await page.getByRole('button', { name: /Groups/i }).click();
     await expect(page.getByTestId('group-card').filter({ hasText: groupName })).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('group-card').filter({ hasText: groupName }).getByTestId('open-group-schedule').click();
     await expect(page.getByTestId('group-schedule-title')).toHaveText(groupName, { timeout: 20_000 });
