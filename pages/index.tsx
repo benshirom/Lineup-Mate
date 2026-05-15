@@ -256,7 +256,7 @@ export default function Home() {
                         className="shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold transition"
                         style={{ background: isSaved ? `${c.acc}22` : c.surf2, color: isSaved ? c.acc : c.muted, border: `1px solid ${isSaved ? c.acc : c.brd}` }}
                       >
-                        {isSaved ? '✓' : '+ Save'}
+                        {isSaved ? t.saved : t.saveFestival}
                       </button>
                     </div>
 
