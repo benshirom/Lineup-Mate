@@ -32,7 +32,7 @@ interface FestivalStats {
 }
 
 export default function Home() {
-  const { user, supabase, language, theme, t } = useAuth();
+  const { user, supabase, theme, t } = useAuth();
   const router = useRouter();
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [stats, setStats] = useState<Record<number, FestivalStats>>({});
@@ -156,9 +156,8 @@ export default function Home() {
     setSavedFestivalIds(Object.fromEntries((savedRows || []).map((row) => [row.festival_id, true])));
   };
 
-  const getFestivalName = (festival: Festival) => language === 'he' && festival.name_he ? festival.name_he : festival.name;
-  const getFestivalLocation = (festival: Festival) => language === 'he' && festival.location_he ? festival.location_he : festival.location;
-  const getFestivalDescription = (festival: Festival) => language === 'he' && festival.description_he ? festival.description_he : festival.description;
+  const getFestivalName = (festival: Festival) => festival.name;
+  const getFestivalLocation = (festival: Festival) => festival.location;
 
   return (
     <>
@@ -223,7 +222,7 @@ export default function Home() {
           <div className="mb-6 flex flex-wrap gap-2">
             {genreFilters.map((filter) => (
               <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.acc : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
-                {language === 'he' ? filter.he : filter.en}
+                {filter.label}
               </button>
             ))}
           </div>
