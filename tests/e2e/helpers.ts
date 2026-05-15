@@ -10,7 +10,7 @@ export async function login(page: Page, email: string, password: string) {
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: /^Sign in$/i }).click();
   await expect(page).toHaveURL('/', { timeout: 20_000 });
-  await expect(page.getByTestId('user-profile-link').or(page.getByRole('button', { name: /Sign out/i })).or(page.getByLabel(/Open menu/i))).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('user-profile-link')).toBeVisible({ timeout: 15_000 });
 }
 
 export async function openMobileMenu(page: Page) {
