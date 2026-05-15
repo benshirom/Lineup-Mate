@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { login } from './helpers';
+import { clickNav, login } from './helpers';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
@@ -16,8 +16,7 @@ test.describe('admin smoke tests', () => {
   });
 
   test('admin can open import page', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /Admin/i })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('link', { name: /Admin/i }).click();
+    await clickNav(page, /Admin/i);
     await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible();
   });
@@ -30,7 +29,7 @@ test.describe('admin smoke tests', () => {
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('link', { name: /Admin/i }).click();
+    await clickNav(page, /Admin/i);
     await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
     expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
 
