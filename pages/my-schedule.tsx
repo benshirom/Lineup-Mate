@@ -67,7 +67,7 @@ function festivalTitle(name: string, year: number) {
 
 export default function MySchedulePage() {
   const router = useRouter();
-  const { user, supabase, theme } = useAuth();
+  const { user, authReady, supabase, theme } = useAuth();
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [savedFestivals, setSavedFestivals] = useState<SavedFestivalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,10 @@ export default function MySchedulePage() {
   const c = getThemeColors(theme);
 
   useEffect(() => {
+    if (!authReady) return;
+
     if (!user) {
+      setLoading(false);
       router.push('/login');
       return;
     }
@@ -181,7 +184,7 @@ export default function MySchedulePage() {
     };
 
     loadSchedule();
-  }, [router, supabase, user]);
+  }, [authReady, router, supabase, user]);
 
   const groupedItems = useMemo((): FestivalScheduleGroup[] => {
     const festivalGroups = new Map<number, FestivalScheduleGroup>();
@@ -316,10 +319,10 @@ export default function MySchedulePage() {
             </div>
           </header>
 
-          {loading && <p style={{ color: c.muted }}>Loading your schedule…</p>}
+          {(!authReady || loading) && <p style={{ color: c.muted }}>Loading your schedule…</p>}
           {error && <p className="mb-4 rounded-xl p-4 text-sm text-red-700" style={{ background: '#fee2e2', border: '1px solid #fecaca' }}>{error}</p>}
 
-          {!loading && !error && (
+          {authReady && !loading && !error && (
             <section className="mb-7 rounded-[28px] p-5 shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="saved-festivals-section">
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -368,7 +371,7 @@ export default function MySchedulePage() {
             </section>
           )}
 
-          {!loading && items.length === 0 && !error && (
+          {authReady && !loading && items.length === 0 && !error && (
             <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">☆</div>
               <h2 className="mt-3 text-2xl font-black">No saved acts yet</h2>
@@ -379,7 +382,7 @@ export default function MySchedulePage() {
             </div>
           )}
 
-          {items.length > 0 && (
+          {authReady && items.length > 0 && (
             <div className="space-y-5" data-testid="saved-acts-section">
               {groupedItems.map((group) => (
                 <section key={group.festivalId} className="overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="schedule-festival-group">
