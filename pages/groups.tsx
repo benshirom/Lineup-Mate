@@ -49,6 +49,16 @@ export default function GroupsPage() {
 
   const c = getThemeColors(theme);
 
+  const saveFestivalForUser = async (festivalId: number) => {
+    if (!user || !festivalId) return;
+
+    const { error: saveError } = await supabase
+      .from('saved_festivals')
+      .upsert({ user_id: user.id, festival_id: festivalId }, { onConflict: 'user_id,festival_id' });
+
+    if (saveError) throw saveError;
+  };
+
   const loadGroups = async () => {
     if (!user) return;
     setLoading(true);
@@ -122,6 +132,8 @@ export default function GroupsPage() {
 
     const loadInitialData = async () => {
       setLoading(true);
+      setError(null);
+
       await loadGroups();
 
       const { data: festivalRows, error: festivalError } = await supabase
@@ -129,11 +141,18 @@ export default function GroupsPage() {
         .select('id, name, year, location, start_date, end_date, emoji, color')
         .order('start_date', { ascending: true });
 
-      if (!festivalError) {
-        const mappedFestivals = festivalRows || [];
-        setFestivals(mappedFestivals);
-        setSelectedFestivalId((current) => current || (mappedFestivals[0]?.id ? String(mappedFestivals[0].id) : ''));
+      if (festivalError) {
+        setFestivals([]);
+        setSelectedFestivalId('');
+        setError(`Could not load available festivals for group creation: ${festivalError.message}`);
+        setLoading(false);
+        return;
       }
+
+      const mappedFestivals = festivalRows || [];
+      setFestivals(mappedFestivals);
+      setSelectedFestivalId((current) => current || (mappedFestivals[0]?.id ? String(mappedFestivals[0].id) : ''));
+      setLoading(false);
     };
 
     loadInitialData();
@@ -186,6 +205,8 @@ export default function GroupsPage() {
     setMessage(null);
 
     try {
+      await saveFestivalForUser(festivalId);
+
       const { data: newGroup, error: groupError } = await supabase
         .from('groups')
         .insert({ festival_id: festivalId, name: trimmedName, owner_user_id: user.id })
@@ -226,6 +247,15 @@ export default function GroupsPage() {
       const { data: joinedGroupId, error: rpcError } = await supabase.rpc('join_group_by_invite_code', { p_invite_code: code });
       if (rpcError) throw rpcError;
 
+      const { data: joinedGroup, error: joinedGroupError } = await supabase
+        .from('groups')
+        .select('festival_id')
+        .eq('id', joinedGroupId)
+        .single();
+
+      if (joinedGroupError) throw joinedGroupError;
+      await saveFestivalForUser(joinedGroup.festival_id);
+
       setInviteCode('');
       await loadGroups();
       router.push(`/group/${joinedGroupId}`);
@@ -239,7 +269,7 @@ export default function GroupsPage() {
   const CreateGroupForm = ({ compact = false }: { compact?: boolean }) => (
     <form onSubmit={handleCreateGroup} data-testid="create-group-panel" className={compact ? 'space-y-4' : 'rounded-[28px] p-5'} style={compact ? undefined : { background: c.surf, border: `1px solid ${c.brd}` }}>
       <h2 className="mb-2 text-xl font-black">Create a group</h2>
-      <p className="mb-4 text-sm" style={{ color: c.muted }}>Choose a festival and create a shared schedule for that specific event.</p>
+      <p className="mb-4 text-sm" style={{ color: c.muted }}>Choose any available festival and create a shared schedule for that specific event. Creating a group also saves that festival to your schedule.</p>
 
       <div className="space-y-3">
         <label className="block">
@@ -299,7 +329,7 @@ export default function GroupsPage() {
             {groups.length === 0 && <CreateGroupForm />}
             <form onSubmit={handleJoinGroup} data-testid="join-group-panel" className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <h2 className="mb-2 text-xl font-black">Join a group</h2>
-              <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend to join their festival schedule.</p>
+              <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend to join their festival schedule. Joining also saves the group's festival to your schedule.</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input data-testid="join-group-code-input" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
                 <button type="submit" data-testid="join-group-submit" disabled={actionLoading || !inviteCode.trim()} className="rounded-2xl px-5 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.accB }}>{actionLoading ? 'Joining…' : 'Join'}</button>
@@ -329,7 +359,6 @@ export default function GroupsPage() {
                     <span className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black capitalize" style={{ background: c.surf2, color: c.muted, border: `1px solid ${c.brd}` }}>{group.member_role}</span>
                   </div>
 
-                  {/* Invite code – prominent */}
                   <div className="mb-3 flex items-center gap-2 rounded-2xl px-3 py-2.5" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                     <code data-testid="group-invite-code" className="min-w-0 flex-1 text-sm font-black" style={{ color: c.txt, letterSpacing: '0.06em' }}>{group.invite_code}</code>
                     <button type="button" data-testid="copy-invite-code" onClick={() => copyInviteCode(group.invite_code)} className="shrink-0 rounded-full px-3 py-1 text-xs font-black text-white transition" style={{ background: copiedCode === group.invite_code ? '#16a34a' : c.accB }}>
