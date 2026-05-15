@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { cloudName, apiKey, apiSecret } = cloudinaryEnv();
     const timestamp = Math.floor(Date.now() / 1000);
     const folder = 'lineup-mate/avatars';
-    const publicId = `${folder}/${user.id}`;
+    const publicId = user.id;
     const uploadParams = {
       folder,
       public_id: publicId,
