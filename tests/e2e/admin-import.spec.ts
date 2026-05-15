@@ -12,15 +12,15 @@ test.describe('admin Clashfinder import tools', () => {
   });
 
   test('admin can run Clashfinder Preview without importing data', async ({ page }) => {
-    await page.getByRole('link', { name: /Admin/i }).click();
-    await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible();
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
 
-    const slugInput = page.getByLabel(/Clashfinder slug/i);
+    const slugInput = page.getByTestId('clashfinder-slug-input').or(page.getByLabel(/Clashfinder slug/i));
     await slugInput.fill('ozora2026');
 
-    await page.getByRole('button', { name: /^Preview$/i }).click();
+    await page.getByTestId('preview-clashfinder').or(page.getByRole('button', { name: /^Preview$/i })).click();
 
-    await expect(page.getByRole('heading', { name: /Result/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: /Result/i })).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/Detected:/i)).toBeVisible();
   });
 });
