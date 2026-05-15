@@ -15,6 +15,15 @@ interface ProfileData {
   created_at: string | null;
 }
 
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Could not read avatar file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user, session, authReady, supabase, theme: currentTheme, setLocalPreferences, refreshProfile, t } = useAuth();
@@ -115,15 +124,14 @@ export default function ProfilePage() {
 
     setUploadingAvatar(true);
     try {
-      const formData = new FormData();
-      formData.append('avatar', avatarFile);
-
+      const fileDataUrl = await fileToDataUrl(avatarFile);
       const response = await fetch('/api/profile/avatar-upload', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
         },
-        body: formData
+        body: JSON.stringify({ file: fileDataUrl })
       });
 
       const payload = await response.json().catch(() => ({}));
