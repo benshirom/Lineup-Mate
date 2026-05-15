@@ -6,6 +6,15 @@ const ownerPassword = process.env.E2E_ADMIN_PASSWORD;
 const memberEmail = process.env.E2E_USER_EMAIL;
 const memberPassword = process.env.E2E_USER_PASSWORD;
 
+async function openCreateGroupForm(page: import('@playwright/test').Page) {
+  const modalButton = page.getByTestId('open-create-group-modal');
+  if (await modalButton.isVisible().catch(() => false)) {
+    await modalButton.click();
+    await expect(page.getByTestId('create-group-modal')).toBeVisible({ timeout: 20_000 });
+  }
+  await expect(page.getByTestId('create-group-panel')).toBeVisible({ timeout: 20_000 });
+}
+
 test.describe.serial('group collaboration flows', () => {
   test.skip(
     !ownerEmail || !ownerPassword || !memberEmail || !memberPassword,
@@ -19,10 +28,10 @@ test.describe.serial('group collaboration flows', () => {
     await page.goto('/groups');
 
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('create-group-panel')).toBeVisible();
     await expect(page.getByTestId('join-group-panel')).toBeVisible();
-    await expect(page.getByTestId('group-festival-select')).toBeVisible();
 
+    await openCreateGroupForm(page);
+    await expect(page.getByTestId('group-festival-select')).toBeVisible();
     await page.getByTestId('group-name-input').fill(groupName);
     await page.getByTestId('create-group-submit').click();
 
@@ -35,6 +44,7 @@ test.describe.serial('group collaboration flows', () => {
     await page.getByRole('button', { name: /My Groups/i }).click();
     await expect(page).toHaveURL(/\/groups/, { timeout: 20_000 });
     await expect(page.getByTestId('group-card').filter({ hasText: groupName })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('open-create-group-modal')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('group-card').filter({ hasText: groupName }).getByTestId('group-invite-code')).toBeVisible();
     await expect(page.getByTestId('group-card').filter({ hasText: groupName }).getByTestId('open-group-schedule')).toBeVisible();
   });
@@ -47,6 +57,7 @@ test.describe.serial('group collaboration flows', () => {
     await ensureFirstActIsStarred(page);
 
     await page.goto('/groups');
+    await openCreateGroupForm(page);
     await page.getByTestId('group-name-input').fill(groupName);
     await page.getByTestId('create-group-submit').click();
 
@@ -75,6 +86,7 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('group-day-tabs')).toBeVisible();
     await expect(page.getByTestId('group-stage-filters')).toBeVisible();
     await expect(page.getByTestId('group-timeline')).toBeVisible();
+    await expect(page.getByTestId('group-timeline-scroll')).toBeVisible();
     await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('group-performance-picks').first()).toBeVisible({ timeout: 20_000 });
 
@@ -82,8 +94,9 @@ test.describe.serial('group collaboration flows', () => {
     const pickedBlocks = await page.getByTestId('group-performance-picks').count();
     expect(timelineBlocks).toBeGreaterThan(pickedBlocks);
 
-    const stageLabels = await page.getByTestId('group-stage-row').locator('div').first().allTextContents();
-    expect(stageLabels.length).toBeGreaterThan(0);
+    const stageFilters = await page.getByTestId('group-stage-filter').count();
+    const stageRows = await page.getByTestId('group-stage-row').count();
+    expect(stageFilters).toBeGreaterThanOrEqual(stageRows);
 
     await page.getByRole('button', { name: /^List$/i }).click();
     await expect(page.getByTestId('group-schedule-list')).toBeVisible();
