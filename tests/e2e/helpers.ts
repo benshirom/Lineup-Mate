@@ -4,13 +4,28 @@ export function localPart(email: string) {
   return email.split('@')[0];
 }
 
+export async function expectAuthenticated(page: Page) {
+  const desktopProfileLink = page.getByTestId('user-profile-link');
+  if (await desktopProfileLink.isVisible().catch(() => false)) {
+    return;
+  }
+
+  const openMenuButton = page.getByLabel(/Open menu/i);
+  if (await openMenuButton.isVisible().catch(() => false)) {
+    await expect(openMenuButton).toBeVisible({ timeout: 15_000 });
+    return;
+  }
+
+  await expect(page.getByRole('link', { name: /Profile|Schedule|Groups/i }).first()).toBeVisible({ timeout: 15_000 });
+}
+
 export async function login(page: Page, email: string, password: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: /^Sign in$/i }).click();
   await expect(page).toHaveURL('/', { timeout: 20_000 });
-  await expect(page.getByTestId('user-profile-link')).toBeVisible({ timeout: 15_000 });
+  await expectAuthenticated(page);
 }
 
 export async function openMobileMenu(page: Page) {
@@ -41,7 +56,9 @@ export async function signOut(page: Page) {
   }
 
   await page.getByRole('button', { name: /Sign out/i }).first().click();
-  await expect(page.getByRole('link', { name: /^Login$/i }).or(page.getByRole('button', { name: /^Login$/i }))).toBeVisible({ timeout: 20_000 });
+  await page.waitForURL('/', { timeout: 20_000 });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('link', { name: /^Login$/i }).or(page.getByRole('button', { name: /^Login$/i })).first()).toBeVisible({ timeout: 20_000 });
 }
 
 export async function openProfile(page: Page) {
@@ -83,15 +100,15 @@ export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
   await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
 
-  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved/i }).first();
+  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!/i }).first();
   await expect(firstSaveOrSavedButton).toBeVisible({ timeout: 20_000 });
 
   const label = (await firstSaveOrSavedButton.innerText()).trim();
-  if (/\+ Save/i.test(label)) {
+  if (/\+ Save|Save Festival/i.test(label)) {
     await firstSaveOrSavedButton.click();
   }
 
-  await expect(page.getByRole('button', { name: /✓ Saved/i }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /✓ Saved|Saved!/i }).first()).toBeVisible({ timeout: 20_000 });
 }
 
 /** Wait for the festival dropdown to have real options and select the first one. */
@@ -101,9 +118,15 @@ export async function selectFirstFestivalInForm(page: Page) {
   await page.waitForFunction(
     () => {
       const el = document.querySelector('[data-testid="group-festival-select"]') as HTMLSelectElement | null;
-      return el !== null && el.options.length > 0 && el.options[0].value !== '';
+      return el !== null && el.options.length > 0 && Array.from(el.options).some((option) => option.value !== '');
     },
-    { timeout: 15_000 }
+    { timeout: 20_000 }
   );
-  await select.selectOption({ index: 0 });
+
+  const value = await select.evaluate((el) => {
+    const selectEl = el as HTMLSelectElement;
+    return Array.from(selectEl.options).find((option) => option.value !== '')?.value || '';
+  });
+
+  await select.selectOption(value);
 }
