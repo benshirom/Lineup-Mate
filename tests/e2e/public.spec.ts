@@ -5,16 +5,16 @@ test.describe('public browsing', () => {
     await page.goto('/');
 
     await expect(page.getByText(/Lineup[·-]Mate/i).first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/Never miss a set again/i)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByPlaceholder(/Search events/i)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('button', { name: /View Lineup/i }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Never miss a set again|לעולם לא תפספס הופעה/i)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByPlaceholder(/Search events|חפש אירועים/i)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test('guest can open a festival and see schedule tabs', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: /View Lineup/i }).first()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole('button', { name: /View Lineup/i }).first().click();
+    await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first().click();
 
     await expect(page.getByRole('button', { name: /timeline/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /lineup/i })).toBeVisible();
@@ -24,8 +24,9 @@ test.describe('public browsing', () => {
   test('guest is sent to login when trying to save a festival', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: /Save Festival/i }).first()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole('button', { name: /Save Festival/i }).first().click();
+    const saveButton = page.getByRole('button', { name: /\+ Save|Save Festival|שמור פסטיבל/i }).first();
+    await expect(saveButton).toBeVisible({ timeout: 20_000 });
+    await saveButton.click();
 
     await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { name: /Welcome back|Create an account/i })).toBeVisible({ timeout: 20_000 });
