@@ -266,7 +266,7 @@ export default function GroupsPage() {
     }
   };
 
-  const CreateGroupForm = ({ compact = false }: { compact?: boolean }) => (
+  const renderCreateGroupForm = (compact = false) => (
     <form onSubmit={handleCreateGroup} data-testid="create-group-panel" className={compact ? 'space-y-4' : 'rounded-[28px] p-5'} style={compact ? undefined : { background: c.surf, border: `1px solid ${c.brd}` }}>
       <h2 className="mb-2 text-xl font-black">Create a group</h2>
       <p className="mb-4 text-sm" style={{ color: c.muted }}>Choose any available festival and create a shared schedule for that specific event. Creating a group also saves that festival to your schedule.</p>
@@ -326,7 +326,7 @@ export default function GroupsPage() {
           {message && <p className="mb-4 rounded-xl p-4 text-sm text-green-700" style={{ background: '#dcfce7', border: '1px solid #bbf7d0' }}>{message}</p>}
 
           <section className={`mb-6 grid grid-cols-1 gap-4 ${groups.length === 0 ? 'lg:grid-cols-2' : ''}`}>
-            {groups.length === 0 && <CreateGroupForm />}
+            {groups.length === 0 && renderCreateGroupForm()}
             <form onSubmit={handleJoinGroup} data-testid="join-group-panel" className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <h2 className="mb-2 text-xl font-black">Join a group</h2>
               <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend to join their festival schedule. Joining also saves the group's festival to your schedule.</p>
@@ -386,7 +386,7 @@ export default function GroupsPage() {
         {showCreateModal && (
           <div data-testid="create-group-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(5px)' }} onClick={resetCreateForm}>
             <div className="w-full max-w-lg rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} onClick={(event) => event.stopPropagation()}>
-              <CreateGroupForm compact />
+              {renderCreateGroupForm(true)}
             </div>
           </div>
         )}
