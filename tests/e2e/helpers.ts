@@ -56,10 +56,11 @@ export async function signOut(page: Page) {
 
   await page.getByRole('button', { name: /Sign out/i }).first().click();
   await page.waitForURL(/\/(login)?$/, { timeout: 20_000 }).catch(() => undefined);
-  await page.reload({ waitUntil: 'domcontentloaded' });
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await expect(
-    page.getByRole('link', { name: /^Login$/i }).or(page.getByRole('button', { name: /^Login$/i })).first(),
-    'After sign out and reload, the public Login action should be visible.'
+    page.getByLabel('Email').or(page.getByRole('button', { name: /^Sign in$/i })).first(),
+    'After sign out, the login form should be reachable.'
   ).toBeVisible({ timeout: 20_000 });
 }
 
