@@ -4,10 +4,6 @@ import { clickNav, login } from './helpers';
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 
-async function mainBackground(page: import('@playwright/test').Page) {
-  return page.locator('main').first().evaluate((element) => window.getComputedStyle(element).backgroundColor);
-}
-
 test.describe('admin smoke tests', () => {
   test.skip(!adminEmail || !adminPassword, 'Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to run admin tests.');
 
@@ -27,10 +23,11 @@ test.describe('admin smoke tests', () => {
     await page.getByLabel(/Theme/i).selectOption('light');
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('html'), 'Saving light theme should keep html data-theme=light.').toHaveAttribute('data-theme', 'light');
 
     await clickNav(page, /Admin/i);
     await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
-    expect(await mainBackground(page)).not.toBe('rgb(13, 13, 28)');
+    await expect(page.locator('html'), 'Admin page should keep the saved light theme state.').toHaveAttribute('data-theme', 'light', { timeout: 20_000 });
 
     await page.goto('/profile');
     await page.getByLabel(/Theme/i).selectOption('dark');
