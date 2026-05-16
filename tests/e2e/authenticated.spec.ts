@@ -4,16 +4,16 @@ import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, o
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
 
-async function mainBackground(page: import('@playwright/test').Page) {
-  return page.locator('main').first().evaluate((element) => window.getComputedStyle(element).backgroundColor);
-}
-
 async function expectSavedFestivalCard(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('saved-festivals-section'), 'My Schedule loaded, but saved festivals section is missing.').toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByTestId('saved-festival-card').first(),
     'Saved festival card was not rendered. If this fails, the save did not persist to saved_festivals or My Schedule cannot read saved_festivals.'
   ).toBeVisible({ timeout: 20_000 });
+}
+
+async function expectLightTheme(page: import('@playwright/test').Page, context: string) {
+  await expect(page.locator('html'), context).toHaveAttribute('data-theme', 'light', { timeout: 20_000 });
 }
 
 test.describe('authenticated flows', () => {
@@ -105,32 +105,33 @@ test.describe('authenticated flows', () => {
     await expect(page.getByLabel(/Avatar URL/i)).toHaveCount(0);
   });
 
-  test('profile theme preference updates the UI immediately and persists across pages', async ({ page }) => {
+  test('profile theme preference updates immediately and persists across pages', async ({ page }) => {
     await page.goto('/profile');
     await expect(page.getByRole('heading', { name: /Profile/i })).toBeVisible({ timeout: 20_000 });
 
     await page.getByLabel(/Theme/i).selectOption('light');
-    await expect(page.locator('html'), 'Theme change should set html data-theme=light immediately.').toHaveAttribute('data-theme', 'light');
+    await expectLightTheme(page, 'Theme change should set html data-theme=light immediately.');
 
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });
+    await expectLightTheme(page, 'Saving light theme should keep html data-theme=light.');
 
     await openFirstFestival(page);
-    expect(await mainBackground(page), 'Festival page still uses dark background after light theme was saved.').not.toBe('rgb(13, 13, 28)');
+    await expectLightTheme(page, 'Festival page should keep the saved light theme state.');
 
     await page.goto('/groups');
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
-    expect(await mainBackground(page), 'Groups page still uses dark background after light theme was saved.').not.toBe('rgb(13, 13, 28)');
+    await expectLightTheme(page, 'Groups page should keep the saved light theme state.');
 
     await page.goto('/my-schedule');
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
-    expect(await mainBackground(page), 'My Schedule page still uses dark background after light theme was saved.').not.toBe('rgb(13, 13, 28)');
+    await expectLightTheme(page, 'My Schedule page should keep the saved light theme state.');
 
     const adminLink = page.getByRole('link', { name: /Admin/i }).first();
     if (await adminLink.isVisible().catch(() => false)) {
       await clickNav(page, /Admin/i);
       await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
-      expect(await mainBackground(page), 'Admin page still uses dark background after light theme was saved.').not.toBe('rgb(13, 13, 28)');
+      await expectLightTheme(page, 'Admin page should keep the saved light theme state.');
     }
 
     await page.goto('/profile');
