@@ -43,12 +43,17 @@ function normalizeTheme(value: unknown): ThemeMode {
   return value === 'light' ? 'light' : 'dark';
 }
 
+function readStoredTheme(): ThemeMode {
+  if (typeof window === 'undefined') return DEFAULT_THEME;
+  return normalizeTheme(window.localStorage.getItem('lineup-mate-theme'));
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [theme, setTheme] = useState<ThemeMode>(DEFAULT_THEME);
+  const [theme, setTheme] = useState<ThemeMode>(() => readStoredTheme());
 
   const applyPreferences = useCallback((nextTheme: ThemeMode) => {
     setTheme(nextTheme);
@@ -72,7 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .eq('id', userId)
       .single();
 
-    const nextTheme = normalizeTheme(data?.theme);
+    const storedTheme = readStoredTheme();
+    const nextTheme = data?.theme ? normalizeTheme(data.theme) : storedTheme;
 
     if (data) {
       setProfile({
@@ -100,9 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [applyPreferences, theme]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      applyPreferences(normalizeTheme(window.localStorage.getItem('lineup-mate-theme')));
-    }
+    applyPreferences(readStoredTheme());
 
     const setData = async () => {
       try {
