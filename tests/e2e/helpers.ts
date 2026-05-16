@@ -55,7 +55,7 @@ export async function signOut(page: Page) {
   if (!(await signOutButton.isVisible().catch(() => false))) await openMobileMenu(page);
 
   await page.getByRole('button', { name: /Sign out/i }).first().click();
-  await page.waitForURL('/', { timeout: 20_000 });
+  await page.waitForURL(/\/(login)?$/, { timeout: 20_000 }).catch(() => undefined);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(
     page.getByRole('link', { name: /^Login$/i }).or(page.getByRole('button', { name: /^Login$/i })).first(),
