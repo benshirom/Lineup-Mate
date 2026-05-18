@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
@@ -17,12 +17,9 @@ function memberLabel(member: GroupMember): string {
   return `User·${member.user_id.slice(0, 6)}`;
 }
 function timeLabel(dateString: string) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-function hourNumber(dateString: string) { const d = new Date(dateString); return d.getHours() + d.getMinutes() / 60; }
-function durationHours(start: string, end: string) { return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5); }
+function dayLabel(dateString: string) { return new Date(dateString).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }); }
 function festivalTitle(festival: FestivalInfo) { return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`; }
-function statusLabel(status: string) { if (status === 'going') return '★'; if (status === 'maybe') return '?'; return '×'; }
-function useHourWidth() { const [w, setW] = useState(118); useEffect(() => { const u = () => setW(window.innerWidth < 640 ? 72 : 118); u(); window.addEventListener('resize', u); return () => window.removeEventListener('resize', u); }, []); return w; }
-function useStageLabelWidth() { const [w, setW] = useState(132); useEffect(() => { const u = () => setW(window.innerWidth < 640 ? 80 : 132); u(); window.addEventListener('resize', u); return () => window.removeEventListener('resize', u); }, []); return w; }
+function statusLabel(status: string) { if (status === 'going') return 'Going'; if (status === 'maybe') return 'Maybe'; return 'Not interested'; }
 function stageSortValue(stageName: string, performances: PerformanceInfo[]) {
   const stagePerformances = performances.filter((p) => p.stage_name === stageName);
   const firstStart = stagePerformances.map((p) => p.start_time).sort()[0] || '';
@@ -42,11 +39,10 @@ export default function GroupPage() {
   const [performances, setPerformances] = useState<Record<number, PerformanceInfo>>({});
   const [selectedDay, setSelectedDay] = useState('');
   const [activeStages, setActiveStages] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'timeline' | 'list'>('timeline');
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const nowLineRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!authReady) return;
@@ -99,9 +95,9 @@ export default function GroupPage() {
         perfData?.forEach((p: any) => {
           perfMap[p.id] = {
             id: p.id,
-            artist_name: p.artists?.name ?? '',
+            artist_name: p.artists?.name ?? 'Unknown Artist',
             stage_name: p.stages?.name ?? 'Stage',
-            stage_color: p.stages?.color ?? mappedGroup.festival?.color ?? c.acc,
+            stage_color: p.stages?.color ?? mappedGroup.festival?.color ?? c.secondary,
             start_time: p.start_time,
             end_time: p.end_time,
             day_date: p.day_date
@@ -142,7 +138,7 @@ export default function GroupPage() {
       }
     };
     loadData();
-  }, [authReady, groupId, supabase, user, router, c.acc]);
+  }, [authReady, groupId, supabase, user, router, c.secondary]);
 
   const sortedPerformances = useMemo(() => Object.values(performances).sort((a, b) => a.start_time.localeCompare(b.start_time)), [performances]);
   const stageOrder = useMemo(() => Array.from(new Set(sortedPerformances.map((p) => p.stage_name))).sort((a, b) => {
@@ -151,6 +147,13 @@ export default function GroupPage() {
     return aSort.firstStart.localeCompare(bSort.firstStart) || aSort.firstSameTimeIndex - bSort.firstSameTimeIndex || a.localeCompare(b);
   }), [sortedPerformances]);
   const days = useMemo(() => Array.from(new Set(sortedPerformances.map((p) => p.day_date))).sort(), [sortedPerformances]);
+  const selectedDayPerformances = useMemo(() => sortedPerformances.filter((p) => p.day_date === selectedDay), [sortedPerformances, selectedDay]);
+  const visiblePerformances = useMemo(() => selectedDayPerformances.filter((p) => activeStages[p.stage_name] !== false), [selectedDayPerformances, activeStages]);
+  const allStages = useMemo(() => {
+    const stageMap = new Map<string, string>();
+    sortedPerformances.forEach((p) => stageMap.set(p.stage_name, p.stage_color));
+    return stageOrder.map((name) => ({ name, color: stageMap.get(name) || c.secondary }));
+  }, [sortedPerformances, stageOrder, c.secondary]);
   const performancePreferenceMap = useMemo(() => {
     const result: Record<number, GroupMemberPref[]> = {};
     performancePrefs.forEach((pref) => {
@@ -162,45 +165,23 @@ export default function GroupPage() {
     return result;
   }, [performancePrefs, performances]);
 
-  const selectedDayPerformances = useMemo(() => sortedPerformances.filter((p) => p.day_date === selectedDay), [sortedPerformances, selectedDay]);
-  const visiblePerformances = useMemo(() => selectedDayPerformances.filter((p) => activeStages[p.stage_name] !== false), [selectedDayPerformances, activeStages]);
-  const allStages = useMemo(() => {
-    const stageMap = new Map<string, string>();
-    sortedPerformances.forEach((p) => stageMap.set(p.stage_name, p.stage_color));
-    return stageOrder.map((name) => ({ name, color: stageMap.get(name) || c.acc }));
-  }, [sortedPerformances, stageOrder, c.acc]);
-  const dayStages = useMemo(() => {
-    const stageMap = new Map<string, string>();
-    selectedDayPerformances.forEach((p) => stageMap.set(p.stage_name, p.stage_color));
-    return stageOrder.filter((name) => stageMap.has(name)).map((name) => ({ name, color: stageMap.get(name) || c.acc }));
-  }, [selectedDayPerformances, stageOrder, c.acc]);
-  const listPerformances = useMemo(() => visiblePerformances, [visiblePerformances]);
-  const hours = useMemo(() => {
-    if (visiblePerformances.length === 0) return Array.from({ length: 8 }, (_, i) => i);
-    const min = Math.floor(Math.min(...visiblePerformances.map((p) => hourNumber(p.start_time))));
-    const max = Math.ceil(Math.max(...visiblePerformances.map((p) => hourNumber(p.end_time))));
-    return Array.from({ length: Math.max(1, max - min) }, (_, i) => min + i);
-  }, [visiblePerformances]);
+  const copyInviteCode = async () => {
+    if (!group?.invite_code) return;
+    await navigator.clipboard.writeText(group.invite_code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
 
-  const minHour = hours[0] || 0;
-  const hourWidth = useHourWidth();
-  const stageLabelWidth = useStageLabelWidth();
-
-  const copyInviteCode = async () => { if (!group?.invite_code) return; await navigator.clipboard.writeText(group.invite_code); setCopied(true); setTimeout(() => setCopied(false), 1600); };
-
-  const renderPeoplePills = (performanceId: number, mode: 'compact' | 'full' = 'full') => {
+  const renderPeoplePills = (performanceId: number) => {
     const prefs = performancePreferenceMap[performanceId] ?? [];
-    if (prefs.length === 0) return <span className="text-[10px] font-bold opacity-70">No group picks</span>;
-    const visiblePrefs = mode === 'compact' ? prefs.slice(0, 3) : prefs;
-    const hiddenCount = prefs.length - visiblePrefs.length;
+    if (prefs.length === 0) return <span className="text-xs font-bold" style={{ color: c.muted }}>No group picks yet</span>;
     return (
-      <div className={mode === 'compact' ? 'flex max-h-6 flex-wrap gap-1 overflow-hidden' : 'flex max-h-24 flex-wrap gap-1 overflow-y-auto pr-1'} data-testid="group-performance-picks" title={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}>
-        {visiblePrefs.map((pref) => (
-          <span key={`${pref.user_id}-${pref.status}-${mode}`} className="max-w-[140px] truncate rounded-full px-2 py-1 text-[10px] font-black" style={{ background: pref.status === 'going' ? '#ffd16622' : `${c.accB}22`, color: pref.status === 'going' ? '#ffd166' : c.accB, border: `1px solid ${pref.status === 'going' ? '#ffd16655' : `${c.accB}55`}` }}>
-            {statusLabel(pref.status)} {pref.user_label}
+      <div className="flex flex-wrap gap-1.5" data-testid="group-performance-picks" title={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}>
+        {prefs.map((pref) => (
+          <span key={`${pref.user_id}-${pref.status}`} className="rounded-full px-2.5 py-1 text-[10px] font-black" style={{ background: pref.status === 'going' ? 'rgba(250,204,21,0.14)' : c.primarySoft, color: pref.status === 'going' ? c.star : c.primary, border: `1px solid ${pref.status === 'going' ? 'rgba(250,204,21,0.28)' : 'rgba(139,92,246,0.26)'}` }}>
+            {statusLabel(pref.status)} · {pref.user_label}
           </span>
         ))}
-        {hiddenCount > 0 && <span data-testid="group-picks-overflow" className="rounded-full px-2 py-1 text-[10px] font-black" style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}>+{hiddenCount}</span>}
       </div>
     );
   };
@@ -208,81 +189,66 @@ export default function GroupPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
-        <section className="mx-auto max-w-7xl px-4 py-8">
-          <header className="fade-up mb-6 overflow-hidden rounded-[28px] shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-            <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${group?.festival?.color || c.acc}, ${c.accB})` }} />
-            <div className="grid gap-5 p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_280px] lg:items-center">
+      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+        <section className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
+          <header className="premium-card mb-6 p-5 sm:p-6">
+            <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_320px] lg:items-center">
               <div>
-                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: group?.festival?.color || c.acc }}>Group Schedule</p>
-                <h1 data-testid="group-schedule-title" className="text-3xl font-black sm:text-5xl" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.02em' }}>{group ? group.name : 'Loading…'}</h1>
-                {group?.festival && <p className="mt-1.5 text-sm" style={{ color: c.muted }}>{festivalTitle(group.festival)} · {formatDateRange(group.festival.start_date, group.festival.end_date)}</p>}
+                <p className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: c.primary }}>Group Schedule</p>
+                <h1 data-testid="group-schedule-title" className="app-title mt-2 text-4xl font-black leading-tight sm:text-5xl">{group ? group.name : 'Loading…'}</h1>
+                {group?.festival && <p className="mt-3 text-sm leading-6" style={{ color: c.textSecondary }}>{festivalTitle(group.festival)} · {formatDateRange(group.festival.start_date, group.festival.end_date)}</p>}
               </div>
-              <div className="rounded-2xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
-                <div className="space-y-2 text-sm" style={{ color: c.muted }}>
-                  <div>👥 <b style={{ color: c.txt }}>{members.length}</b> members</div>
-                  {group?.festival && <div>📍 {group.festival.location || 'Location TBA'}</div>}
-                  {group?.festival && <div>📅 {formatDateRange(group.festival.start_date, group.festival.end_date)}</div>}
+              <div className="rounded-2xl p-4" style={{ background: c.surfaceHover, border: `1px solid ${c.border}` }}>
+                <div className="space-y-1.5 text-sm" style={{ color: c.muted }}>
+                  <div><b style={{ color: c.txt }}>{members.length}</b> members</div>
+                  {group?.festival && <div>{group.festival.location || 'Location TBA'}</div>}
+                  {group?.festival && <div>{formatDateRange(group.festival.start_date, group.festival.end_date)}</div>}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {group && <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>Open Festival</button>}
-                  <button type="button" onClick={() => router.push('/groups')} className="rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>← Groups</button>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {group && <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="mobile-action rounded-2xl px-3 py-2 text-xs font-black" style={{ background: c.surface, border: `1px solid ${c.border}`, color: c.txt }}>Festival</button>}
+                  <button type="button" onClick={() => router.push('/groups')} className="mobile-action rounded-2xl px-3 py-2 text-xs font-black" style={{ background: c.surface, border: `1px solid ${c.border}`, color: c.txt }}>Groups</button>
                 </div>
               </div>
             </div>
           </header>
 
           {loading && <p style={{ color: c.muted }}>Loading group schedule…</p>}
-          {error && <p data-testid="group-schedule-error" className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>{error}</p>}
+          {error && <p data-testid="group-schedule-error" className="mb-4 rounded-2xl p-4 text-sm font-bold" style={{ background: 'rgba(239,68,68,0.12)', color: c.danger, border: '1px solid rgba(239,68,68,0.26)' }}>{error}</p>}
 
           {!loading && group && (
             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <h2 className="mb-1 font-black">Invite friends</h2>
-                <p className="mb-4 text-sm" style={{ color: c.muted }}>Share this code so friends can join from the Groups page or the festival page.</p>
-                <div className="flex items-center gap-2"><code data-testid="group-page-invite-code" className="flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}>{group.invite_code}</code><button type="button" onClick={copyInviteCode} className="rounded-full px-4 py-3 text-sm font-black text-white" style={{ background: copied ? '#16a34a' : c.accB }}>{copied ? 'Copied!' : 'Copy'}</button></div>
+              <div className="premium-card p-5">
+                <div className="relative z-10"><h2 className="app-title mb-1 text-xl font-black">Invite friends</h2><p className="mb-4 text-sm" style={{ color: c.muted }}>Share this code so friends can join from the Groups page.</p><div className="flex items-center gap-2"><code data-testid="group-page-invite-code" className="mobile-action flex-1 rounded-2xl px-4 py-3 text-sm font-black tracking-[0.06em]" style={{ background: c.surfaceHover, color: c.txt, border: `1px solid ${c.border}` }}>{group.invite_code}</code><button type="button" onClick={copyInviteCode} className="mobile-action rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: copied ? c.success : c.secondary }}>{copied ? 'Copied' : 'Copy'}</button></div></div>
               </div>
-              <div className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <h2 className="mb-3 font-black">Members ({members.length})</h2>
-                <ul className="flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1">
-                  {members.map((member) => <li key={member.user_id} data-testid="group-member-pill" className="flex items-center gap-2 rounded-full px-3 py-2" style={{ background: c.surf2 }}><span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black" style={{ background: `${c.acc}33`, color: c.acc }}>{memberLabel(member).slice(0, 1).toUpperCase()}</span><span className="text-sm font-bold">{memberLabel(member)}</span><span className="text-[10px] font-black uppercase" style={{ color: c.muted }}>{member.role}</span></li>)}
-                </ul>
+              <div className="premium-card p-5">
+                <div className="relative z-10"><h2 className="app-title mb-3 text-xl font-black">Members ({members.length})</h2><ul className="flex max-h-36 flex-wrap gap-2 overflow-y-auto pr-1 scroll-thin">{members.map((member) => <li key={member.user_id} data-testid="group-member-pill" className="flex items-center gap-2 rounded-full px-3 py-2" style={{ background: c.surfaceHover, border: `1px solid ${c.border}` }}><span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black" style={{ background: c.primarySoft, color: c.primary }}>{memberLabel(member).slice(0, 1).toUpperCase()}</span><span className="text-sm font-bold">{memberLabel(member)}</span><span className="text-[10px] font-black uppercase" style={{ color: c.muted }}>{member.role}</span></li>)}</ul></div>
               </div>
             </div>
           )}
 
-          {!loading && !error && sortedPerformances.length === 0 && <div data-testid="group-empty-picks" className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}><div className="text-5xl">🎶</div><h2 className="mt-3 text-2xl font-black">No lineup yet</h2><p className="mt-2 text-sm" style={{ color: c.muted }}>This festival has no imported performances yet.</p></div>}
+          {!loading && !error && sortedPerformances.length === 0 && <div data-testid="group-empty-picks" className="premium-card p-8 text-center"><div className="relative z-10"><h2 className="app-title text-2xl font-black">No lineup yet</h2><p className="mt-2 text-sm" style={{ color: c.muted }}>This festival has no imported performances yet.</p></div></div>}
 
           {!loading && sortedPerformances.length > 0 && (
             <>
-              <div className="mb-5 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setViewMode('timeline')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'timeline' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'timeline' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'timeline' ? group?.festival?.color || c.acc : c.brd}` }}>Timeline</button>
-                <button type="button" onClick={() => setViewMode('list')} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'list' ? group?.festival?.color || c.acc : c.surf, color: viewMode === 'list' ? '#fff' : c.muted, border: `1px solid ${viewMode === 'list' ? group?.festival?.color || c.acc : c.brd}` }}>List</button>
+              <div className="mb-5 flex gap-2 overflow-x-auto scroll-hidden pb-1">
+                <button type="button" onClick={() => setViewMode('list')} className="mobile-action shrink-0 rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'list' ? c.primarySoft : c.surface, color: viewMode === 'list' ? c.primary : c.muted, border: `1px solid ${viewMode === 'list' ? 'rgba(139,92,246,0.28)' : c.border}` }}>List</button>
+                <button type="button" onClick={() => setViewMode('timeline')} className="mobile-action shrink-0 rounded-full px-5 py-2 text-sm font-black" style={{ background: viewMode === 'timeline' ? c.primarySoft : c.surface, color: viewMode === 'timeline' ? c.primary : c.muted, border: `1px solid ${viewMode === 'timeline' ? 'rgba(139,92,246,0.28)' : c.border}` }}>Timeline</button>
               </div>
 
-              {days.length > 0 && <div className="relative mb-5"><div className="flex gap-2 overflow-x-auto scroll-hidden py-1 px-0.5" data-testid="group-day-tabs" style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%)' }}>{days.map((day) => <button key={day} type="button" data-testid="group-day-tab" onClick={() => setSelectedDay(day)} className="whitespace-nowrap rounded-full px-4 py-2 text-xs font-black" style={{ background: selectedDay === day ? c.accB : c.surf, color: selectedDay === day ? '#fff' : c.muted, border: `1px solid ${selectedDay === day ? c.accB : c.brd}` }}>{new Date(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</button>)}</div></div>}
+              {days.length > 0 && <div className="mb-5 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="group-day-tabs">{days.map((day) => <button key={day} type="button" data-testid="group-day-tab" onClick={() => setSelectedDay(day)} className="mobile-action shrink-0 rounded-full px-4 py-2 text-xs font-black" style={{ background: selectedDay === day ? c.primarySoft : c.surface, color: selectedDay === day ? c.primary : c.muted, border: `1px solid ${selectedDay === day ? 'rgba(139,92,246,0.28)' : c.border}` }}>{new Date(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</button>)}</div>}
 
-              <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="group-stage-filters">
-                {allStages.map((stage) => {
-                  const isOn = activeStages[stage.name] !== false;
-                  const hasShowsToday = selectedDayPerformances.some((p) => p.stage_name === stage.name);
-                  return <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ background: isOn ? stage.color : c.surf2, color: isOn ? '#fff' : c.muted, border: `1px solid ${isOn ? stage.color : c.brd}`, opacity: hasShowsToday ? 1 : 0.45 }}>{stage.name}</button>;
-                })}
-              </div>
+              <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="group-stage-filters">{allStages.map((stage) => { const isOn = activeStages[stage.name] !== false; const hasShowsToday = selectedDayPerformances.some((p) => p.stage_name === stage.name); return <button key={stage.name} type="button" data-testid="group-stage-filter" onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))} className="mobile-action shrink-0 rounded-full px-3 py-2 text-xs font-black" style={{ background: isOn ? c.secondarySoft : c.surface, color: isOn ? c.secondary : c.muted, border: `1px solid ${isOn ? 'rgba(6,182,212,0.28)' : c.border}`, opacity: hasShowsToday ? 1 : 0.45 }}>{stage.name}</button>; })}</div>
 
               {viewMode === 'timeline' && (
-                <section className="rounded-[28px] p-4 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-timeline">
-                  {visiblePerformances.length === 0 ? <p style={{ color: c.muted }}>No performances this day with the selected stage filters.</p> : <div className="relative overflow-x-auto scroll-thin" data-testid="group-timeline-scroll"><div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}><div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>{hours.map((hour) => <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>{`${String(hour % 24).padStart(2, '0')}:00`}</div>)}</div>{dayStages.filter((s) => activeStages[s.name] !== false).map((stage) => <div key={stage.name} className="mb-2 flex items-stretch" data-testid="group-stage-row"><div className="shrink-0 pr-2 text-right text-xs font-black leading-tight flex items-center justify-end" style={{ width: stageLabelWidth, color: stage.color, position: 'sticky', left: 0, zIndex: 2, background: c.surf }}><span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}15` }}>{stage.name}</span></div><div className="relative h-20 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}08`, border: `1px solid ${c.brd}` }}>{hours.map((hour) => <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />)}{visiblePerformances.filter((p) => p.stage_name === stage.name).map((p) => { const left = (hourNumber(p.start_time) - minHour) * hourWidth; const width = Math.max(60, durationHours(p.start_time, p.end_time) * hourWidth - 4); const hasPicks = (performancePreferenceMap[p.id] ?? []).length > 0; return <div key={p.id} data-testid="group-performance-block" title={`${p.artist_name} · ${timeLabel(p.start_time)}–${timeLabel(p.end_time)}`} className="perf-block absolute top-2 h-16 overflow-hidden rounded-xl px-2 py-1.5 text-left text-xs font-black text-white shadow-lg" style={{ left, width, background: `linear-gradient(135deg, ${p.stage_color}, ${p.stage_color}cc)`, opacity: hasPicks ? 1 : 0.6 }}><span className="block truncate leading-4">{p.artist_name}</span><span className="block truncate text-[10px] opacity-75">{timeLabel(p.start_time)} – {timeLabel(p.end_time)}</span><div className="mt-1">{renderPeoplePills(p.id, 'compact')}</div></div>; })}</div></div>)}</div></div>}
+                <section className="premium-card p-5" data-testid="group-timeline">
+                  <div className="relative z-10"><p className="mb-3 text-sm" style={{ color: c.muted }}>Timeline is available as a secondary view. For mobile planning, the list below is the primary experience.</p><div className="grid grid-cols-1 gap-3 md:grid-cols-2">{visiblePerformances.map((perf) => <article key={perf.id} data-testid="group-performance-block" className="rounded-2xl p-4" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, borderLeft: `4px solid ${perf.stage_color}` }}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-black">{perf.artist_name}</h3><p className="text-sm" style={{ color: c.muted }}>{timeLabel(perf.start_time)} – {timeLabel(perf.end_time)} · {perf.stage_name}</p></div><span className="text-xs font-black" style={{ color: c.secondary }}>{timeLabel(perf.start_time)}</span></div><div className="mt-3">{renderPeoplePills(perf.id)}</div></article>)}</div></div>
                 </section>
               )}
 
               {viewMode === 'list' && (
-                <div data-testid="group-schedule-list">
-                  <div className="hidden sm:block overflow-hidden rounded-[28px] shadow-xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                    <div className="overflow-x-auto scroll-thin"><table className="min-w-full"><thead><tr style={{ background: c.surf2, borderBottom: `1px solid ${c.brd}` }}><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Date</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Time</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Stage</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Artist</th><th className="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-widest" style={{ color: '#ffd166' }}>★ Group picks</th></tr></thead><tbody>{listPerformances.map((perf, idx) => <tr key={perf.id} data-testid="group-list-row" style={{ borderTop: idx === 0 ? 'none' : `1px solid ${c.brd}` }}><td className="px-4 py-3 text-xs font-bold" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td><td className="px-4 py-3 text-sm font-bold" style={{ color: c.txt }}>{timeLabel(perf.start_time)}</td><td className="px-4 py-3 text-sm" style={{ color: c.muted }}>{perf.stage_name}</td><td className="px-4 py-3 text-sm font-black" style={{ color: c.txt }}>{perf.artist_name}</td><td className="px-4 py-3 text-sm font-bold">{renderPeoplePills(perf.id)}</td></tr>)}</tbody></table></div>
-                  </div>
-                  <div className="sm:hidden space-y-3">{listPerformances.map((perf) => <article key={perf.id} data-testid="group-list-row" className="rounded-2xl p-4" style={{ background: c.surf, border: `1px solid ${c.brd}` }}><div className="mb-2 flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="truncate font-black" style={{ color: c.txt }}>{perf.artist_name}</h3><p className="text-xs" style={{ color: perf.stage_color }}>{perf.stage_name}</p></div><span className="shrink-0 text-xs font-bold" style={{ color: c.muted }}>{timeLabel(perf.start_time)}</span></div><p className="mb-2 text-xs" style={{ color: c.muted }}>{new Date(perf.day_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p><div>{renderPeoplePills(perf.id)}</div></article>)}</div>
-                  {listPerformances.length === 0 && <p className="rounded-2xl p-4 text-sm" style={{ background: c.surf, color: c.muted, border: `1px solid ${c.brd}` }}>No performances match the selected day and stage filters.</p>}
+                <div data-testid="group-schedule-list" className="space-y-3">
+                  {visiblePerformances.map((perf) => <article key={perf.id} data-testid="group-list-row" className="premium-card p-4"><div className="relative z-10"><div data-testid="group-performance-block" className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.14em]" style={{ color: c.secondary }}>{dayLabel(perf.day_date)}</p><h3 className="app-title mt-1 truncate text-xl font-black">{perf.artist_name}</h3><p className="mt-1 text-sm" style={{ color: c.muted }}>{timeLabel(perf.start_time)} – {timeLabel(perf.end_time)} · <span style={{ color: perf.stage_color }}>{perf.stage_name}</span></p></div><span className="shrink-0 rounded-full px-3 py-1 text-xs font-black" style={{ background: c.surfaceHover, color: c.textSecondary, border: `1px solid ${c.border}` }}>{timeLabel(perf.start_time)}</span></div><div className="mt-3">{renderPeoplePills(perf.id)}</div></div></article>)}
+                  {visiblePerformances.length === 0 && <p className="rounded-2xl p-4 text-sm" style={{ background: c.surface, color: c.muted, border: `1px solid ${c.border}` }}>No performances match the selected day and stage filters.</p>}
                 </div>
               )}
             </>
