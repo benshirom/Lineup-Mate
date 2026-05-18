@@ -142,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadProfile(session.user.id);
       } else {
         setProfile(null);
+        applyPreferences(DEFAULT_THEME);
       }
     });
 
