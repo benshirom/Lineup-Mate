@@ -9,7 +9,10 @@ const buckets = new Map<string, Bucket>();
 
 
 function isRateLimitEnabled() {
-  return process.env.DISABLE_API_RATE_LIMIT !== 'true' && process.env.NODE_ENV !== 'test';
+  if (process.env.DISABLE_API_RATE_LIMIT === 'true') return false;
+  if (process.env.CI === 'true') return false;
+  if (process.env.NODE_ENV === 'test') return false;
+  return true;
 }
 
 function cleanup(now: number) {
