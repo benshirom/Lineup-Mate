@@ -7,6 +7,11 @@ type Bucket = {
 
 const buckets = new Map<string, Bucket>();
 
+
+function isRateLimitEnabled() {
+  return process.env.DISABLE_API_RATE_LIMIT !== 'true' && process.env.NODE_ENV !== 'test';
+}
+
 function cleanup(now: number) {
   for (const [key, bucket] of buckets.entries()) {
     if (bucket.resetAt <= now) buckets.delete(key);
@@ -32,6 +37,9 @@ export function applyRateLimit(options: {
   windowMs: number;
 }): { ok: true } | { ok: false } {
   const { req, res, key, limit, windowMs } = options;
+  if (!isRateLimitEnabled()) {
+    return { ok: true };
+  }
   const now = Date.now();
   cleanup(now);
 
