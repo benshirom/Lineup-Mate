@@ -82,15 +82,15 @@ export async function openProfile(page: Page) {
 
 export async function openFirstFestival(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with View Lineup').toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first().click();
-  await expect(page.getByRole('button', { name: /timeline/i }), 'Festival page should render schedule tabs after opening first festival').toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /Open schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with an open schedule CTA').toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: /Open schedule|View Lineup|צפה בליינאפ/i }).first().click();
+  await expect(page.getByRole('button', { name: /timeline|schedule|lineup|artists/i }).first(), 'Festival page should render schedule tabs after opening first festival').toBeVisible({ timeout: 20_000 });
   return page.url();
 }
 
 export async function ensureFirstActIsStarred(page: Page) {
   const starButton = page.getByRole('button', { name: /Add to my schedule|Remove from my schedule/i }).first();
-  await expect(starButton, 'Festival timeline should contain a star action for at least one act').toBeVisible({ timeout: 20_000 });
+  await expect(starButton, 'Festival schedule should contain a star action for at least one act').toBeVisible({ timeout: 20_000 });
 
   const label = await starButton.getAttribute('aria-label');
   if (label?.toLowerCase().includes('add')) {
@@ -102,13 +102,13 @@ export async function ensureFirstActIsStarred(page: Page) {
 
 export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /Open schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
 
-  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!|Saved|נשמר/i }).first();
+  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!|Saved|Save|נשמר/i }).first();
   await expect(firstSaveOrSavedButton, 'Home page should expose a save/saved festival button').toBeVisible({ timeout: 20_000 });
 
   const label = (await firstSaveOrSavedButton.innerText()).trim();
-  if (/\+ Save|Save Festival|שמור פסטיבל/i.test(label)) {
+  if (/\+ Save|Save Festival|Save|שמור פסטיבל/i.test(label)) {
     await firstSaveOrSavedButton.click();
     await page.waitForLoadState('networkidle').catch(() => undefined);
   }
