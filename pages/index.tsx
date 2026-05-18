@@ -114,7 +114,7 @@ export default function Home() {
   const filteredFestivals = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return festivals.filter((festival) => {
-      const title = `${festival.name} ${festival.name_he || ''} ${festival.location || ''} ${festival.location_he || ''}`.toLowerCase();
+      const title = `${festival.name} ${festival.name_he || ''} ${festival.location || ''} ${festival.location_he || ''} ${festival.genre_label || ''}`.toLowerCase();
       const matchesQuery = !normalizedQuery || title.includes(normalizedQuery);
       const matchesGenre = genre === 'all' || festival.genre === genre;
       return matchesQuery && matchesGenre;
@@ -158,124 +158,134 @@ export default function Home() {
 
   const getFestivalName = (festival: Festival) => festival.name;
   const getFestivalLocation = (festival: Festival) => festival.location;
+  const featuredFestival = festivals[0];
 
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr] lg:items-center">
+      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+        <section className="mx-auto max-w-7xl px-4 pb-8 pt-8 sm:pb-12 sm:pt-12 md:px-6">
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
             <div className="fade-up">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold" style={{ background: `${c.acc}18`, color: c.acc, border: `1px solid ${c.acc}40` }}>
-                <span className="inline-block h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: c.acc }} />
-                {t.appName}
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black" style={{ background: c.primarySoft, color: c.primary, border: `1px solid rgba(139,92,246,0.28)` }}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: c.secondary, boxShadow: `0 0 12px ${c.secondary}` }} />
+                Premium festival planner
               </div>
-              <h1 className="text-4xl font-black sm:text-6xl" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.03em', lineHeight: 1.05 }}>
+              <h1 className="app-title max-w-3xl text-4xl font-black leading-[0.98] sm:text-6xl lg:text-7xl">
                 {t.heroTitle}
               </h1>
-              <p className="mt-4 max-w-xl text-base sm:text-lg leading-relaxed" style={{ color: c.muted }}>
+              <p className="mt-5 max-w-xl text-base leading-7 sm:text-lg" style={{ color: c.textSecondary }}>
                 {t.heroSub}
               </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#events" className="rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})`, boxShadow: `0 4px 20px ${c.acc}55` }}>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <a href="#events" className="mobile-action inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5" style={{ background: `linear-gradient(135deg, ${c.primary}, ${c.secondary})`, boxShadow: c.glow }}>
                   {t.browseEvents}
                 </a>
                 {isAdmin && (
-                  <button type="button" onClick={() => router.push('/admin')} className="rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+                  <button type="button" onClick={() => router.push('/admin')} className="mobile-action rounded-2xl px-5 py-3 text-sm font-black transition" style={{ background: c.surfaceElevated, border: `1px solid ${c.border}`, color: c.txt }}>
                     {t.importSync}
                   </button>
                 )}
               </div>
+
+              <div className="mt-7 grid grid-cols-3 gap-2 text-center sm:max-w-md">
+                <div className="rounded-2xl p-3" style={{ background: c.surface, border: `1px solid ${c.border}` }}><b className="block text-lg">{festivals.length}</b><span className="text-[11px] font-bold" style={{ color: c.muted }}>Festivals</span></div>
+                <div className="rounded-2xl p-3" style={{ background: c.surface, border: `1px solid ${c.border}` }}><b className="block text-lg">Plan</b><span className="text-[11px] font-bold" style={{ color: c.muted }}>Personal</span></div>
+                <div className="rounded-2xl p-3" style={{ background: c.surface, border: `1px solid ${c.border}` }}><b className="block text-lg">Sync</b><span className="text-[11px] font-bold" style={{ color: c.muted }}>Friends</span></div>
+              </div>
             </div>
 
-            <div className="overflow-hidden rounded-[28px] p-5 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-              <div className="h-0.5 -mx-5 -mt-5 mb-5" style={{ background: `linear-gradient(90deg, ${c.acc}, ${c.accB})` }} />
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.15em]" style={{ color: c.muted }}>{t.upcomingEvents}</div>
-              <div className="mt-3 space-y-2">
-                {festivals.slice(0, 3).map((festival) => (
-                  <button
-                    key={festival.id}
-                    type="button"
-                    onClick={() => router.push(`/festival/${festival.id}`)}
-                    className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition hover:brightness-105"
-                    style={{ background: c.surf2 }}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg" style={{ background: `${festival.color || c.acc}22` }}>{festival.emoji || '🎪'}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-black" style={{ letterSpacing: '-0.01em' }}>{getFestivalName(festival)}</div>
-                      <div className="truncate text-xs" style={{ color: c.muted }}>{getFestivalLocation(festival) || 'Location TBA'}</div>
-                    </div>
-                    <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: festival.color || c.acc }} />
-                  </button>
-                ))}
+            <div className="premium-card p-4 sm:p-5" data-testid="product-preview-card">
+              <div className="relative z-10">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: c.muted }}>Tonight preview</div>
+                    <h2 className="app-title mt-1 text-2xl font-black">Your festival plan</h2>
+                  </div>
+                  <span className="rounded-full px-3 py-1 text-xs font-black" style={{ background: c.secondarySoft, color: c.secondary, border: `1px solid rgba(6,182,212,0.22)` }}>Live</span>
+                </div>
+
+                <div className="space-y-3">
+                  {(featuredFestival ? festivals.slice(0, 3) : []).map((festival, index) => (
+                    <button key={festival.id} type="button" onClick={() => router.push(`/festival/${festival.id}`)} className="flex w-full items-center gap-3 rounded-[20px] p-3 text-left transition hover:opacity-95" style={{ background: c.surfaceHover, border: `1px solid ${c.borderSoft}` }}>
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-black" style={{ background: c.primarySoft, color: c.primary }}>{String(index + 1).padStart(2, '0')}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-black">{getFestivalName(festival)}</div>
+                        <div className="truncate text-xs" style={{ color: c.muted }}>{getFestivalLocation(festival) || 'Location TBA'}</div>
+                      </div>
+                      <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: festival.color || c.secondary }} />
+                    </button>
+                  ))}
+                  {!featuredFestival && <p className="rounded-2xl p-4 text-sm" style={{ background: c.surfaceHover, color: c.muted }}>Festivals will appear here after import.</p>}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="events" className="mx-auto max-w-6xl px-4 pb-14">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{t.upcomingEvents}</h2>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.searchEvents} className="w-full rounded-full px-4 py-3 text-sm outline-none sm:max-w-xs" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }} />
+        <section id="events" className="mx-auto max-w-7xl px-4 pb-16 md:px-6">
+          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: c.primary }}>Discover</p>
+              <h2 className="app-title mt-1 text-3xl font-black sm:text-4xl">{t.upcomingEvents}</h2>
+            </div>
+            <label className="relative block w-full lg:max-w-md">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm" style={{ color: c.muted }}>Search</span>
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.searchEvents} className="mobile-action w-full rounded-2xl py-3 pl-[72px] pr-4 text-sm outline-none" style={{ background: c.surface, border: `1px solid ${c.border}`, color: c.txt }} />
+            </label>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-2">
-            {genreFilters.map((filter) => (
-              <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.acc : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
-                {filter.label}
-              </button>
-            ))}
+          <div className="mb-6 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="genre-filter-row">
+            {genreFilters.map((filter) => {
+              const active = genre === filter.key;
+              return (
+                <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="mobile-action shrink-0 rounded-full px-4 py-2 text-xs font-black transition" style={{ background: active ? c.primarySoft : c.surface, color: active ? c.primary : c.muted, border: `1px solid ${active ? 'rgba(139,92,246,0.30)' : c.border}` }}>
+                  {filter.label}
+                </button>
+              );
+            })}
           </div>
 
           {loading && <p style={{ color: c.muted }}>Loading festivals…</p>}
-          {error && <p className="rounded-xl p-4 text-sm text-red-700" style={{ background: '#fee2e2', border: '1px solid #fecaca' }}>{error}</p>}
+          {error && <p className="rounded-2xl p-4 text-sm font-bold" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.26)', color: c.danger }}>{error}</p>}
           {!loading && !error && filteredFestivals.length === 0 && <p style={{ color: c.muted }}>No festivals available yet.</p>}
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredFestivals.map((festival) => {
               const festivalStats = stats[festival.id] || { performances: 0, stages: 0, days: 0, festival_id: festival.id };
               const isSaved = savedFestivalIds[festival.id];
               return (
-                <article key={festival.id} className="fade-up overflow-hidden rounded-[24px] shadow-xl transition hover:-translate-y-1 hover:shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${festival.color || c.acc}, ${c.accB})` }} />
-                  <div className="p-5">
+                <article key={festival.id} className="premium-card fade-up p-4 transition hover:-translate-y-0.5" data-testid="festival-card">
+                  <div className="relative z-10">
                     <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}30, ${festival.color || c.acc}10)`, border: `1px solid ${festival.color || c.acc}33` }}>
-                          {festival.emoji || '🎪'}
-                        </div>
-                        <div>
-                          <h3 className="text-base font-black leading-snug" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.01em' }}>{getFestivalName(festival)}</h3>
-                          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: festival.color || c.acc }}>{festival.genre_label || festival.genre || 'Festival'}</p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="mb-1 text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: c.secondary }}>{festival.genre_label || festival.genre || 'Festival'}</p>
+                        <h3 className="app-title truncate text-xl font-black leading-tight">{getFestivalName(festival)}</h3>
                       </div>
                       <button
                         type="button"
                         onClick={() => toggleSavedFestival(festival.id)}
-                        className="shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold transition"
-                        style={{ background: isSaved ? `${c.acc}22` : c.surf2, color: isSaved ? c.acc : c.muted, border: `1px solid ${isSaved ? c.acc : c.brd}` }}
+                        className="mobile-action shrink-0 rounded-full px-3 py-1.5 text-xs font-black transition"
+                        style={{ background: isSaved ? 'rgba(250,204,21,0.14)' : c.surfaceHover, color: isSaved ? c.star : c.muted, border: `1px solid ${isSaved ? 'rgba(250,204,21,0.34)' : c.border}` }}
+                        aria-label={isSaved ? 'Saved festival' : 'Save festival'}
                       >
-                        {isSaved ? '✓ Saved' : '+ Save'}
+                        {isSaved ? 'Saved' : 'Save'}
                       </button>
                     </div>
 
-                    <div className="mb-4 space-y-1 text-xs" style={{ color: c.muted }}>
-                      <div className="flex items-center gap-1.5"><span>📍</span><span className="truncate">{getFestivalLocation(festival) || 'Location TBA'}</span></div>
-                      <div className="flex items-center gap-1.5"><span>📅</span><span>{formatDateRange(festival.start_date, festival.end_date)}</span></div>
+                    <div className="mb-4 space-y-2 text-sm" style={{ color: c.muted }}>
+                      <div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: festival.color || c.secondary }} /><span className="truncate">{getFestivalLocation(festival) || 'Location TBA'}</span></div>
+                      <div>{formatDateRange(festival.start_date, festival.end_date)}</div>
                     </div>
 
-                    <div className="mb-4 grid grid-cols-3 gap-1.5 text-center text-xs">
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.performances}</b><span style={{ color: c.muted }}>{t.artists}</span></div>
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.stages}</b><span style={{ color: c.muted }}>{t.stages}</span></div>
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.days}</b><span style={{ color: c.muted }}>{t.days}</span></div>
+                    <div className="mb-4 grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="rounded-2xl py-2" style={{ background: c.surfaceHover }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.performances}</b><span style={{ color: c.muted }}>{t.artists}</span></div>
+                      <div className="rounded-2xl py-2" style={{ background: c.surfaceHover }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.stages}</b><span style={{ color: c.muted }}>{t.stages}</span></div>
+                      <div className="rounded-2xl py-2" style={{ background: c.surfaceHover }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.days}</b><span style={{ color: c.muted }}>{t.days}</span></div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/festival/${festival.id}`)}
-                      className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white transition hover:brightness-110"
-                      style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}, ${c.accB})`, boxShadow: `0 4px 16px ${festival.color || c.acc}44` }}
-                    >
+                    <button type="button" onClick={() => router.push(`/festival/${festival.id}`)} className="mobile-action w-full rounded-2xl px-4 py-3 text-sm font-black text-white transition hover:opacity-95" style={{ background: `linear-gradient(135deg, ${c.primary}, ${c.secondary})` }}>
                       {t.viewLineup}
                     </button>
                   </div>
