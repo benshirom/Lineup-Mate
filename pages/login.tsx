@@ -172,7 +172,7 @@ const LoginPage = () => {
 
   const titles: Record<View, string> = {
     login: 'Welcome back',
-    signup: 'Create an account',
+    signup: 'Create your lineup account',
     forgot: 'Reset your password',
     'update-password': 'Choose a new password'
   };

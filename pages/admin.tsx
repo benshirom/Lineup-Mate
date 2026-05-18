@@ -176,7 +176,7 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+        <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
           <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
             <h1 className="text-3xl font-bold mb-4">Admin</h1>
             <p style={mutedStyle}>You must be signed in to use the admin tools.</p>
@@ -190,7 +190,7 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+        <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
           <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
             <h1 className="text-3xl font-bold mb-4">Admin</h1>
             <p style={mutedStyle}>Checking permissions…</p>
@@ -204,7 +204,7 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+        <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
           <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
             <h1 className="text-3xl font-bold mb-4">Admin</h1>
             <p data-testid="admin-permission-error" className="rounded-lg bg-red-50 border border-red-200 text-red-700 p-3">
@@ -219,7 +219,7 @@ export default function AdminPage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="p-4">
+      <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
             <p className="text-sm uppercase tracking-wide font-semibold" style={{ color: c.acc }}>Lineup-Mate Admin</p>
