@@ -3,11 +3,16 @@ import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfin
 import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import { importNormalizedFestival } from '@/lib/importFestival';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!applyRateLimit({ req, res, key: 'admin_import_clashfinder', limit: 10, windowMs: 60_000 }).ok) {
+    return;
   }
 
   const admin = await requireAdmin(req);

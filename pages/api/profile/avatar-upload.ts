@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 const MAX_BASE64_LENGTH = 6_000_000;
 
@@ -33,6 +34,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+
+  if (!applyRateLimit({ req, res, key: 'avatar_upload', limit: 10, windowMs: 60_000 }).ok) {
+    return;
   }
 
   const token = req.headers.authorization?.startsWith('Bearer ')

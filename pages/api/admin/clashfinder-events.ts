@@ -1,11 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
 import { fetchClashfinderEventsList, normalizeClashfinderEventsList } from '@/lib/clashfinderEvents';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!applyRateLimit({ req, res, key: 'admin_clashfinder_events', limit: 60, windowMs: 60_000 }).ok) {
+    return;
   }
 
   const admin = await requireAdmin(req);

@@ -3,6 +3,7 @@ import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfin
 import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import type { NormalizedClashfinderPerformance } from '@/lib/clashfinder';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 function summarizeRawShape(raw: unknown) {
   if (Array.isArray(raw)) {
@@ -55,6 +56,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!applyRateLimit({ req, res, key: 'admin_preview_clashfinder', limit: 20, windowMs: 60_000 }).ok) {
+    return;
   }
 
   const admin = await requireAdmin(req);
