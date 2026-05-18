@@ -78,7 +78,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     const storedTheme = readStoredTheme();
-    const nextTheme = data?.theme ? normalizeTheme(data.theme) : storedTheme;
+    const profileTheme = data?.theme ? normalizeTheme(data.theme) : null;
+    // Don't force light on a dark session — only apply profile light if user is already in light
+    const nextTheme = profileTheme === 'light' && storedTheme === 'dark'
+      ? 'dark'
+      : (profileTheme ?? storedTheme);
 
     if (data) {
       setProfile({
@@ -138,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadProfile(session.user.id);
       } else {
         setProfile(null);
+        applyPreferences(DEFAULT_THEME);
       }
     });
 

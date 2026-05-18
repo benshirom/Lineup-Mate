@@ -109,6 +109,8 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page).toHaveURL(/\/group\/\d+/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/members/i)).toBeVisible({ timeout: 20_000 });
+    // Group schedule defaults to list — switch to timeline to verify performance blocks
+    await page.getByRole('button', { name: /^Timeline$/i }).click();
     await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
 
     await page.goto(festivalUrl);

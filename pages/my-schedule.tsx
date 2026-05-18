@@ -289,7 +289,7 @@ export default function MySchedulePage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-6xl px-4 py-8">
           <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -376,7 +376,7 @@ export default function MySchedulePage() {
               <div className="text-5xl">☆</div>
               <h2 className="mt-3 text-2xl font-black">No saved acts yet</h2>
               <p className="mt-2 text-sm" style={{ color: c.muted }}>Open a festival and tap the star next to artists you do not want to miss.</p>
-              <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})` }}>
+              <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: c.acc }}>
                 Find Festivals
               </button>
             </div>

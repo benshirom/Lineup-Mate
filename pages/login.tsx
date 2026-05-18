@@ -172,7 +172,7 @@ const LoginPage = () => {
 
   const titles: Record<View, string> = {
     login: 'Welcome back',
-    signup: 'Create an account',
+    signup: 'Create your lineup account',
     forgot: 'Reset your password',
     'update-password': 'Choose a new password'
   };
@@ -180,7 +180,7 @@ const LoginPage = () => {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="flex flex-col items-center justify-center p-4">
+      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md rounded-[28px] p-8 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
           <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
           <h1 className="mb-6 text-3xl font-black">{titles[view]}</h1>
@@ -236,7 +236,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            <button type="submit" disabled={submitting || socialLoading !== null} className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})` }}>
+            <button type="submit" disabled={submitting || socialLoading !== null} className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.acc }}>
               {submitting ? 'Please wait…' : view === 'login' ? 'Sign in' : view === 'signup' ? 'Create account' : view === 'forgot' ? 'Send reset link' : 'Update password'}
             </button>
           </form>

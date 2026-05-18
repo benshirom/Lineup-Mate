@@ -82,8 +82,8 @@ export async function openProfile(page: Page) {
 
 export async function openFirstFestival(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with View Lineup').toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first().click();
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
   await expect(page.getByRole('button', { name: /timeline/i }), 'Festival page should render schedule tabs after opening first festival').toBeVisible({ timeout: 20_000 });
   return page.url();
 }
@@ -102,7 +102,7 @@ export async function ensureFirstActIsStarred(page: Page) {
 
 export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
 
   const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!|Saved|נשמר/i }).first();
   await expect(firstSaveOrSavedButton, 'Home page should expose a save/saved festival button').toBeVisible({ timeout: 20_000 });
