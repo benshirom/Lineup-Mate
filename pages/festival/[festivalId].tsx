@@ -397,7 +397,7 @@ export default function FestivalPage() {
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div
                       className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl shadow-lg"
-                      style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}33, ${festival.color || c.acc}11)`, border: `1px solid ${festival.color || c.acc}44` }}
+                      style={{ background: `${festival.color || c.acc}18`, border: `1px solid ${festival.color || c.acc}44` }}
                     >
                       {festival.emoji || '🎪'}
                     </div>
@@ -470,9 +470,9 @@ export default function FestivalPage() {
                           onClick={() => selectDay(nextDay)}
                           className="shrink-0 tap-active whitespace-nowrap rounded-full px-4 text-xs font-bold"
                           style={{
-                            background: selectedDay === nextDay ? c.accB : c.surf,
+                            background: selectedDay === nextDay ? c.acc : c.surf,
                             color: selectedDay === nextDay ? '#fff' : c.muted,
-                            border: `1px solid ${selectedDay === nextDay ? c.accB : c.brd}`,
+                            border: `1px solid ${selectedDay === nextDay ? c.acc : c.brd}`,
                             minHeight: 32,
                             paddingTop: 6,
                             paddingBottom: 6,
@@ -723,7 +723,7 @@ export default function FestivalPage() {
                         <button
                           type="submit"
                           className="tap-active rounded-2xl px-4 py-3 text-sm font-bold text-white"
-                          style={{ background: c.accB, minHeight: 48 }}
+                          style={{ background: c.acc, minHeight: 48 }}
                         >
                           {user ? 'Join' : 'Sign in'}
                         </button>

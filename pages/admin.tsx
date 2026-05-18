@@ -305,7 +305,7 @@ export default function AdminPage() {
                               data-testid={`select-clashfinder-event-${event.slug}`}
                               onClick={() => selectEvent(event)}
                               className="rounded-lg px-3 py-1 text-white"
-                              style={{ background: c.accB }}
+                              style={{ background: c.acc }}
                             >
                               Select
                             </button>

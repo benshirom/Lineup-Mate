@@ -231,7 +231,7 @@ export default function GroupPage() {
       <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-7xl px-4 py-6 md:py-8">
           <header className="fade-up mb-6 overflow-hidden rounded-3xl shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-            <div className="h-1" style={{ background: `linear-gradient(90deg, ${group?.festival?.color || c.acc}, ${c.accB})` }} />
+            <div className="h-px" style={{ background: c.brd }} />
             <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-[1fr_auto] lg:grid-cols-[1fr_260px] lg:items-center">
               <div>
                 <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.18em]" style={{ color: group?.festival?.color || c.acc }}>Group Schedule</p>
@@ -298,7 +298,7 @@ export default function GroupPage() {
                     type="button"
                     onClick={copyInviteCode}
                     className="tap-active rounded-full px-4 py-3 text-sm font-bold text-white"
-                    style={{ background: copied ? c.success : c.accB, minHeight: 48 }}
+                    style={{ background: copied ? c.success : c.acc, minHeight: 48 }}
                   >
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
@@ -385,9 +385,9 @@ export default function GroupPage() {
                         onClick={() => setSelectedDay(day)}
                         className="tap-active whitespace-nowrap rounded-full px-4 text-xs font-bold"
                         style={{
-                          background: selectedDay === day ? c.accB : c.surf,
+                          background: selectedDay === day ? c.acc : c.surf,
                           color: selectedDay === day ? '#fff' : c.muted,
-                          border: `1px solid ${selectedDay === day ? c.accB : c.brd}`,
+                          border: `1px solid ${selectedDay === day ? c.acc : c.brd}`,
                           minHeight: 36,
                           paddingTop: 8,
                           paddingBottom: 8,
