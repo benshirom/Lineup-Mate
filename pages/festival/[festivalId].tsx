@@ -392,8 +392,7 @@ export default function FestivalPage() {
           {festival && (
             <>
               {/* ── Festival header ─────────────────────────────── */}
-              <header className="fade-up mb-5 overflow-hidden rounded-3xl shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <div className="relative h-1" style={{ background: `linear-gradient(90deg, ${festival.color || c.acc}, ${c.accB})` }} />
+              <header className="fade-up mb-5 overflow-hidden rounded-3xl shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}`, borderTop: `2px solid ${(festival.color || c.acc)}66` }}>
                 <div className="p-4 sm:p-5">
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div
