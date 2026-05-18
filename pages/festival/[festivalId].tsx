@@ -82,6 +82,9 @@ export default function FestivalPage() {
   const [popId, setPopId] = useState<number | null>(null);
   const [inviteCode, setInviteCode] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [groupNameInput, setGroupNameInput] = useState('');
 
   useEffect(() => {
     if (!festivalId) return;
@@ -93,6 +96,7 @@ export default function FestivalPage() {
         const { data: festivalData, error: festivalError } = await supabase.from('festivals').select('*').eq('id', festivalId).single();
         if (festivalError) throw festivalError;
         setFestival(festivalData as Festival);
+        setGroupNameInput(`${festivalData.name} Group`);
 
         const { data: rows, error: perfError } = await supabase
           .from('performances')
@@ -192,12 +196,28 @@ export default function FestivalPage() {
     }
   };
 
-  const createGroupFromFestival = async () => {
+  const handleCreateGroup = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!festival || !requireLogin()) return;
-    const { data: newGroup, error: groupError } = await supabase.from('groups').insert({ festival_id: festival.id, name: `${festival.name} Group`, owner_user_id: user!.id }).select().single();
-    if (groupError) { setError(groupError.message); return; }
-    await supabase.from('group_members').insert({ group_id: newGroup.id, user_id: user!.id, role: 'owner' });
-    router.push(`/group/${newGroup.id}`);
+    const groupName = groupNameInput.trim();
+    if (!groupName) {
+      setError('Enter a group name.');
+      return;
+    }
+    setCreatingGroup(true);
+    setError(null);
+    try {
+      const { data: newGroup, error: groupError } = await supabase.from('groups').insert({ festival_id: festival.id, name: groupName, owner_user_id: user!.id }).select().single();
+      if (groupError) throw groupError;
+      const { error: memberError } = await supabase.from('group_members').insert({ group_id: newGroup.id, user_id: user!.id, role: 'owner' });
+      if (memberError) throw memberError;
+      router.push(`/group/${newGroup.id}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not create group.');
+    } finally {
+      setCreatingGroup(false);
+      setShowCreateModal(false);
+    }
   };
 
   const renderStarButton = (performance: PerformanceItem) => {
@@ -242,7 +262,20 @@ export default function FestivalPage() {
 
               {tab === 'lineup' && <section className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">{visiblePerformances.map(renderPerformanceCard)}{visiblePerformances.length === 0 && <p className="rounded-2xl p-4 text-sm" style={{ background: c.surface, color: c.muted, border: `1px solid ${c.border}` }}>No shows this day with the selected stage filters.</p>}</section>}
               {tab === 'timeline' && <section className="premium-card p-5"><div className="relative z-10"><h2 className="app-title text-2xl font-black">Timeline</h2><p className="mt-2 text-sm" style={{ color: c.muted }}>Timeline is now a secondary compact view. Artists is the primary mobile experience.</p><div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">{visiblePerformances.map(renderPerformanceCard)}</div></div></section>}
-              {tab === 'info' && <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><article className="premium-card p-5"><div className="relative z-10"><h2 className="app-title mb-3 text-2xl font-black">About</h2><p className="text-sm leading-7" style={{ color: c.muted }}>{festival.description || 'No description yet.'}</p></div></article><aside className="premium-card p-5"><div className="relative z-10"><h2 className="app-title mb-3 text-2xl font-black">Plan with friends</h2><button type="button" onClick={createGroupFromFestival} className="mobile-action mb-3 w-full rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: `linear-gradient(135deg, ${c.primary}, ${c.secondary})` }}>{user ? 'Create Group' : 'Sign in to Create Group'}</button><form onSubmit={handleJoinGroup} className="space-y-2"><input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="mobile-action w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, color: c.txt }} /><button type="submit" className="mobile-action w-full rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, color: c.txt }}>{user ? 'Join group' : 'Sign in'}</button></form>{joinError && <p className="mt-2 text-sm" style={{ color: c.danger }}>{joinError}</p>}</div></aside></div>}
+              {tab === 'info' && <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><article className="premium-card p-5"><div className="relative z-10"><h2 className="app-title mb-3 text-2xl font-black">About</h2><p className="text-sm leading-7" style={{ color: c.muted }}>{festival.description || 'No description yet.'}</p></div></article><aside className="premium-card p-5"><div className="relative z-10"><h2 className="app-title mb-3 text-2xl font-black">Plan with friends</h2><button type="button" onClick={() => { if (!requireLogin()) return; setShowCreateModal(true); }} className="mobile-action mb-3 w-full rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: `linear-gradient(135deg, ${c.primary}, ${c.secondary})` }}>{user ? 'Create Group' : 'Sign in to Create Group'}</button><form onSubmit={handleJoinGroup} className="space-y-2"><input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="mobile-action w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, color: c.txt }} /><button type="submit" className="mobile-action w-full rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, color: c.txt }}>{user ? 'Join group' : 'Sign in'}</button></form>{joinError && <p className="mt-2 text-sm" style={{ color: c.danger }}>{joinError}</p>}</div></aside></div>}
+
+              {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }} onClick={() => setShowCreateModal(false)}>
+                  <div className="w-full max-w-sm rounded-[28px] p-6 shadow-2xl" style={{ background: c.surface, border: `1px solid ${c.border}` }} onClick={(event) => event.stopPropagation()}>
+                    <h2 className="app-title mb-1 text-2xl font-black">Create a group</h2>
+                    <p className="mb-5 text-sm" style={{ color: c.muted }}>Choose a group name your friends will recognise.</p>
+                    <form onSubmit={handleCreateGroup} className="space-y-4">
+                      <input autoFocus type="text" value={groupNameInput} onChange={(event) => setGroupNameInput(event.target.value)} placeholder="e.g. Ozora Squad 2026" className="mobile-action w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, color: c.txt }} maxLength={60} />
+                      <div className="flex gap-3"><button type="button" onClick={() => setShowCreateModal(false)} className="mobile-action flex-1 rounded-2xl px-4 py-3 text-sm font-black" style={{ background: c.surfaceHover, border: `1px solid ${c.border}`, color: c.muted }}>Cancel</button><button type="submit" disabled={!groupNameInput.trim() || creatingGroup} className="mobile-action flex-1 rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: `linear-gradient(135deg, ${c.primary}, ${c.secondary})` }}>{creatingGroup ? 'Creating…' : 'Create'}</button></div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </section>
