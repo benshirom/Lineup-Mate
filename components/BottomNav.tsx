@@ -5,10 +5,10 @@ import { useAuth } from '@/lib/AuthContext';
 import { getThemeColors } from '@/lib/platform';
 
 const items = [
-  { href: '/', icon: '🎪', label: 'Home' },
-  { href: '/my-schedule', icon: '⭐', label: 'Schedule' },
-  { href: '/groups', icon: '👥', label: 'Groups' },
-  { href: '/profile', icon: '👤', label: 'Profile' },
+  { href: '/', icon: 'Home', label: 'Festivals' },
+  { href: '/my-schedule', icon: 'Star', label: 'Schedule' },
+  { href: '/groups', icon: 'Team', label: 'Groups' },
+  { href: '/profile', icon: 'User', label: 'Profile' }
 ];
 
 const BottomNav: React.FC = () => {
@@ -18,29 +18,34 @@ const BottomNav: React.FC = () => {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 flex justify-around items-center px-2 pb-safe"
-      style={{ background: c.surf, borderTop: `1px solid ${c.brd}`, height: '56px', backdropFilter: 'blur(12px)' }}
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 px-3 pb-safe pt-2"
+      style={{ background: 'linear-gradient(180deg, rgba(8,11,18,0), rgba(8,11,18,0.94) 24%)' }}
+      aria-label="Mobile navigation"
     >
-      {items.map(({ href, icon, label }) => {
-        const active = router.pathname === href || (href !== '/' && router.pathname.startsWith(href));
-        return (
-          <Link
-            key={href}
-            href={href}
-            className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-black transition-all"
-            style={{ color: active ? c.acc : c.muted }}
-          >
-            {active && (
-              <span
-                className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full"
-                style={{ background: c.acc, boxShadow: `0 0 8px ${c.acc}` }}
-              />
-            )}
-            <span className="text-xl leading-none" style={{ filter: active ? `drop-shadow(0 0 4px ${c.acc}88)` : 'none' }}>{icon}</span>
-            <span>{label}</span>
-          </Link>
-        );
-      })}
+      <div
+        className="mx-auto grid max-w-md grid-cols-4 rounded-[24px] border px-1.5 py-1.5 shadow-2xl"
+        style={{ background: 'rgba(17,24,39,0.92)', borderColor: 'rgba(148,163,184,0.18)', backdropFilter: 'blur(18px)', boxShadow: c.shadow }}
+      >
+        {items.map(({ href, icon, label }) => {
+          const active = router.pathname === href || (href !== '/' && router.pathname.startsWith(href));
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-[18px] text-[10px] font-black transition-all"
+              style={{
+                background: active ? c.primarySoft : 'transparent',
+                color: active ? c.primary : c.muted,
+                border: `1px solid ${active ? 'rgba(139,92,246,0.26)' : 'transparent'}`
+              }}
+              aria-current={active ? 'page' : undefined}
+            >
+              <span className="text-[11px] leading-none">{icon}</span>
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 };
