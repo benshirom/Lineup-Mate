@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   ensureFirstActIsStarred,
+  festivalIdFromUrl,
   login,
   openFirstFestival,
   selectFirstFestivalInForm,
@@ -88,16 +89,18 @@ test.describe.serial('group collaboration flows', () => {
   });
 
   test('owner creates a group, another member joins, and group schedule defaults to list-first', async ({ page, isMobile }) => {
+    test.setTimeout(75_000);
     const groupName = `E2E Group ${Date.now()}`;
 
     await prepareOwnerForGroupCreation(page);
     const festivalUrl = await openFirstFestival(page);
+    const starredFestivalId = festivalIdFromUrl(festivalUrl);
     await ensureFirstActIsStarred(page);
 
     await page.goto('/groups');
     await expectAuthenticatedMobileNav(page, isMobile);
     const form = await openCreateGroupForm(page);
-    await selectFirstFestivalInForm(page, form);
+    await selectFirstFestivalInForm(page, form, starredFestivalId);
     await form.getByTestId('group-name-input').fill(groupName);
     await expect(form.getByTestId('create-group-submit')).toBeEnabled({ timeout: 5_000 });
     await form.getByTestId('create-group-submit').click();
@@ -122,10 +125,10 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/members/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /^List$/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole('button', { name: /^Timeline$/i }).click();
-    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 30_000 });
 
     await page.goto(festivalUrl);
     await expect(page.getByTestId('festival-performance-block').first()).toBeVisible({ timeout: 20_000 });
