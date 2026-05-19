@@ -26,7 +26,7 @@ function fileToDataUrl(file: File) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, session, authReady, supabase, theme: currentTheme, setLocalPreferences, refreshProfile, t } = useAuth();
+  const { user, session, authReady, supabase, theme: currentTheme, setLocalPreferences, t } = useAuth();
   const c = getThemeColors(currentTheme);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -148,9 +148,11 @@ export default function ProfilePage() {
     event.preventDefault();
     if (!user) return;
 
+    const selectedTheme = theme;
     setSaving(true);
     setError(null);
     setMessage(null);
+    setLocalPreferences({ theme: selectedTheme });
 
     try {
       const uploadedAvatarUrl = await uploadAvatarIfNeeded();
@@ -160,7 +162,7 @@ export default function ProfilePage() {
         .update({
           display_name: displayName.trim() || null,
           avatar_url: uploadedAvatarUrl,
-          theme
+          theme: selectedTheme
         })
         .eq('id', user.id);
 
@@ -173,13 +175,13 @@ export default function ProfilePage() {
         ...current,
         display_name: displayName.trim() || null,
         avatar_url: uploadedAvatarUrl,
-        theme
+        theme: selectedTheme
       } : current);
 
-      await refreshProfile();
-      setLocalPreferences({ theme });
+      setLocalPreferences({ theme: selectedTheme });
       setMessage('Profile saved successfully.');
     } catch (err: unknown) {
+      setLocalPreferences({ theme: selectedTheme });
       setError(err instanceof Error ? err.message : 'Could not save your profile.');
     } finally {
       setSaving(false);
