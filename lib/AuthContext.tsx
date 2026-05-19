@@ -79,10 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const storedTheme = readStoredTheme();
     const profileTheme = data?.theme ? normalizeTheme(data.theme) : null;
-    // Don't force light on a dark session — only apply profile light if user is already in light
-    const nextTheme = profileTheme === 'light' && storedTheme === 'dark'
-      ? 'dark'
-      : (profileTheme ?? storedTheme);
+    const nextTheme = profileTheme ?? storedTheme;
 
     if (data) {
       setProfile({
