@@ -1,12 +1,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem } from '@/lib/designSystem';
 
 const Navbar: React.FC = () => {
   const { user, profile, supabase, theme, t } = useAuth();
-  const c = getThemeColors(theme);
+  const ds = createDesignSystem(theme);
+  const c = ds.colors;
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -23,20 +25,19 @@ const Navbar: React.FC = () => {
   const isActive = (href: string) =>
     href === '/' ? router.pathname === '/' : router.pathname.startsWith(href);
 
-  const navLinkStyle = (href: string): React.CSSProperties => ({
-    color: isActive(href) ? c.txt : c.muted,
+  const navLinkStyle = (href: string): CSSProperties => ({
+    color: isActive(href) ? c.text : c.muted,
     fontWeight: isActive(href) ? 700 : 500,
   });
 
   return (
     <nav
       className="glass-nav sticky top-0 z-40"
-      style={{ background: `${c.surf}f0`, borderBottom: `1px solid ${c.brd}`, color: c.txt }}
+      style={{ background: `${c.surface}f0`, borderBottom: `1px solid ${c.border}`, color: c.text }}
     >
-      {/* ── Desktop ─────────────────────────────────────── */}
       <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3.5">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-base font-extrabold tracking-tight" style={{ color: c.acc }}>
+          <Link href="/" className="text-base font-extrabold tracking-tight" style={{ color: c.primary, fontFamily: ds.typography.heading }}>
             {t.appName}
           </Link>
           {user && (
@@ -50,7 +51,7 @@ const Navbar: React.FC = () => {
             </>
           )}
           {isAdmin && (
-            <Link href="/admin" className="text-sm hover:opacity-80 transition-opacity" style={{ color: c.muted }}>
+            <Link href="/admin" className="text-sm hover:opacity-80 transition-opacity" style={navLinkStyle('/admin')}>
               Admin
             </Link>
           )}
@@ -63,7 +64,7 @@ const Navbar: React.FC = () => {
                 href="/profile"
                 data-testid="user-profile-link"
                 className="inline-flex max-w-[180px] truncate rounded-full px-3 py-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
-                style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
+                style={{ background: c.surfaceElevated, color: c.text, border: `1px solid ${c.border}` }}
                 title={user.email ?? undefined}
                 aria-label="Open profile"
               >
@@ -72,7 +73,7 @@ const Navbar: React.FC = () => {
               <button
                 onClick={handleSignOut}
                 className="rounded-full px-3 py-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
-                style={{ background: c.surf2, color: c.muted, border: `1px solid ${c.brd}` }}
+                style={{ background: c.surfaceElevated, color: c.muted, border: `1px solid ${c.border}` }}
               >
                 Sign out
               </button>
@@ -81,7 +82,7 @@ const Navbar: React.FC = () => {
             <Link
               href="/login"
               className="rounded-full px-5 py-2 text-sm font-bold text-white tap-active"
-              style={{ background: c.acc }}
+              style={{ background: c.primary }}
             >
               Login
             </Link>
@@ -89,49 +90,47 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Mobile top bar ─────────────────────────────── */}
       <div className="flex md:hidden items-center justify-between px-4 py-3">
-        <Link href="/" onClick={close} className="text-sm font-extrabold tracking-tight" style={{ color: c.acc }}>
+        <Link href="/" onClick={close} className="text-sm font-extrabold tracking-tight" style={{ color: c.primary, fontFamily: ds.typography.heading }}>
           {t.appName}
         </Link>
         <button
           onClick={() => setMenuOpen((o) => !o)}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           className="tap-active flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold transition-all"
-          style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
+          style={{ background: c.surfaceElevated, color: c.text, border: `1px solid ${c.border}` }}
         >
-          {menuOpen ? '✕' : '☰'}
+          {menuOpen ? '×' : '☰'}
         </button>
       </div>
 
-      {/* ── Mobile drawer ──────────────────────────────── */}
       {menuOpen && (
         <div
           className="md:hidden flex flex-col gap-1 border-t px-4 pb-4 pt-3"
-          style={{ borderColor: c.brd, background: c.surf }}
+          style={{ borderColor: c.border, background: c.surface }}
         >
           {user ? (
             <>
-              <Link href="/my-schedule" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.txt }}>
-                ⭐ {t.navMySchedule}
+              <Link href="/my-schedule" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.text }}>
+                {t.navMySchedule}
               </Link>
-              <Link href="/groups" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.txt }}>
-                👥 {t.navGroups}
+              <Link href="/groups" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.text }}>
+                {t.navGroups}
               </Link>
-              <Link href="/profile" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.txt }}>
-                👤 {t.navProfile}
+              <Link href="/profile" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.text }}>
+                {t.navProfile}
               </Link>
               {isAdmin && (
                 <Link href="/admin" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.muted }}>
-                  🛠 Admin
+                  Admin
                 </Link>
               )}
-              <div className="mt-2 flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
-                <span className="max-w-[180px] truncate text-sm font-bold" style={{ color: c.txt }}>{displayLabel}</span>
+              <div className="mt-2 flex items-center justify-between rounded-2xl px-4 py-3" style={{ background: c.surfaceElevated, border: `1px solid ${c.border}` }}>
+                <span className="max-w-[180px] truncate text-sm font-bold" style={{ color: c.text }}>{displayLabel}</span>
                 <button
                   onClick={handleSignOut}
                   className="rounded-full px-3 py-1.5 text-xs font-bold"
-                  style={{ background: c.surf3, color: c.muted, border: `1px solid ${c.brd}` }}
+                  style={{ background: c.surfaceHover, color: c.muted, border: `1px solid ${c.border}` }}
                 >
                   Sign out
                 </button>
@@ -142,7 +141,7 @@ const Navbar: React.FC = () => {
               href="/login"
               onClick={close}
               className="rounded-2xl px-5 py-3.5 text-center text-sm font-bold text-white tap-active"
-              style={{ background: c.acc }}
+              style={{ background: c.primary }}
             >
               Login
             </Link>
