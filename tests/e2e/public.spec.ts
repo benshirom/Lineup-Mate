@@ -15,9 +15,23 @@ test.describe('public browsing', () => {
     await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
     await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
 
-    await expect(page.getByRole('button', { name: /^Timeline$/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('button', { name: /^Artists$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Artists$/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /^Timeline$/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Info$/i })).toBeVisible();
+    await expect(page.getByTestId('festival-performance-block').first()).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('festival stage filters keep neutral premium surface styling', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
+
+    const firstStageFilter = page.getByTestId('festival-stage-filter').first();
+    await expect(firstStageFilter).toBeVisible({ timeout: 20_000 });
+
+    const backgroundColor = await firstStageFilter.evaluate((element) => window.getComputedStyle(element).backgroundColor);
+    expect(backgroundColor).toBe('rgb(21, 30, 46)');
   });
 
   test('guest is sent to login when trying to save a festival', async ({ page }) => {
