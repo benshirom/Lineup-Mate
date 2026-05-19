@@ -19,7 +19,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ eyebrow, title, descript
       {eyebrow && (
         <p
           className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em]"
-          style={{ color: accent || c.acc }}
+          style={{ color: accent || c.primary }}
         >
           {eyebrow}
         </p>
@@ -28,7 +28,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ eyebrow, title, descript
         <div className="min-w-0">
           <h1
             className="text-2xl font-extrabold leading-tight sm:text-3xl"
-            style={{ color: c.txt, letterSpacing: '-0.02em' }}
+            style={{ color: c.text, letterSpacing: '-0.02em' }}
           >
             {title}
           </h1>
