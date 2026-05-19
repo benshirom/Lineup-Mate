@@ -94,6 +94,18 @@ h1, h2, h3 {
   cursor: default;
 }
 
+/* ── Stage filters: keep stage color functional, not decorative ───────── */
+button[data-testid="festival-stage-filter"],
+button[data-testid="group-stage-filter"] {
+  background: #151E2E !important;
+  color: #CBD5E1 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+button[data-testid="festival-stage-filter"]:hover,
+button[data-testid="group-stage-filter"]:hover {
+  background: #1B2638 !important;
+}
+
 /* ── Tap feedback for mobile actions ──────────────────────────────────── */
 .tap-active {
   transition: transform 0.08s ease, opacity 0.08s ease;
