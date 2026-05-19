@@ -34,8 +34,8 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children, maxWidth 
         className="slide-up w-full overflow-hidden rounded-[28px] shadow-elevated"
         style={{
           maxWidth,
-          background: c.surf,
-          border: `1px solid ${c.brd}`,
+          background: c.surface,
+          border: `1px solid ${c.border}`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
