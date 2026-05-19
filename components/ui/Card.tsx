@@ -1,16 +1,14 @@
 import React from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem, type CardPadding, type CardVariant } from '@/lib/designSystem';
 
 interface CardProps {
-  variant?: 'default' | 'elevated' | 'flat';
-  padding?: 'sm' | 'md' | 'lg' | 'none';
+  variant?: CardVariant;
+  padding?: CardPadding;
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
 }
-
-const paddingMap = { none: '0', sm: '16px', md: '20px', lg: '28px' };
 
 export const Card: React.FC<CardProps> = ({
   variant = 'default',
@@ -20,28 +18,17 @@ export const Card: React.FC<CardProps> = ({
   children,
 }) => {
   const { theme } = useAuth();
-  const c = getThemeColors(theme);
-
-  const bgMap = {
-    default: c.surface,
-    elevated: c.surfaceElevated,
-    flat: c.surfaceHover,
-  };
-
-  const shadowMap = {
-    default: '0 4px 24px rgba(0,0,0,0.18)',
-    elevated: '0 18px 48px rgba(0,0,0,0.32)',
-    flat: 'none',
-  };
+  const ds = createDesignSystem(theme);
+  const variantStyle = ds.card.variants[variant];
 
   return (
     <div
-      className={`overflow-hidden rounded-3xl ${className}`}
+      className={`overflow-hidden ${className}`}
       style={{
-        background: bgMap[variant],
-        border: `1px solid ${c.border}`,
-        boxShadow: shadowMap[variant],
-        padding: paddingMap[padding],
+        ...variantStyle,
+        border: `1px solid ${ds.colors.border}`,
+        borderRadius: ds.radii.card,
+        padding: ds.card.padding[padding],
         ...style,
       }}
     >
