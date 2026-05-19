@@ -23,9 +23,9 @@ export const Card: React.FC<CardProps> = ({
   const c = getThemeColors(theme);
 
   const bgMap = {
-    default: c.surf,
-    elevated: c.surf2,
-    flat: c.surf3,
+    default: c.surface,
+    elevated: c.surfaceElevated,
+    flat: c.surfaceHover,
   };
 
   const shadowMap = {
@@ -39,7 +39,7 @@ export const Card: React.FC<CardProps> = ({
       className={`overflow-hidden rounded-3xl ${className}`}
       style={{
         background: bgMap[variant],
-        border: `1px solid ${c.brd}`,
+        border: `1px solid ${c.border}`,
         boxShadow: shadowMap[variant],
         padding: paddingMap[padding],
         ...style,
