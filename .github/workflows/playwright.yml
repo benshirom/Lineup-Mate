@@ -28,10 +28,10 @@ jobs:
         id: playwright_base_url
         shell: bash
         run: |
-          if [ -n "${{ vars.PLAYWRIGHT_BASE_URL }}" ]; then
-            echo "url=${{ vars.PLAYWRIGHT_BASE_URL }}" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "url=https://deploy-preview-${{ github.event.pull_request.number }}--lineup-mate.netlify.app" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ vars.PLAYWRIGHT_BASE_URL }}" ]; then
+            echo "url=${{ vars.PLAYWRIGHT_BASE_URL }}" >> "$GITHUB_OUTPUT"
           else
             echo "url=https://lineup-mate.netlify.app" >> "$GITHUB_OUTPUT"
           fi
