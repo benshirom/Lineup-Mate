@@ -1,8 +1,10 @@
+import type React from 'react';
 import { getThemeColors, type ThemeMode } from '@/lib/platform';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 export type CardVariant = 'default' | 'elevated' | 'flat';
+export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
 export type BadgeVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'star' | 'muted';
 
 export function createDesignSystem(theme: ThemeMode) {
@@ -46,7 +48,7 @@ export function createDesignSystem(theme: ThemeMode) {
       sm: '16px',
       md: '20px',
       lg: '28px',
-    },
+    } satisfies Record<CardPadding, string>,
     variants: {
       default: { background: c.surface, boxShadow: shadows.card },
       elevated: { background: c.surfaceElevated, boxShadow: shadows.elevated },
