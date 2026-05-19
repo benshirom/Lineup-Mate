@@ -41,8 +41,9 @@ test.describe('admin Clashfinder event browser', () => {
       await expect(page.getByTestId('selected-clashfinder-event')).toBeVisible();
       await page.getByTestId('preview-clashfinder').click();
       await expect(page.getByTestId('clashfinder-preview-result'), 'Preview should return parsed performances. If this fails, check Clashfinder parser/API env vars.').toBeVisible({ timeout: 45_000 });
-      await expect(page.getByText(/Detected:/i)).toBeVisible();
+      await expect(page.getByTestId('detected-stages'), 'Preview should expose detected stages instead of relying on copy text.').toBeVisible({ timeout: 20_000 });
       await expect(page.getByTestId('sample-performances-table')).toBeVisible();
+      await expect(page.getByTestId('sample-performance-row').first()).toBeVisible();
     });
   });
 
