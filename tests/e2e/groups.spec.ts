@@ -15,6 +15,15 @@ const memberPassword = process.env.E2E_USER_PASSWORD;
 const groupPageCodeTestId = ['group-page', 'invite-code'].join('-');
 const groupCardCodeTestId = ['group', 'invite-code'].join('-');
 
+async function expectAuthenticatedMobileNav(page: import('@playwright/test').Page, isMobile: boolean) {
+  if (!isMobile) return;
+  await expect(page.getByRole('navigation', { name: /mobile bottom navigation/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('link', { name: /Festivals/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Schedule/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Groups/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Profile/i })).toBeVisible();
+}
+
 async function waitForGroupsPageReady(page: import('@playwright/test').Page) {
   await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
   await page.getByText(/Loading groups/i).waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => undefined);
@@ -49,11 +58,12 @@ async function expectSavedFestival(page: import('@playwright/test').Page) {
 test.describe.serial('group collaboration flows', () => {
   test.skip(!ownerEmail || !ownerPassword || !memberEmail || !memberPassword, 'Set E2E auth variables to run group tests.');
 
-  test('Groups page lets an owner create a group and auto-save the festival', async ({ page }) => {
+  test('Groups page lets an owner create a group and auto-save the festival', async ({ page, isMobile }) => {
     const groupName = `E2E Groups Page ${Date.now()}`;
 
     await prepareOwnerForGroupCreation(page);
     await page.goto('/groups');
+    await expectAuthenticatedMobileNav(page, isMobile);
 
     await waitForGroupsPageReady(page);
 
@@ -77,7 +87,7 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('group-card').filter({ hasText: groupName }).getByTestId('open-group-schedule')).toBeVisible();
   });
 
-  test('owner creates a group, another member joins, and group schedule defaults to list-first', async ({ page }) => {
+  test('owner creates a group, another member joins, and group schedule defaults to list-first', async ({ page, isMobile }) => {
     const groupName = `E2E Group ${Date.now()}`;
 
     await prepareOwnerForGroupCreation(page);
@@ -85,6 +95,7 @@ test.describe.serial('group collaboration flows', () => {
     await ensureFirstActIsStarred(page);
 
     await page.goto('/groups');
+    await expectAuthenticatedMobileNav(page, isMobile);
     const form = await openCreateGroupForm(page);
     await selectFirstFestivalInForm(page, form);
     await form.getByTestId('group-name-input').fill(groupName);
@@ -101,6 +112,7 @@ test.describe.serial('group collaboration flows', () => {
     await signOut(page);
     await login(page, memberEmail!, memberPassword!);
     await page.goto('/groups');
+    await expectAuthenticatedMobileNav(page, isMobile);
     await waitForGroupsPageReady(page);
     await page.getByTestId('join-group-code-input').fill(joinCode);
     await expect(page.getByTestId('join-group-submit')).toBeEnabled({ timeout: 5_000 });
