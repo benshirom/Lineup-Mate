@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem } from '@/lib/designSystem';
 
 interface ModalProps {
   open: boolean;
@@ -11,7 +11,7 @@ interface ModalProps {
 
 export const Modal: React.FC<ModalProps> = ({ open, onClose, children, maxWidth = 400 }) => {
   const { theme } = useAuth();
-  const c = getThemeColors(theme);
+  const ds = createDesignSystem(theme);
 
   useEffect(() => {
     if (!open) return;
@@ -31,11 +31,13 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children, maxWidth 
       aria-modal="true"
     >
       <div
-        className="slide-up w-full overflow-hidden rounded-[28px] shadow-elevated"
+        className="slide-up w-full overflow-hidden"
         style={{
           maxWidth,
-          background: c.surface,
-          border: `1px solid ${c.border}`,
+          background: ds.colors.surface,
+          border: `1px solid ${ds.colors.border}`,
+          borderRadius: ds.radii.modal,
+          boxShadow: ds.shadows.elevated,
         }}
         onClick={(e) => e.stopPropagation()}
       >
