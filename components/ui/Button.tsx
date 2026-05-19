@@ -26,8 +26,8 @@ export const Button: React.FC<ButtonProps> = ({
   const c = getThemeColors(theme);
 
   const bgMap: Record<Variant, string> = {
-    primary: c.acc,
-    secondary: c.accB,
+    primary: c.primary,
+    secondary: c.secondary,
     ghost: 'transparent',
     danger: c.danger,
   };
@@ -40,9 +40,9 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const borderMap: Record<Variant, string> = {
-    primary: c.acc,
-    secondary: c.accB,
-    ghost: c.brd,
+    primary: c.primary,
+    secondary: c.secondary,
+    ghost: c.border,
     danger: c.danger,
   };
 
