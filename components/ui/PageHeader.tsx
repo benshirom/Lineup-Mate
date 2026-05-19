@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem } from '@/lib/designSystem';
 
 interface PageHeaderProps {
   eyebrow?: string;
@@ -12,14 +12,14 @@ interface PageHeaderProps {
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ eyebrow, title, description, actions, accent }) => {
   const { theme } = useAuth();
-  const c = getThemeColors(theme);
+  const ds = createDesignSystem(theme);
 
   return (
     <header className="mb-6">
       {eyebrow && (
         <p
           className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em]"
-          style={{ color: accent || c.primary }}
+          style={{ color: accent || ds.colors.primary }}
         >
           {eyebrow}
         </p>
@@ -28,12 +28,12 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ eyebrow, title, descript
         <div className="min-w-0">
           <h1
             className="text-2xl font-extrabold leading-tight sm:text-3xl"
-            style={{ color: c.text, letterSpacing: '-0.02em' }}
+            style={{ color: ds.colors.text, fontFamily: ds.typography.heading, letterSpacing: '-0.02em' }}
           >
             {title}
           </h1>
           {description && (
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: c.muted }}>
+            <p className="mt-1 text-sm leading-relaxed" style={{ color: ds.colors.muted }}>
               {description}
             </p>
           )}
