@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 20
+    timeout-minutes: 25
     runs-on: ubuntu-latest
 
     steps:
@@ -24,10 +24,37 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Resolve Playwright base URL
+        id: playwright_base_url
+        shell: bash
+        run: |
+          if [ -n "${{ vars.PLAYWRIGHT_BASE_URL }}" ]; then
+            echo "url=${{ vars.PLAYWRIGHT_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "url=https://deploy-preview-${{ github.event.pull_request.number }}--lineup-mate.netlify.app" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://lineup-mate.netlify.app" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for Playwright base URL
+        shell: bash
+        run: |
+          echo "Waiting for ${{ steps.playwright_base_url.outputs.url }}"
+          for i in {1..30}; do
+            if curl -fsS "${{ steps.playwright_base_url.outputs.url }}" >/dev/null; then
+              echo "Playwright base URL is ready."
+              exit 0
+            fi
+            echo "Base URL not ready yet. Retry $i/30..."
+            sleep 10
+          done
+          echo "Playwright base URL did not become ready in time."
+          exit 1
+
       - name: Run Playwright tests
         run: npx playwright test --max-failures=8
         env:
-          PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL || 'https://lineup-mate.netlify.app' }}
+          PLAYWRIGHT_BASE_URL: ${{ steps.playwright_base_url.outputs.url }}
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
