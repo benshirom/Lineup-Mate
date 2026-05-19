@@ -1,4 +1,4 @@
-import type React from 'react';
+import type { CSSProperties } from 'react';
 import { getThemeColors, type ThemeMode } from '@/lib/platform';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -33,13 +33,13 @@ export function createDesignSystem(theme: ThemeMode) {
       sm: { minHeight: 36, padding: '0 14px', fontSize: '12px' },
       md: { minHeight: 44, padding: '0 20px', fontSize: '14px' },
       lg: { minHeight: 52, padding: '0 28px', fontSize: '15px' },
-    } satisfies Record<ButtonSize, React.CSSProperties>,
+    } satisfies Record<ButtonSize, CSSProperties>,
     variants: {
       primary: { background: c.primary, color: '#fff', borderColor: c.primary },
       secondary: { background: c.secondary, color: '#fff', borderColor: c.secondary },
       ghost: { background: 'transparent', color: c.muted, borderColor: c.border },
       danger: { background: c.danger, color: '#fff', borderColor: c.danger },
-    } satisfies Record<ButtonVariant, React.CSSProperties>,
+    } satisfies Record<ButtonVariant, CSSProperties>,
   } as const;
 
   const card = {
@@ -53,7 +53,7 @@ export function createDesignSystem(theme: ThemeMode) {
       default: { background: c.surface, boxShadow: shadows.card },
       elevated: { background: c.surfaceElevated, boxShadow: shadows.elevated },
       flat: { background: c.surfaceHover, boxShadow: 'none' },
-    } satisfies Record<CardVariant, React.CSSProperties>,
+    } satisfies Record<CardVariant, CSSProperties>,
   } as const;
 
   const badge = {
@@ -65,7 +65,7 @@ export function createDesignSystem(theme: ThemeMode) {
       danger: { background: 'rgba(239,68,68,0.14)', color: c.danger, borderColor: 'rgba(239,68,68,0.4)' },
       star: { background: 'rgba(250,204,21,0.14)', color: c.star, borderColor: 'rgba(250,204,21,0.4)' },
       muted: { background: c.surfaceElevated, color: c.muted, borderColor: c.border },
-    } satisfies Record<BadgeVariant, React.CSSProperties>,
+    } satisfies Record<BadgeVariant, CSSProperties>,
   } as const;
 
   const stageFilter = {
