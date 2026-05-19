@@ -15,13 +15,13 @@ export const Badge: React.FC<BadgeProps> = ({ variant = 'muted', children, class
   const c = getThemeColors(theme);
 
   const styles: Record<Variant, { bg: string; color: string; border: string }> = {
-    primary:   { bg: c.accSoft,  color: c.acc,     border: `${c.acc}44` },
-    secondary: { bg: c.accBSoft, color: c.accB,    border: `${c.accB}44` },
-    success:   { bg: 'rgba(34,197,94,0.14)',  color: c.success, border: 'rgba(34,197,94,0.4)' },
-    warning:   { bg: 'rgba(245,158,11,0.14)', color: c.warning, border: 'rgba(245,158,11,0.4)' },
-    danger:    { bg: 'rgba(239,68,68,0.14)',  color: c.danger,  border: 'rgba(239,68,68,0.4)' },
-    star:      { bg: 'rgba(250,204,21,0.14)', color: c.star,    border: 'rgba(250,204,21,0.4)' },
-    muted:     { bg: c.surf2,    color: c.muted,   border: c.brd },
+    primary: { bg: c.primarySoft, color: c.primary, border: `${c.primary}44` },
+    secondary: { bg: c.secondarySoft, color: c.secondary, border: `${c.secondary}44` },
+    success: { bg: 'rgba(34,197,94,0.14)', color: c.success, border: 'rgba(34,197,94,0.4)' },
+    warning: { bg: 'rgba(245,158,11,0.14)', color: c.warning, border: 'rgba(245,158,11,0.4)' },
+    danger: { bg: 'rgba(239,68,68,0.14)', color: c.danger, border: 'rgba(239,68,68,0.4)' },
+    star: { bg: 'rgba(250,204,21,0.14)', color: c.star, border: 'rgba(250,204,21,0.4)' },
+    muted: { bg: c.surfaceElevated, color: c.muted, border: c.border },
   };
 
   const s = styles[variant];
