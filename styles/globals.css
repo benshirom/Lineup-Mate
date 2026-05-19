@@ -15,6 +15,17 @@ h1, h2, h3 {
   font-family: "Space Grotesk", Inter, sans-serif;
 }
 
+/* ── Netlify deploy-preview drawer guard ───────────────────────────────── */
+/* Netlify injects a preview drawer iframe into deploy previews. It can sit above
+   fixed mobile navigation and intercept Playwright clicks, so keep it out of the
+   interactive layer without affecting production where these nodes do not exist. */
+div[data-netlify-deploy-id][data-netlify-site-id],
+iframe[title="Netlify Drawer"] {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
 /* ── Focus visible ─────────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid #8B5CF6;
