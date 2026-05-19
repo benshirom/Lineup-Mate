@@ -77,7 +77,7 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByTestId('group-card').filter({ hasText: groupName }).getByTestId('open-group-schedule')).toBeVisible();
   });
 
-  test('owner creates a group, another member joins, and group schedule shows timeline', async ({ page }) => {
+  test('owner creates a group, another member joins, and group schedule defaults to list-first', async ({ page }) => {
     const groupName = `E2E Group ${Date.now()}`;
 
     await prepareOwnerForGroupCreation(page);
@@ -109,7 +109,9 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page).toHaveURL(/\/group\/\d+/, { timeout: 20_000 });
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/members/i)).toBeVisible({ timeout: 20_000 });
-    // Group schedule defaults to list — switch to timeline to verify performance blocks
+    await expect(page.getByRole('button', { name: /^List$/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
+
     await page.getByRole('button', { name: /^Timeline$/i }).click();
     await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 20_000 });
 
