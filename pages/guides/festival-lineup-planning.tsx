@@ -1,17 +1,18 @@
 import Link from 'next/link';
+import BrandHeading from '@/components/marketing/BrandHeading';
 import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors, typography } from '@/lib/platform';
+import { getThemeColors } from '@/lib/platform';
 
 const sections = [
   {
     title: 'Start with your must-see artists',
-    body: 'Do not try to plan the whole festival at once. Pick the artists you really care about first, then build the rest of the night around them.'
+    body: 'Do not try to plan the whole festival at once. Pick the artists you really care about first, then build the rest of the day around them.'
   },
   {
     title: 'Check schedule clashes before the festival starts',
-    body: 'The most stressful decisions happen when two artists overlap. A good plan highlights conflicts early so you can decide before you are already between stages.'
+    body: 'The hardest choices happen when two artists overlap. A good plan highlights conflicts early so you can decide before you are already between stages.'
   },
   {
     title: 'Group the plan by day, not by hype',
@@ -61,9 +62,9 @@ export default function FestivalLineupPlanningGuide() {
           <header className="mb-8">
             <Link href="/faq" className="text-sm font-bold hover:opacity-80" style={{ color: c.acc }}>← Back to FAQ</Link>
             <p className="mt-6 text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.accB }}>Festival planning guide</p>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl" style={{ fontFamily: typography.display, letterSpacing: typography.tight, lineHeight: 1 }}>
-              How to plan a festival lineup without turning it into a spreadsheet nightmare.
-            </h1>
+            <BrandHeading as="h1" tight lineHeight={1} className="mt-2 text-4xl font-black sm:text-5xl">
+              How to plan a festival lineup with less stress and better decisions.
+            </BrandHeading>
             <p className="mt-4 text-base leading-relaxed" style={{ color: c.muted }}>
               A festival lineup can look simple from far away, but once there are multiple stages, overlapping sets, and friends pulling in different directions, the plan gets messy fast. This guide explains a cleaner way to build a lineup you can actually use on mobile.
             </p>
@@ -83,9 +84,9 @@ export default function FestivalLineupPlanningGuide() {
 
           <section className="mt-8 rounded-[28px] p-6" style={{ background: `linear-gradient(135deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
             <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>Lineup·Mate approach</p>
-            <h2 className="mt-2 text-2xl font-black" style={{ fontFamily: typography.display }}>
+            <BrandHeading className="mt-2 text-2xl font-black">
               The lineup is public. The plan is personal.
-            </h2>
+            </BrandHeading>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>
               Use the public schedule as the source, then build your own saved artist list and crew plan on top of it.
             </p>
