@@ -10,7 +10,7 @@ interface SeoProps {
 const SITE_URL = 'https://lineup-mate.netlify.app';
 const DEFAULT_TITLE = 'Lineup·Mate — Plan your festival schedule with your crew';
 const DEFAULT_DESCRIPTION = 'Explore festival lineups, save must-see artists, avoid time clashes, and coordinate plans with friends in one mobile-first festival planner.';
-const DEFAULT_IMAGE = `${SITE_URL}/og-lineup-mate.png`;
+const DEFAULT_IMAGE = `${SITE_URL}/og-lineup-mate.svg`;
 
 export default function Seo({
   title = DEFAULT_TITLE,
