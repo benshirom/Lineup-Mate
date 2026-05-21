@@ -12,7 +12,7 @@ test.describe('public browsing', () => {
     await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
   });
 
-  test('guest can open the FAQ page from the homepage', async ({ page }) => {
+  test('guest can open the FAQ page from the homepage and continue to the planning guide', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.getByRole('link', { name: /^FAQ$/i })).toBeVisible({ timeout: 20_000 });
@@ -22,6 +22,10 @@ test.describe('public browsing', () => {
     await expect(page.getByRole('heading', { name: /Festival planning, explained clearly/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('faq-list')).toBeVisible();
     await expect(page.getByText(/What is Lineup·Mate/i)).toBeVisible();
+
+    await page.getByRole('link', { name: /Read the planning guide/i }).click();
+    await expect(page).toHaveURL(/\/guides\/festival-lineup-planning/, { timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: /How to plan a festival lineup/i })).toBeVisible({ timeout: 20_000 });
   });
 
   test('guest can open a festival and see schedule tabs', async ({ page }) => {
