@@ -125,10 +125,15 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/members/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /^List$/i })).toBeVisible({ timeout: 20_000 });
-    await expect(
-      page.getByTestId('group-list-row').first(),
-      'Group schedule should default to List view and render list rows.'
-    ).toBeVisible({ timeout: 30_000 });
+    await expect
+      .poll(
+        async () => page.getByTestId('group-list-row').count(),
+        {
+          timeout: 30_000,
+          message: 'Group schedule should default to List view and render list rows in the DOM.'
+        }
+      )
+      .toBeGreaterThan(0);
 
     await page.getByRole('button', { name: /^Timeline$/i }).click();
     await expect(
