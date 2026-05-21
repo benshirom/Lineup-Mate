@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
+import BrandHeading from '@/components/marketing/BrandHeading';
 import Navbar from '@/components/Navbar';
+import Seo from '@/components/Seo';
 import { getThemeColors } from '@/lib/platform';
 
 type SocialProvider = 'google';
@@ -171,81 +173,124 @@ const LoginPage = () => {
   const inputStyle = { background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt };
 
   const titles: Record<View, string> = {
-    login: 'Welcome back',
+    login: 'Welcome back to the plan',
     signup: 'Create your lineup account',
     forgot: 'Reset your password',
     'update-password': 'Choose a new password'
   };
 
+  const subtitles: Record<View, string> = {
+    login: 'Pick up where you left off: saved artists, festival plans, and crew groups.',
+    signup: 'Start saving must-see sets, spotting clashes, and planning with friends.',
+    forgot: 'We will send a reset link so you can get back to your lineup.',
+    'update-password': 'Set a fresh password and continue planning your festival.'
+  };
+
   return (
     <>
+      <Seo
+        title="Login to Lineup·Mate — Save your festival lineup"
+        description="Sign in to Lineup·Mate to save festivals, mark must-see artists, avoid schedule clashes, and plan festival lineups with friends."
+        canonicalPath="/login"
+      />
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-[28px] p-8 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-          <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
-          <h1 className="mb-6 text-3xl font-black">{titles[view]}</h1>
+      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="mobile-shell-padding relative flex flex-col items-center justify-center overflow-hidden p-4">
+        <div className="pointer-events-none absolute right-[-80px] top-20 h-72 w-72 rounded-full blur-3xl" style={{ background: `${c.acc}24` }} />
+        <div className="pointer-events-none absolute bottom-[-90px] left-[-80px] h-72 w-72 rounded-full blur-3xl" style={{ background: `${c.accB}18` }} />
 
-          {message && <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#16a34a20', color: '#16a34a', border: '1px solid #16a34a40' }}>{message}</div>}
-          {error && <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>{error}</div>}
-
-          {view !== 'forgot' && view !== 'update-password' && (
-            <>
-              <button type="button" disabled={socialLoading !== null || submitting} onClick={() => handleSocialLogin('google')} className="mb-4 w-full rounded-2xl px-4 py-3 text-sm font-bold transition hover:opacity-80 disabled:opacity-50" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
-                {socialLoading === 'google' ? 'Redirecting…' : '🌐  Continue with Google'}
-              </button>
-              <div className="mb-4 flex items-center gap-3">
-                <div className="h-px flex-1" style={{ background: c.brd }} />
-                <span className="text-xs" style={{ color: c.muted }}>or use email</span>
-                <div className="h-px flex-1" style={{ background: c.brd }} />
-              </div>
-            </>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {view === 'signup' && (
-              <div>
-                <label htmlFor="display-name" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Display name</label>
-                <input id="display-name" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="How should friends see you?" autoComplete="name" className={inputClass} style={inputStyle} />
-              </div>
-            )}
-
-            {view !== 'update-password' && (
-              <div>
-                <label htmlFor="email" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Email</label>
-                <input id="email" type="text" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={inputClass} style={inputStyle} />
-              </div>
-            )}
-
-            {view !== 'forgot' && (
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
-                    {view === 'update-password' ? 'New Password' : 'Password'}
-                  </label>
-                  {view === 'login' && <button type="button" onClick={() => { reset(); setView('forgot'); }} className="text-xs font-bold hover:opacity-80" style={{ color: c.acc }}>Forgot password?</button>}
+        <div className="relative grid w-full max-w-5xl gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <section className="hidden rounded-[32px] p-7 lg:block" style={{ background: `linear-gradient(180deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black" style={{ background: `${c.accB}16`, color: c.accB, border: `1px solid ${c.accB}3d` }}>
+              <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: c.accB }} />
+              Crew-ready planning
+            </div>
+            <BrandHeading className="text-4xl font-black" tight lineHeight={1}>
+              Your next set should not depend on group chat chaos.
+            </BrandHeading>
+            <p className="mt-4 text-sm leading-relaxed" style={{ color: c.muted }}>
+              Sign in to keep your festival plan close: saved artists, shared groups, and the next move your crew can actually follow.
+            </p>
+            <div className="mt-7 space-y-3">
+              {[
+                ['Save', 'Keep your must-see artists in one place.'],
+                ['Clash', 'Notice overlaps before you commit.'],
+                ['Crew', 'Create groups and plan together.'],
+              ].map(([label, body], index) => (
+                <div key={label} className="rounded-2xl p-4" style={{ background: c.surf, border: `1px solid ${index === 1 ? `${c.warning}55` : c.brd}` }}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: index === 1 ? c.warning : index === 2 ? c.accB : c.acc }}>{label}</p>
+                  <p className="mt-1 text-sm font-bold" style={{ color: c.txt }}>{body}</p>
                 </div>
-                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete={view === 'login' ? 'current-password' : 'new-password'} className={inputClass} style={inputStyle} />
-                {(view === 'signup' || view === 'update-password') && <p className="mt-1 text-xs" style={{ color: c.muted }}>At least 6 characters.</p>}
-              </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="w-full rounded-[28px] p-6 shadow-2xl sm:p-8" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+            <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
+            <BrandHeading as="h1" className="text-3xl font-black" tight>{titles[view]}</BrandHeading>
+            <p className="mb-6 mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>{subtitles[view]}</p>
+
+            {message && <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#16a34a20', color: '#16a34a', border: '1px solid #16a34a40' }}>{message}</div>}
+            {error && <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#dc262620', color: '#ef4444', border: '1px solid #dc262640' }}>{error}</div>}
+
+            {view !== 'forgot' && view !== 'update-password' && (
+              <>
+                <button type="button" disabled={socialLoading !== null || submitting} onClick={() => handleSocialLogin('google')} className="mb-4 w-full rounded-2xl px-4 py-3 text-sm font-bold transition hover:opacity-80 disabled:opacity-50" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
+                  {socialLoading === 'google' ? 'Redirecting…' : 'Continue with Google'}
+                </button>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-px flex-1" style={{ background: c.brd }} />
+                  <span className="text-xs" style={{ color: c.muted }}>or use email</span>
+                  <div className="h-px flex-1" style={{ background: c.brd }} />
+                </div>
+              </>
             )}
 
-            {view === 'update-password' && (
-              <div>
-                <label htmlFor="confirm-password" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Confirm Password</label>
-                <input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" className={inputClass} style={inputStyle} />
-              </div>
-            )}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {view === 'signup' && (
+                <div>
+                  <label htmlFor="display-name" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Display name</label>
+                  <input id="display-name" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="How should friends see you?" autoComplete="name" className={inputClass} style={inputStyle} />
+                </div>
+              )}
 
-            <button type="submit" disabled={submitting || socialLoading !== null} className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.acc }}>
-              {submitting ? 'Please wait…' : view === 'login' ? 'Sign in' : view === 'signup' ? 'Create account' : view === 'forgot' ? 'Send reset link' : 'Update password'}
-            </button>
-          </form>
+              {view !== 'update-password' && (
+                <div>
+                  <label htmlFor="email" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Email</label>
+                  <input id="email" type="text" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={inputClass} style={inputStyle} />
+                </div>
+              )}
 
-          <div className="mt-5 flex flex-col gap-2 text-center text-sm">
-            {view === 'login' && <button type="button" onClick={() => { reset(); setView('signup'); }} className="font-bold hover:opacity-80" style={{ color: c.acc }}>No account yet? Sign up</button>}
-            {view === 'signup' && <button type="button" onClick={() => { reset(); setView('login'); }} className="font-bold hover:opacity-80" style={{ color: c.acc }}>Already have an account? Sign in</button>}
-            {(view === 'forgot' || view === 'update-password') && <button type="button" onClick={() => { reset(); setView('login'); }} className="font-bold hover:opacity-80" style={{ color: c.muted }}>← Back to sign in</button>}
-          </div>
+              {view !== 'forgot' && (
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label htmlFor="password" className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>
+                      {view === 'update-password' ? 'New Password' : 'Password'}
+                    </label>
+                    {view === 'login' && <button type="button" onClick={() => { reset(); setView('forgot'); }} className="text-xs font-bold hover:opacity-80" style={{ color: c.acc }}>Forgot password?</button>}
+                  </div>
+                  <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete={view === 'login' ? 'current-password' : 'new-password'} className={inputClass} style={inputStyle} />
+                  {(view === 'signup' || view === 'update-password') && <p className="mt-1 text-xs" style={{ color: c.muted }}>At least 6 characters.</p>}
+                </div>
+              )}
+
+              {view === 'update-password' && (
+                <div>
+                  <label htmlFor="confirm-password" className="mb-1.5 block text-xs font-extrabold uppercase tracking-widest" style={{ color: c.muted }}>Confirm Password</label>
+                  <input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" className={inputClass} style={inputStyle} />
+                </div>
+              )}
+
+              <button type="submit" disabled={submitting || socialLoading !== null} className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.acc }}>
+                {submitting ? 'Please wait…' : view === 'login' ? 'Sign in' : view === 'signup' ? 'Create account' : view === 'forgot' ? 'Send reset link' : 'Update password'}
+              </button>
+            </form>
+
+            <div className="mt-5 flex flex-col gap-2 text-center text-sm">
+              {view === 'login' && <button type="button" onClick={() => { reset(); setView('signup'); }} className="font-bold hover:opacity-80" style={{ color: c.acc }}>No account yet? Sign up</button>}
+              {view === 'signup' && <button type="button" onClick={() => { reset(); setView('login'); }} className="font-bold hover:opacity-80" style={{ color: c.acc }}>Already have an account? Sign in</button>}
+              {(view === 'forgot' || view === 'update-password') && <button type="button" onClick={() => { reset(); setView('login'); }} className="font-bold hover:opacity-80" style={{ color: c.muted }}>← Back to sign in</button>}
+            </div>
+          </section>
         </div>
       </main>
     </>

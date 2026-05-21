@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lineup-mate.netlify.app/sitemap.xml

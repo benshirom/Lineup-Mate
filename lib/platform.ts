@@ -1,5 +1,12 @@
 export type ThemeMode = 'light' | 'dark';
 
+export const typography = {
+  display: 'Space Grotesk, Inter, sans-serif',
+  body: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  tight: '-0.04em',
+  tighter: '-0.045em',
+} as const;
+
 export const translations = {
   appName: 'Lineup·Mate',
   navEvents: 'Events',
@@ -7,11 +14,11 @@ export const translations = {
   navGroups: 'Groups',
   navSettings: 'Settings',
   navProfile: 'Profile',
-  heroTitle: 'Plan your festival schedule. Together.',
-  heroSub: 'Explore lineups, save your favorite artists, avoid time conflicts, and coordinate plans with friends.',
-  browseEvents: 'Explore Festivals',
-  upcomingEvents: 'Upcoming Events',
-  searchEvents: 'Search events…',
+  heroTitle: 'Your festival plan, without the chaos.',
+  heroSub: 'Save must-see artists, spot schedule clashes early, and sync the next move with your crew.',
+  browseEvents: 'Build my lineup',
+  upcomingEvents: 'Featured festivals',
+  searchEvents: 'Search festivals, cities, stages…',
   all: 'All',
   psytrance: 'Psytrance',
   electronic: 'Electronic',
@@ -23,7 +30,7 @@ export const translations = {
   artists: 'artists',
   stages: 'stages',
   days: 'days',
-  signInToSave: 'Sign in to build your personal lineup and sync plans with friends.',
+  signInToSave: 'Create a free account to save festivals, build your personal lineup, and plan with friends.',
   importSync: 'Import / Sync'
 } as const;
 

@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
+import FestivalCard from '@/components/marketing/FestivalCard';
+import MarketingFeatureCard from '@/components/marketing/MarketingFeatureCard';
+import ProductPreviewCard from '@/components/marketing/ProductPreviewCard';
+import Seo from '@/components/Seo';
 import { useAuth } from '@/lib/AuthContext';
-import { formatDateRange, genreFilters, getThemeColors } from '@/lib/platform';
+import { genreFilters, getThemeColors } from '@/lib/platform';
 
 interface Festival {
   id: number;
@@ -31,6 +35,12 @@ interface FestivalStats {
   days: number;
 }
 
+const featureCards = [
+  { eyebrow: 'Save', title: 'Pick your must-see sets', body: 'Build a personal lineup that stays easy to scan on the move.' },
+  { eyebrow: 'Clash', title: 'Spot conflicts early', body: 'See overlaps before you are already walking to the wrong stage.' },
+  { eyebrow: 'Crew', title: 'Plan the next move together', body: 'Create a group, share an invite code, and keep everyone aligned.' },
+];
+
 export default function Home() {
   const { user, supabase, theme, t } = useAuth();
   const router = useRouter();
@@ -42,6 +52,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('all');
+  const [loginNudgeFestivalId, setLoginNudgeFestivalId] = useState<number | null>(null);
 
   const c = getThemeColors(theme);
 
@@ -121,16 +132,16 @@ export default function Home() {
     });
   }, [festivals, query, genre]);
 
-  const requireLogin = () => {
+  const requireLogin = (festivalId?: number) => {
     if (!user) {
-      router.push('/login');
+      setLoginNudgeFestivalId(festivalId ?? null);
       return false;
     }
     return true;
   };
 
   const toggleSavedFestival = async (festivalId: number) => {
-    if (!requireLogin()) return;
+    if (!requireLogin(festivalId)) return;
 
     const isSaved = savedFestivalIds[festivalId];
     const previousSavedFestivalIds = savedFestivalIds;
@@ -156,72 +167,88 @@ export default function Home() {
     setSavedFestivalIds(Object.fromEntries((savedRows || []).map((row) => [row.festival_id, true])));
   };
 
-  const getFestivalName = (festival: Festival) => festival.name;
-  const getFestivalLocation = (festival: Festival) => festival.location;
+  const nudgeFestival = festivals.find((festival) => festival.id === loginNudgeFestivalId);
 
   return (
     <>
+      <Seo />
       <Navbar />
       <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr] lg:items-center">
+        <section className="relative mx-auto max-w-6xl overflow-hidden px-4 py-10 sm:py-16">
+          <div className="pointer-events-none absolute right-0 top-4 h-56 w-56 rounded-full blur-3xl" style={{ background: `${c.acc}22` }} />
+          <div className="pointer-events-none absolute -left-10 top-24 h-48 w-48 rounded-full blur-3xl" style={{ background: `${c.accB}18` }} />
+
+          <div className="relative grid gap-7 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
             <div className="fade-up">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold" style={{ background: `${c.acc}18`, color: c.acc, border: `1px solid ${c.acc}40` }}>
-                <span className="inline-block h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: c.acc }} />
-                {t.appName}
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold" style={{ background: `${c.accB}16`, color: c.accB, border: `1px solid ${c.accB}3d` }}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: c.accB }} />
+                Built for festival crews
               </div>
-              <h1 className="text-4xl font-black sm:text-6xl" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.03em', lineHeight: 1.05 }}>
+              <h1 className="text-4xl font-black sm:text-6xl" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', letterSpacing: '-0.045em', lineHeight: 0.98 }}>
                 {t.heroTitle}
               </h1>
-              <p className="mt-4 max-w-xl text-base sm:text-lg leading-relaxed" style={{ color: c.muted }}>
+              <p className="mt-4 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: c.muted }}>
                 {t.heroSub}
               </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#events" className="rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: c.acc, boxShadow: `0 4px 20px ${c.acc}44` }}>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href="#events" className="tap-active rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: c.acc, boxShadow: `0 4px 20px ${c.acc}44` }}>
                   {t.browseEvents}
                 </a>
+                <a href="#how-it-works" className="tap-active rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+                  See how it works
+                </a>
+                <a href="/faq" className="tap-active rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+                  FAQ
+                </a>
                 {isAdmin && (
-                  <button type="button" onClick={() => router.push('/admin')} className="rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+                  <button type="button" onClick={() => router.push('/admin')} className="tap-active rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
                     {t.importSync}
                   </button>
                 )}
               </div>
-            </div>
-
-            <div className="overflow-hidden rounded-[28px] p-5 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-              <div className="h-px -mx-5 -mt-5 mb-5" style={{ background: c.brd }} />
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.15em]" style={{ color: c.muted }}>{t.upcomingEvents}</div>
-              <div className="mt-3 space-y-2">
-                {festivals.slice(0, 3).map((festival) => (
-                  <button
-                    key={festival.id}
-                    type="button"
-                    onClick={() => router.push(`/festival/${festival.id}`)}
-                    className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition hover:brightness-105"
-                    style={{ background: c.surf2 }}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg" style={{ background: `${festival.color || c.acc}22` }}>{festival.emoji || '🎪'}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-black" style={{ letterSpacing: '-0.01em' }}>{getFestivalName(festival)}</div>
-                      <div className="truncate text-xs" style={{ color: c.muted }}>{getFestivalLocation(festival) || 'Location TBA'}</div>
-                    </div>
-                    <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: festival.color || c.acc }} />
-                  </button>
+              <div className="mt-6 grid max-w-xl grid-cols-3 gap-2 text-xs">
+                {['Save artists', 'Avoid clashes', 'Sync your crew'].map((label) => (
+                  <div key={label} className="rounded-2xl px-3 py-2 font-bold" style={{ background: `${c.surf2}cc`, border: `1px solid ${c.brd}`, color: c.muted }}>
+                    {label}
+                  </div>
                 ))}
               </div>
             </div>
+
+            <ProductPreviewCard />
+          </div>
+        </section>
+
+        <section id="how-it-works" className="mx-auto max-w-6xl px-4 pb-12">
+          <div className="mb-5 flex flex-col gap-2">
+            <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.accB }}>How it works</p>
+            <h2 className="text-3xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif' }}>From lineup overload to one clean plan.</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {featureCards.map((card, index) => (
+              <MarketingFeatureCard
+                key={card.title}
+                index={index}
+                eyebrow={card.eyebrow}
+                title={card.title}
+                body={card.body}
+              />
+            ))}
           </div>
         </section>
 
         <section id="events" className="mx-auto max-w-6xl px-4 pb-14">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{t.upcomingEvents}</h2>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>{t.upcomingEvents}</p>
+              <h2 className="mt-1 text-3xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif' }}>Choose your festival</h2>
+            </div>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.searchEvents} className="w-full rounded-full px-4 py-3 text-sm outline-none sm:max-w-xs" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }} />
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="mb-6 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="genre-filter-row">
             {genreFilters.map((filter) => (
-              <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.acc : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
+              <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="shrink-0 rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.acc : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
                 {filter.label}
               </button>
             ))}
@@ -234,58 +261,50 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredFestivals.map((festival) => {
               const festivalStats = stats[festival.id] || { performances: 0, stages: 0, days: 0, festival_id: festival.id };
-              const isSaved = savedFestivalIds[festival.id];
               return (
-                <article key={festival.id} className="fade-up overflow-hidden rounded-[24px] shadow-xl transition hover:-translate-y-1 hover:shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <div className="h-px" style={{ background: c.brd }} />
-                  <div className="p-5">
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: `${festival.color || c.acc}18`, border: `1px solid ${festival.color || c.acc}33` }}>
-                          {festival.emoji || '🎪'}
-                        </div>
-                        <div>
-                          <h3 className="text-base font-black leading-snug" style={{ fontFamily: 'Syne, Nunito, sans-serif', letterSpacing: '-0.01em' }}>{getFestivalName(festival)}</h3>
-                          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: festival.color || c.acc }}>{festival.genre_label || festival.genre || 'Festival'}</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleSavedFestival(festival.id)}
-                        className="shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold transition"
-                        style={{ background: isSaved ? `${c.acc}22` : c.surf2, color: isSaved ? c.acc : c.muted, border: `1px solid ${isSaved ? c.acc : c.brd}` }}
-                      >
-                        {isSaved ? '✓ Saved' : '+ Save'}
-                      </button>
-                    </div>
-
-                    <div className="mb-4 space-y-1 text-xs" style={{ color: c.muted }}>
-                      <div className="flex items-center gap-1.5"><span>📍</span><span className="truncate">{getFestivalLocation(festival) || 'Location TBA'}</span></div>
-                      <div className="flex items-center gap-1.5"><span>📅</span><span>{formatDateRange(festival.start_date, festival.end_date)}</span></div>
-                    </div>
-
-                    <div className="mb-4 grid grid-cols-3 gap-1.5 text-center text-xs">
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.performances}</b><span style={{ color: c.muted }}>{t.artists}</span></div>
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.stages}</b><span style={{ color: c.muted }}>{t.stages}</span></div>
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.days}</b><span style={{ color: c.muted }}>{t.days}</span></div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/festival/${festival.id}`)}
-                      className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white transition hover:brightness-110"
-                      style={{ background: c.acc, boxShadow: `0 4px 16px ${c.acc}33` }}
-                    >
-                      {t.viewLineup}
-                    </button>
-                  </div>
-                </article>
+                <FestivalCard
+                  key={festival.id}
+                  festival={festival}
+                  stats={festivalStats}
+                  isSaved={Boolean(savedFestivalIds[festival.id])}
+                  onToggleSaved={toggleSavedFestival}
+                  onOpen={(festivalId) => router.push(`/festival/${festivalId}`)}
+                />
               );
             })}
           </div>
 
           {!user && <p className="mt-6 text-center text-sm" style={{ color: c.muted }}>{t.signInToSave}</p>}
         </section>
+
+        <section className="mx-auto max-w-6xl px-4 pb-16">
+          <div className="rounded-[28px] p-5 sm:p-7" style={{ background: `linear-gradient(135deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
+            <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.accB }}>Crew mode</p>
+            <h2 className="mt-2 text-3xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif' }}>The lineup is public. The plan is personal.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed" style={{ color: c.muted }}>
+              Lineup·Mate is designed for the moment when everyone wants to see something different. Save your picks, open a group, and use the schedule as a shared decision layer.
+            </p>
+            <a href="/faq" className="mt-5 inline-flex rounded-full px-5 py-3 text-sm font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+              Read the FAQ
+            </a>
+          </div>
+        </section>
+
+        {loginNudgeFestivalId !== null && !user && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }} onClick={() => setLoginNudgeFestivalId(null)}>
+            <div className="w-full max-w-sm rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} onClick={(event) => event.stopPropagation()}>
+              <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>Save your lineup</p>
+              <h2 className="mt-2 text-2xl font-black">Create a free account first</h2>
+              <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>
+                Sign in to save {nudgeFestival ? nudgeFestival.name : 'this festival'}, mark your must-see artists, and plan with your crew.
+              </p>
+              <div className="mt-5 flex gap-2">
+                <button type="button" onClick={() => setLoginNudgeFestivalId(null)} className="flex-1 rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>Maybe later</button>
+                <button type="button" onClick={() => router.push('/login')} className="flex-1 rounded-2xl px-4 py-3 text-sm font-black text-white" style={{ background: c.acc }}>Continue</button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );
