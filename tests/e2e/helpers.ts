@@ -129,8 +129,6 @@ export async function ensureFirstActIsStarred(page: Page) {
   if (label?.toLowerCase().includes('add')) {
     await starButton.click({ force: true });
     await page.waitForLoadState('networkidle').catch(() => undefined);
-    await page.waitForTimeout(750);
-    await page.getByRole('button', { name: /Remove from my schedule/i }).first().waitFor({ state: 'visible', timeout: 5_000 }).catch(() => undefined);
   }
 }
 
