@@ -1,5 +1,12 @@
 export type ThemeMode = 'light' | 'dark';
 
+export const typography = {
+  display: 'Space Grotesk, Inter, sans-serif',
+  body: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  tight: '-0.04em',
+  tighter: '-0.045em',
+} as const;
+
 export const translations = {
   appName: 'Lineup·Mate',
   navEvents: 'Events',
