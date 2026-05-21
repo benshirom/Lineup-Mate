@@ -55,6 +55,17 @@ export default function FaqPage() {
             </p>
           </div>
 
+          <div className="mb-6 rounded-[28px] p-5" style={{ background: `linear-gradient(135deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
+            <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>Guide</p>
+            <h2 className="mt-2 text-2xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif' }}>Need a better way to plan the lineup?</h2>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>
+              Read the practical planning guide before you start saving artists and coordinating with friends.
+            </p>
+            <Link href="/guides/festival-lineup-planning" className="mt-4 inline-flex rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: c.acc }}>
+              Read the planning guide
+            </Link>
+          </div>
+
           <div className="space-y-3" data-testid="faq-list">
             {faqs.map((faq) => (
               <article key={faq.question} className="rounded-[24px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
