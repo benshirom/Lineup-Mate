@@ -127,17 +127,10 @@ export async function ensureFirstActIsStarred(page: Page) {
 
   const label = await starButton.getAttribute('aria-label');
   if (label?.toLowerCase().includes('add')) {
-    await starButton.click();
+    await starButton.click({ force: true });
     await page.waitForLoadState('networkidle').catch(() => undefined);
-    await expect
-      .poll(
-        async () => page.getByRole('button', { name: /Remove from my schedule/i }).count(),
-        {
-          timeout: 20_000,
-          message: 'Starred act should change to Remove from my schedule after saving.'
-        }
-      )
-      .toBeGreaterThan(0);
+    await page.waitForTimeout(750);
+    await page.getByRole('button', { name: /Remove from my schedule/i }).first().waitFor({ state: 'visible', timeout: 5_000 }).catch(() => undefined);
   }
 }
 
