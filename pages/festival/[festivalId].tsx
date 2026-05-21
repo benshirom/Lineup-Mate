@@ -1,7 +1,6 @@
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
-import Seo from '@/components/Seo';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
 
@@ -54,14 +53,6 @@ function durationHours(start: string, end: string) {
 
 function festivalTitle(festival: Festival) {
   return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`;
-}
-
-function festivalSeoDescription(festival: Festival, performanceCount: number, stageCount: number, dayCount: number) {
-  const location = festival.location ? ` in ${festival.location}` : '';
-  const stats = performanceCount > 0
-    ? `${performanceCount} performances across ${stageCount} stages and ${dayCount} days`
-    : 'lineup, stages, dates and personal planning tools';
-  return `${festivalTitle(festival)} schedule${location}: explore ${stats}, save your must-see artists, and plan with your crew on Lineup·Mate.`;
 }
 
 function detectConflicts(performances: PerformanceItem[]): Set<number> {
@@ -392,13 +383,6 @@ export default function FestivalPage() {
 
   return (
     <>
-      {festival && (
-        <Seo
-          title={`${festivalTitle(festival)} lineup planner | Lineup·Mate`}
-          description={festivalSeoDescription(festival, performances.length, allStages.length, days.length)}
-          canonicalPath={`/festival/${festival.id}`}
-        />
-      )}
       <Navbar />
       <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-7xl px-4 py-6 md:py-8">
@@ -532,3 +516,277 @@ export default function FestivalPage() {
                         >
                           {stage.name}
                         </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {visiblePerformances.map((performance) => {
+                      const isGoing = performance.status === 'going';
+                      const hasConflict = conflictIds.has(performance.id);
+                      return (
+                        <article
+                          key={performance.id}
+                          data-testid="festival-performance-block"
+                          className="overflow-hidden rounded-2xl perf-card"
+                          style={{
+                            background: c.surf,
+                            border: `1px solid ${isGoing && hasConflict ? `${c.danger}55` : isGoing ? `${c.star}44` : c.brd}`,
+                            borderLeft: `4px solid ${performance.stageColor}`,
+                            boxShadow: isGoing
+                              ? `0 0 14px ${isGoing && hasConflict ? `${c.danger}18` : `${c.star}12`}`
+                              : 'none',
+                            minHeight: 72,
+                          }}
+                        >
+                          <div className="flex items-center gap-3 px-4 py-3.5">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>{performance.artistName}</h3>
+                              <p className="text-[11px] font-semibold mt-0.5" style={{ color: performance.stageColor }}>{performance.stageName}</p>
+                              <p className="text-xs mt-0.5" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {hasConflict && isGoing && (
+                                <span className="text-xs font-bold conflict-badge" style={{ color: c.danger }}>⚠</span>
+                              )}
+                              {renderStarButton(performance)}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  {visiblePerformances.length === 0 && !loading && (
+                    <p className="mt-4 text-sm" style={{ color: c.muted }}>No shows this day.</p>
+                  )}
+                </>
+              )}
+
+              {/* ── Timeline tab ─────────────────────────────────── */}
+              {tab === 'timeline' && (
+                <section className="rounded-3xl p-4 shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                  <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="festival-stage-filters">
+                    {allStages.map((stage) => {
+                      const isOn = activeStages[stage.name] !== false;
+                      const hasShowsToday = selectedDayPerformances.some((performance) => performance.stageName === stage.name);
+                      return (
+                        <button
+                          key={stage.name}
+                          type="button"
+                          data-testid="festival-stage-filter"
+                          onClick={() => setActiveStages((current) => ({ ...current, [stage.name]: !isOn }))}
+                          className="shrink-0 tap-active rounded-full px-3 py-1 text-xs font-bold transition-all"
+                          style={{
+                            background: isOn ? stage.color : c.surf2,
+                            color: isOn ? '#fff' : c.muted,
+                            border: `1px solid ${isOn ? stage.color : c.brd}`,
+                            opacity: hasShowsToday ? 1 : 0.4,
+                          }}
+                          title={hasShowsToday ? stage.name : `${stage.name} — no shows today`}
+                        >
+                          {stage.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {visiblePerformances.length === 0 ? (
+                    <p style={{ color: c.muted }}>No shows this day.</p>
+                  ) : (
+                    <div className="relative overflow-x-auto scroll-thin">
+                      <p className="mb-2 text-[10px] font-bold sm:hidden" style={{ color: c.muted }}>← swipe to see full timeline →</p>
+                      <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
+                        {/* Hour header */}
+                        <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
+                          {hours.map((hour) => (
+                            <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>
+                              {`${String(hour % 24).padStart(2, '0')}:00`}
+                            </div>
+                          ))}
+                        </div>
+
+                        {dayStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
+                          const stageItems = visiblePerformances.filter((performance) => performance.stageName === stage.name);
+                          return (
+                            <div key={stage.name} className="mb-2 flex items-stretch" data-testid="festival-stage-row">
+                              {/* Sticky stage label */}
+                              <div
+                                className="shrink-0 pr-2 text-right text-xs font-bold leading-tight flex items-center justify-end"
+                                style={{ width: stageLabelWidth, color: stage.color, position: 'sticky', left: 0, zIndex: 2, background: c.surf }}
+                              >
+                                <span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}18` }}>{stage.name}</span>
+                              </div>
+                              <div className="relative h-14 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}06`, border: `1px solid ${c.brd}` }}>
+                                {/* Hour grid lines */}
+                                {hours.map((hour) => (
+                                  <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
+                                ))}
+                                {/* Now line */}
+                                {nowLeft !== null && (
+                                  <div
+                                    ref={nowLineRef}
+                                    className="now-line absolute top-0 h-full z-10 pointer-events-none"
+                                    style={{ left: nowLeft, width: 2, background: c.danger, borderRadius: 2 }}
+                                  />
+                                )}
+                                {/* Performance blocks */}
+                                {stageItems.map((performance) => {
+                                  const left = (hourNumber(performance.startTime) - minHour) * hourWidth;
+                                  const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
+                                  const isGoing = performance.status === 'going';
+                                  const hasConflict = conflictIds.has(performance.id);
+                                  return (
+                                    <div
+                                      key={performance.id}
+                                      data-testid="festival-performance-block"
+                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}–${timeLabel(performance.endTime)}${hasConflict ? ' ⚠ Time conflict!' : ''}`}
+                                      className={`perf-block absolute top-1.5 h-11 overflow-hidden rounded-xl text-left text-xs font-bold ${isGoing && hasConflict ? 'conflict-block' : ''}`}
+                                      style={{
+                                        left,
+                                        width,
+                                        background: c.surf2,
+                                        borderLeft: `3px solid ${performance.stageColor}`,
+                                        paddingLeft: 10,
+                                        paddingRight: 34,
+                                        color: c.txt,
+                                        boxShadow: isGoing
+                                          ? `inset 0 0 0 1px ${performance.stageColor}44, 0 2px 10px ${performance.stageColor}33`
+                                          : `inset 0 0 0 1px ${c.brd}`,
+                                      }}
+                                    >
+                                      <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
+                                      <span className="block truncate text-[10px]" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
+                                      {hasConflict && isGoing && (
+                                        <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: c.danger }}>⚠</span>
+                                      )}
+                                      <span className="absolute right-1 top-1/2 -translate-y-1/2">{renderStarButton(performance, true)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* ── Info tab (About + Groups) ─────────────────────── */}
+              {tab === 'info' && (
+                <div className="space-y-4">
+                  <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[1fr_300px]">
+                    <article className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-3 text-xl font-extrabold">About</h2>
+                      <p className="leading-7 text-sm" style={{ color: c.muted }}>{festival.description || 'No description yet.'}</p>
+                    </article>
+                    <aside className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-3 text-xl font-extrabold">Festival details</h2>
+                      <div className="space-y-2.5 text-sm" style={{ color: c.muted }}>
+                        <div><b style={{ color: c.txt }}>Location:</b> {festival.location || 'TBA'}</div>
+                        <div><b style={{ color: c.txt }}>Dates:</b> {formatDateRange(festival.start_date, festival.end_date)}</div>
+                        <div><b style={{ color: c.txt }}>Stages:</b> {allStages.length}</div>
+                        <div><b style={{ color: c.txt }}>Days:</b> {days.length}</div>
+                        <div><b style={{ color: c.txt }}>Performances:</b> {performances.length}</div>
+                        {festival.website && <div><b style={{ color: c.txt }}>Website:</b> {festival.website}</div>}
+                        {festival.clashfinder_slug && <div><b style={{ color: c.txt }}>Source:</b> {festival.clashfinder_slug}</div>}
+                      </div>
+                    </aside>
+                  </section>
+
+                  <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-2 font-extrabold">Create a group</h2>
+                      <p className="mb-4 text-sm" style={{ color: c.muted }}>Open a shared schedule and invite friends to compare picks.</p>
+                      <button
+                        type="button"
+                        onClick={openCreateGroupModal}
+                        className="tap-active rounded-2xl px-4 py-3 text-sm font-bold text-white"
+                        style={{ background: festival.color || c.acc, minHeight: 48 }}
+                      >
+                        {user ? 'Create Group' : 'Sign in to Create Group'}
+                      </button>
+                    </div>
+                    <form onSubmit={handleJoinGroup} className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                      <h2 className="mb-2 font-extrabold">Join a group</h2>
+                      <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend.</p>
+                      <div className="flex gap-2">
+                        <input
+                          value={inviteCode}
+                          onChange={(event) => setInviteCode(event.target.value)}
+                          placeholder="Invite code"
+                          className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none"
+                          style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt, minHeight: 48 }}
+                        />
+                        <button
+                          type="submit"
+                          className="tap-active rounded-2xl px-4 py-3 text-sm font-bold text-white"
+                          style={{ background: c.acc, minHeight: 48 }}
+                        >
+                          {user ? 'Join' : 'Sign in'}
+                        </button>
+                      </div>
+                      {joinError && <p className="mt-2 text-sm font-semibold" style={{ color: c.danger }}>{joinError}</p>}
+                    </form>
+                  </section>
+                </div>
+              )}
+
+              {!loading && performances.length === 0 && <p style={{ color: c.muted }}>No active performances found.</p>}
+
+              {/* ── Create group modal ───────────────────────────── */}
+              {showCreateModal && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                  style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  <div
+                    className="slide-up w-full max-w-sm rounded-[28px] p-6 shadow-elevated"
+                    style={{ background: c.surf, border: `1px solid ${c.brd}` }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h2 className="mb-1 text-2xl font-extrabold">Create a group</h2>
+                    <p className="mb-5 text-sm" style={{ color: c.muted }}>Give your group a name your friends will recognise.</p>
+                    <form onSubmit={handleCreateGroup} className="space-y-4">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={groupNameInput}
+                        onChange={(e) => setGroupNameInput(e.target.value)}
+                        placeholder="e.g. Ozora Squad 2026"
+                        className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                        style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt, minHeight: 48 }}
+                        maxLength={60}
+                      />
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => { setShowCreateModal(false); setGroupNameInput(''); }}
+                          className="flex-1 tap-active rounded-2xl px-4 py-3 text-sm font-bold"
+                          style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted, minHeight: 48 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!groupNameInput.trim() || creatingGroup}
+                          className="flex-1 tap-active rounded-2xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                          style={{ background: festival.color || c.acc, minHeight: 48 }}
+                        >
+                          {creatingGroup ? 'Creating…' : 'Create'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </main>
+    </>
+  );
+}
