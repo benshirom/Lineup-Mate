@@ -12,6 +12,8 @@ test.describe('my schedule management', () => {
   });
 
   test('user can remove one saved act from My Schedule', async ({ page }) => {
+    test.setTimeout(60_000);
+
     await test.step('star an act', async () => {
       await openFirstFestival(page);
       await ensureFirstActIsStarred(page);
@@ -33,6 +35,8 @@ test.describe('my schedule management', () => {
   });
 
   test('user can clear all saved acts from My Schedule', async ({ page }) => {
+    test.setTimeout(60_000);
+
     await test.step('star an act', async () => {
       await openFirstFestival(page);
       await ensureFirstActIsStarred(page);

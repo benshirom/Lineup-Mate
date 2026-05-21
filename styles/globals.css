@@ -1,11 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Base ──────────────────────────────────────────────────────────────── */
+body {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3 {
+  font-family: "Space Grotesk", Inter, sans-serif;
+}
+
+/* ── Netlify deploy-preview drawer guard ───────────────────────────────── */
+/* Netlify injects a preview drawer iframe into deploy previews. It can sit above
+   fixed mobile navigation and intercept Playwright clicks, so keep it out of the
+   interactive layer without affecting production where these nodes do not exist. */
+div[data-netlify-deploy-id][data-netlify-site-id],
+iframe[title="Netlify Drawer"] {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* ── Focus visible ─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #8B5CF6;
+  outline-offset: 2px;
+}
+
+/* ── Safe-area utilities ───────────────────────────────────────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mobile-shell-padding {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ── Custom thin scrollbar for the dark theme ─────────────────────────── */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: #2c2c4c transparent;
+  scrollbar-color: #273244 transparent;
 }
 .scroll-thin::-webkit-scrollbar {
   height: 4px;
@@ -15,11 +53,11 @@
   background: transparent;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: #2c2c4c;
+  background: #273244;
   border-radius: 99px;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: #4c4c7c;
+  background: #3a4a60;
 }
 
 /* Hide scrollbar visually but keep scrollability (day-tabs, etc.) */
@@ -51,14 +89,41 @@
   animation: star-pop 0.25s ease;
 }
 
-/* ── Performance block micro-hover ────────────────────────────────────── */
+/* ── Performance block micro-hover (timeline) ─────────────────────────── */
 .perf-block {
   transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
   cursor: pointer;
 }
 .perf-block:hover {
   transform: translateY(-2px);
-  filter: brightness(1.12);
+  filter: brightness(1.08);
+}
+
+/* ── Performance card (list/artists view) ─────────────────────────────── */
+.perf-card {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: default;
+}
+
+/* ── Stage filters: keep stage color functional, not decorative ───────── */
+button[data-testid="festival-stage-filter"],
+button[data-testid="group-stage-filter"] {
+  background: #151E2E !important;
+  color: #CBD5E1 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+button[data-testid="festival-stage-filter"]:hover,
+button[data-testid="group-stage-filter"]:hover {
+  background: #1B2638 !important;
+}
+
+/* ── Tap feedback for mobile actions ──────────────────────────────────── */
+.tap-active {
+  transition: transform 0.08s ease, opacity 0.08s ease;
+}
+.tap-active:active {
+  transform: scale(0.96);
+  opacity: 0.85;
 }
 
 /* ── Conflict pulse on starred+conflicting blocks ─────────────────────── */
@@ -79,6 +144,15 @@
   animation: fade-up 0.3s ease both;
 }
 
+/* ── Slide-up for modals ───────────────────────────────────────────────── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.slide-up {
+  animation: slide-up 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* ── Grain texture overlay (festival vibe) ─────────────────────────────── */
 .grain::after {
   content: '';
@@ -90,9 +164,9 @@
   z-index: 0;
 }
 
-/* ── Glow effect for starred/going blocks ─────────────────────────────── */
+/* ── Glow effect for starred/going items ──────────────────────────────── */
 .going-glow {
-  box-shadow: inset 0 0 14px rgba(255,209,102,0.25), 0 0 0 1.5px rgba(255,209,102,0.6);
+  box-shadow: inset 0 0 14px rgba(250,204,21,0.2), 0 0 0 1.5px rgba(250,204,21,0.5);
 }
 
 /* ── Conflict badge shake ─────────────────────────────────────────────── */
@@ -103,4 +177,32 @@
 }
 .conflict-badge {
   animation: badge-shake 0.4s ease;
+}
+
+/* ── Glass nav ────────────────────────────────────────────────────────── */
+.glass-nav {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Premium card ─────────────────────────────────────────────────────── */
+.premium-card {
+  border-radius: 24px;
+  border: 1px solid rgba(148,163,184,0.12);
+  background: linear-gradient(180deg, rgba(21,30,46,0.96), rgba(17,24,39,0.99));
+  box-shadow: 0 4px 24px rgba(0,0,0,0.32);
+}
+
+/* ── Reduced motion support ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .star-pop,
+  .now-line,
+  .conflict-block,
+  .fade-up,
+  .slide-up,
+  .perf-block,
+  .tap-active {
+    animation: none !important;
+    transition: none !important;
+  }
 }

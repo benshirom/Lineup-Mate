@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 20
+    timeout-minutes: 30
     runs-on: ubuntu-latest
 
     steps:
@@ -24,10 +24,64 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Resolve Playwright base URL
+        id: playwright_base_url
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "url=https://deploy-preview-${{ github.event.pull_request.number }}--lineup-mate.netlify.app" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ vars.PLAYWRIGHT_BASE_URL }}" ]; then
+            echo "url=${{ vars.PLAYWRIGHT_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://lineup-mate.netlify.app" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for Netlify deploy preview status
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "Waiting for Netlify deploy-preview status on $HEAD_SHA"
+          for i in {1..60}; do
+            state=$(curl -fsS \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPOSITORY/commits/$HEAD_SHA/status" \
+              | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const json=JSON.parse(d); const s=(json.statuses||[]).find(x=>x.context==='netlify/lineup-mate/deploy-preview'); console.log(s?.state || 'pending')})")
+            echo "Netlify deploy-preview status: $state ($i/60)"
+            if [ "$state" = "success" ]; then
+              exit 0
+            fi
+            if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for Netlify deploy-preview status."
+          exit 1
+
+      - name: Wait for Playwright base URL
+        shell: bash
+        run: |
+          echo "Waiting for ${{ steps.playwright_base_url.outputs.url }}"
+          for i in {1..30}; do
+            if curl -fsS "${{ steps.playwright_base_url.outputs.url }}" >/dev/null; then
+              echo "Playwright base URL is ready."
+              exit 0
+            fi
+            echo "Base URL not ready yet. Retry $i/30..."
+            sleep 10
+          done
+          echo "Playwright base URL did not become ready in time."
+          exit 1
+
       - name: Run Playwright tests
         run: npx playwright test --max-failures=8
         env:
-          PLAYWRIGHT_BASE_URL: ${{ vars.PLAYWRIGHT_BASE_URL || 'https://lineup-mate.netlify.app' }}
+          PLAYWRIGHT_BASE_URL: ${{ steps.playwright_base_url.outputs.url }}
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}

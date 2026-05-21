@@ -12,8 +12,8 @@ function AppShell({ Component, pageProps }: AppProps) {
       {user && (
         <>
           <BottomNav />
-          {/* spacer so content is not hidden behind the fixed bottom bar */}
-          <div className="md:hidden h-14" aria-hidden="true" />
+          {/* spacer so content is not hidden behind the fixed BottomNav */}
+          <div className="md:hidden h-20" aria-hidden="true" />
         </>
       )}
     </>

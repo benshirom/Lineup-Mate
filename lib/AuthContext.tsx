@@ -78,7 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     const storedTheme = readStoredTheme();
-    const nextTheme = data?.theme ? normalizeTheme(data.theme) : storedTheme;
+    const profileTheme = data?.theme ? normalizeTheme(data.theme) : null;
+    const nextTheme = profileTheme ?? storedTheme;
 
     if (data) {
       setProfile({
@@ -100,10 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadProfile, user?.id]);
 
   const setLocalPreferences = useCallback((next: Partial<Pick<UserProfile, 'theme'>>) => {
-    const nextTheme = normalizeTheme(next.theme ?? theme);
+    const nextTheme = normalizeTheme(next.theme ?? readStoredTheme());
     applyPreferences(nextTheme);
     setProfile((current) => current ? { ...current, theme: nextTheme } : current);
-  }, [applyPreferences, theme]);
+  }, [applyPreferences]);
 
   useEffect(() => {
     applyPreferences(readStoredTheme());
@@ -138,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadProfile(session.user.id);
       } else {
         setProfile(null);
+        applyPreferences(DEFAULT_THEME);
       }
     });
 

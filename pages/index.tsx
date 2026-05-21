@@ -162,7 +162,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
           <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr] lg:items-center">
             <div className="fade-up">
@@ -177,7 +177,7 @@ export default function Home() {
                 {t.heroSub}
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#events" className="rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: `linear-gradient(135deg, ${c.acc}, ${c.accB})`, boxShadow: `0 4px 20px ${c.acc}55` }}>
+                <a href="#events" className="rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: c.acc, boxShadow: `0 4px 20px ${c.acc}44` }}>
                   {t.browseEvents}
                 </a>
                 {isAdmin && (
@@ -189,7 +189,7 @@ export default function Home() {
             </div>
 
             <div className="overflow-hidden rounded-[28px] p-5 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-              <div className="h-0.5 -mx-5 -mt-5 mb-5" style={{ background: `linear-gradient(90deg, ${c.acc}, ${c.accB})` }} />
+              <div className="h-px -mx-5 -mt-5 mb-5" style={{ background: c.brd }} />
               <div className="text-[10px] font-extrabold uppercase tracking-[0.15em]" style={{ color: c.muted }}>{t.upcomingEvents}</div>
               <div className="mt-3 space-y-2">
                 {festivals.slice(0, 3).map((festival) => (
@@ -237,11 +237,11 @@ export default function Home() {
               const isSaved = savedFestivalIds[festival.id];
               return (
                 <article key={festival.id} className="fade-up overflow-hidden rounded-[24px] shadow-xl transition hover:-translate-y-1 hover:shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                  <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${festival.color || c.acc}, ${c.accB})` }} />
+                  <div className="h-px" style={{ background: c.brd }} />
                   <div className="p-5">
                     <div className="mb-4 flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}30, ${festival.color || c.acc}10)`, border: `1px solid ${festival.color || c.acc}33` }}>
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm" style={{ background: `${festival.color || c.acc}18`, border: `1px solid ${festival.color || c.acc}33` }}>
                           {festival.emoji || '🎪'}
                         </div>
                         <div>
@@ -274,7 +274,7 @@ export default function Home() {
                       type="button"
                       onClick={() => router.push(`/festival/${festival.id}`)}
                       className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white transition hover:brightness-110"
-                      style={{ background: `linear-gradient(135deg, ${festival.color || c.acc}, ${c.accB})`, boxShadow: `0 4px 16px ${festival.color || c.acc}44` }}
+                      style={{ background: c.acc, boxShadow: `0 4px 16px ${c.acc}33` }}
                     >
                       {t.viewLineup}
                     </button>

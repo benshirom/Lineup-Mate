@@ -26,7 +26,7 @@ function fileToDataUrl(file: File) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, session, authReady, supabase, theme: currentTheme, setLocalPreferences, refreshProfile, t } = useAuth();
+  const { user, session, authReady, supabase, theme: currentTheme, setLocalPreferences, t } = useAuth();
   const c = getThemeColors(currentTheme);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -148,9 +148,11 @@ export default function ProfilePage() {
     event.preventDefault();
     if (!user) return;
 
+    const selectedTheme = theme;
     setSaving(true);
     setError(null);
     setMessage(null);
+    setLocalPreferences({ theme: selectedTheme });
 
     try {
       const uploadedAvatarUrl = await uploadAvatarIfNeeded();
@@ -160,7 +162,7 @@ export default function ProfilePage() {
         .update({
           display_name: displayName.trim() || null,
           avatar_url: uploadedAvatarUrl,
-          theme
+          theme: selectedTheme
         })
         .eq('id', user.id);
 
@@ -173,13 +175,13 @@ export default function ProfilePage() {
         ...current,
         display_name: displayName.trim() || null,
         avatar_url: uploadedAvatarUrl,
-        theme
+        theme: selectedTheme
       } : current);
 
-      await refreshProfile();
-      setLocalPreferences({ theme });
+      setLocalPreferences({ theme: selectedTheme });
       setMessage('Profile saved successfully.');
     } catch (err: unknown) {
+      setLocalPreferences({ theme: selectedTheme });
       setError(err instanceof Error ? err.message : 'Could not save your profile.');
     } finally {
       setSaving(false);
@@ -189,7 +191,7 @@ export default function ProfilePage() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-4xl px-4 py-8">
           <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>{t.appName}</p>

@@ -4,20 +4,34 @@ test.describe('public browsing', () => {
   test('home page loads and shows public festival browsing UI', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText(/Never miss a set again|לעולם לא תפספס הופעה/i)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Plan your festival schedule|Never miss a set again|לעולם לא תפספס הופעה/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByPlaceholder(/Search events|חפש אירועים/i)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test('guest can open a festival and see schedule tabs', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
-    await page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first().click();
+    await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
 
-    await expect(page.getByRole('button', { name: /timeline/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('button', { name: /lineup/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /info/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Artists$/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('button', { name: /^Timeline$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Info$/i })).toBeVisible();
+    await expect(page.getByTestId('festival-performance-block').first()).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('festival stage filters keep neutral premium surface styling', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
+
+    const firstStageFilter = page.getByTestId('festival-stage-filter').first();
+    await expect(firstStageFilter).toBeVisible({ timeout: 20_000 });
+
+    const backgroundColor = await firstStageFilter.evaluate((element) => window.getComputedStyle(element).backgroundColor);
+    expect(backgroundColor).toBe('rgb(21, 30, 46)');
   });
 
   test('guest is sent to login when trying to save a festival', async ({ page }) => {
@@ -28,6 +42,6 @@ test.describe('public browsing', () => {
     await saveButton.click();
 
     await expect(page).toHaveURL(/\/login/, { timeout: 20_000 });
-    await expect(page.getByRole('heading', { name: /Welcome back|Create an account/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: /Welcome back|Create your lineup account|Create an account/i })).toBeVisible({ timeout: 20_000 });
   });
 });

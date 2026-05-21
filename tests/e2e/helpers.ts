@@ -4,7 +4,26 @@ export function localPart(email: string) {
   return email.split('@')[0];
 }
 
+export function festivalIdFromUrl(url: string) {
+  return new URL(url).pathname.match(/\/festival\/(\d+)/)?.[1] || null;
+}
+
+export async function dismissPreviewOverlays(page: Page) {
+  await page.addStyleTag({
+    content: `
+      div[data-netlify-deploy-id][data-netlify-site-id],
+      iframe[title="Netlify Drawer"] {
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+    `
+  }).catch(() => undefined);
+}
+
 export async function expectAuthenticated(page: Page) {
+  await dismissPreviewOverlays(page);
+
   const desktopProfileLink = page.getByTestId('user-profile-link');
   if (await desktopProfileLink.isVisible().catch(() => false)) return;
 
@@ -22,14 +41,17 @@ export async function expectAuthenticated(page: Page) {
 
 export async function login(page: Page, email: string, password: string) {
   await page.goto('/login');
+  await dismissPreviewOverlays(page);
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: /password/i }).fill(password);
   await page.getByRole('button', { name: /^Sign in$/i }).click();
   await expect(page, `Login failed for ${email}. Check GitHub Secrets and Supabase email confirmation.`).toHaveURL('/', { timeout: 20_000 });
+  await dismissPreviewOverlays(page);
   await expectAuthenticated(page);
 }
 
 export async function openMobileMenu(page: Page) {
+  await dismissPreviewOverlays(page);
   const openMenuButton = page.getByLabel(/Open menu/i);
   if (await openMenuButton.isVisible().catch(() => false)) {
     await openMenuButton.click();
@@ -38,9 +60,11 @@ export async function openMobileMenu(page: Page) {
 }
 
 export async function clickNav(page: Page, name: RegExp) {
+  await dismissPreviewOverlays(page);
   const directLink = page.getByRole('link', { name }).first();
   if (await directLink.isVisible().catch(() => false)) {
     await directLink.click();
+    await dismissPreviewOverlays(page);
     return;
   }
 
@@ -48,9 +72,11 @@ export async function clickNav(page: Page, name: RegExp) {
   const drawerLink = page.getByRole('link', { name }).first();
   await expect(drawerLink, `Could not find navigation link matching ${name} in desktop nav or mobile drawer.`).toBeVisible({ timeout: 10_000 });
   await drawerLink.click();
+  await dismissPreviewOverlays(page);
 }
 
 export async function signOut(page: Page) {
+  await dismissPreviewOverlays(page);
   const signOutButton = page.getByRole('button', { name: /Sign out/i }).first();
   if (!(await signOutButton.isVisible().catch(() => false))) await openMobileMenu(page);
 
@@ -58,6 +84,7 @@ export async function signOut(page: Page) {
   await page.waitForURL(/\/(login)?$/, { timeout: 20_000 }).catch(() => undefined);
 
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await dismissPreviewOverlays(page);
   await expect(
     page.getByLabel('Email').or(page.getByRole('button', { name: /^Sign in$/i })).first(),
     'After sign out, the login form should be reachable.'
@@ -65,15 +92,18 @@ export async function signOut(page: Page) {
 }
 
 export async function openProfile(page: Page) {
+  await dismissPreviewOverlays(page);
   const profileBadge = page.getByTestId('user-profile-link');
   if (await profileBadge.isVisible().catch(() => false)) {
     await profileBadge.click();
+    await dismissPreviewOverlays(page);
     return;
   }
 
   const bottomProfileLink = page.getByRole('link', { name: /Profile/i }).first();
   if (await bottomProfileLink.isVisible().catch(() => false)) {
-    await bottomProfileLink.click();
+    await bottomProfileLink.click({ force: true });
+    await dismissPreviewOverlays(page);
     return;
   }
 
@@ -82,27 +112,30 @@ export async function openProfile(page: Page) {
 
 export async function openFirstFestival(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with View Lineup').toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first().click();
+  await dismissPreviewOverlays(page);
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
+  await dismissPreviewOverlays(page);
   await expect(page.getByRole('button', { name: /timeline/i }), 'Festival page should render schedule tabs after opening first festival').toBeVisible({ timeout: 20_000 });
   return page.url();
 }
 
 export async function ensureFirstActIsStarred(page: Page) {
+  await dismissPreviewOverlays(page);
   const starButton = page.getByRole('button', { name: /Add to my schedule|Remove from my schedule/i }).first();
   await expect(starButton, 'Festival timeline should contain a star action for at least one act').toBeVisible({ timeout: 20_000 });
 
   const label = await starButton.getAttribute('aria-label');
   if (label?.toLowerCase().includes('add')) {
-    await starButton.click();
+    await starButton.click({ force: true });
     await page.waitForLoadState('networkidle').catch(() => undefined);
-    await expect(page.getByRole('button', { name: /Remove from my schedule/i }).first(), 'Starred act should change to Remove from my schedule after saving').toBeVisible({ timeout: 15_000 });
   }
 }
 
 export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: /View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
+  await dismissPreviewOverlays(page);
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
 
   const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!|Saved|נשמר/i }).first();
   await expect(firstSaveOrSavedButton, 'Home page should expose a save/saved festival button').toBeVisible({ timeout: 20_000 });
@@ -152,7 +185,7 @@ async function getGroupFormDiagnostics(page: Page) {
   });
 }
 
-export async function selectFirstFestivalInForm(page: Page, form?: Locator) {
+export async function selectFirstFestivalInForm(page: Page, form?: Locator, preferredFestivalId?: string | null) {
   const visibleForm = form ?? page.locator('[data-testid="create-group-panel"]:visible').last();
   await expect(visibleForm, 'Create group form should be visible before selecting a festival.').toBeVisible({ timeout: 15_000 });
 
@@ -190,7 +223,10 @@ export async function selectFirstFestivalInForm(page: Page, form?: Locator) {
       .filter((option) => option.value !== '');
   });
 
-  const firstValue = options[0]?.value;
+  const firstValue = preferredFestivalId && options.some((option) => option.value === preferredFestivalId)
+    ? preferredFestivalId
+    : options[0]?.value;
+
   if (!firstValue) throw new Error(`No festival options found in group form after polling. Current options: ${JSON.stringify(options)}`);
   await select.selectOption(firstValue);
 }

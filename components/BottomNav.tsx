@@ -2,24 +2,29 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem } from '@/lib/designSystem';
 
 const items = [
-  { href: '/', icon: '🎪', label: 'Home' },
-  { href: '/my-schedule', icon: '⭐', label: 'Schedule' },
-  { href: '/groups', icon: '👥', label: 'Groups' },
-  { href: '/profile', icon: '👤', label: 'Profile' },
+  { href: '/', icon: 'F', label: 'Festivals' },
+  { href: '/my-schedule', icon: 'S', label: 'Schedule' },
+  { href: '/groups', icon: 'G', label: 'Groups' },
+  { href: '/profile', icon: 'P', label: 'Profile' },
 ];
 
 const BottomNav: React.FC = () => {
   const { theme } = useAuth();
-  const c = getThemeColors(theme);
+  const ds = createDesignSystem(theme);
   const router = useRouter();
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 flex justify-around items-center px-2 pb-safe"
-      style={{ background: c.surf, borderTop: `1px solid ${c.brd}`, height: '56px', backdropFilter: 'blur(12px)' }}
+      aria-label="Mobile bottom navigation"
+      className="glass-nav md:hidden fixed bottom-0 inset-x-0 z-40 flex justify-around items-stretch pb-safe"
+      style={{
+        background: `${ds.colors.surface}f4`,
+        borderTop: `1px solid ${ds.colors.border}`,
+        minHeight: '60px',
+      }}
     >
       {items.map(({ href, icon, label }) => {
         const active = router.pathname === href || (href !== '/' && router.pathname.startsWith(href));
@@ -27,17 +32,27 @@ const BottomNav: React.FC = () => {
           <Link
             key={href}
             href={href}
-            className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-black transition-all"
-            style={{ color: active ? c.acc : c.muted }}
+            className="tap-active relative flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-bold transition-colors"
+            style={{ color: active ? ds.colors.primary : ds.colors.muted, minHeight: 60 }}
           >
             {active && (
               <span
-                className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full"
-                style={{ background: c.acc, boxShadow: `0 0 8px ${c.acc}` }}
+                className="absolute inset-x-2 top-1 bottom-1 rounded-2xl"
+                style={{ background: ds.colors.primarySoft }}
               />
             )}
-            <span className="text-xl leading-none" style={{ filter: active ? `drop-shadow(0 0 4px ${c.acc}88)` : 'none' }}>{icon}</span>
-            <span>{label}</span>
+            <span
+              className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black leading-none"
+              style={{
+                background: active ? ds.colors.primary : ds.colors.surfaceElevated,
+                color: active ? '#fff' : ds.colors.muted,
+                boxShadow: active ? ds.shadows.glowPrimary : 'none',
+                border: `1px solid ${active ? ds.colors.primary : ds.colors.border}`,
+              }}
+            >
+              {icon}
+            </span>
+            <span className="relative z-10">{label}</span>
           </Link>
         );
       })}
