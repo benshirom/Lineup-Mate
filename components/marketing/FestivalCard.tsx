@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { formatDateRange, getThemeColors } from '@/lib/platform';
+import { formatDateRange, getThemeColors, typography } from '@/lib/platform';
 
 export interface FestivalCardFestival {
   id: number;
@@ -41,7 +41,7 @@ export default function FestivalCard({ festival, stats, isSaved, onToggleSaved, 
               {(festival.name || 'F').slice(0, 1).toUpperCase()}
             </div>
             <div>
-              <h3 className="text-base font-black leading-snug" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', letterSpacing: '-0.01em' }}>{festival.name}</h3>
+              <h3 className="text-base font-black leading-snug" style={{ fontFamily: typography.display, letterSpacing: '-0.01em' }}>{festival.name}</h3>
               <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: accent }}>{festival.genre_label || festival.genre || 'Festival'}</p>
             </div>
           </div>
