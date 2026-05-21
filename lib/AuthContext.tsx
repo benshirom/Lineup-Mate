@@ -101,10 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loadProfile, user?.id]);
 
   const setLocalPreferences = useCallback((next: Partial<Pick<UserProfile, 'theme'>>) => {
-    const nextTheme = normalizeTheme(next.theme ?? theme);
+    const nextTheme = normalizeTheme(next.theme ?? readStoredTheme());
     applyPreferences(nextTheme);
     setProfile((current) => current ? { ...current, theme: nextTheme } : current);
-  }, [applyPreferences, theme]);
+  }, [applyPreferences]);
 
   useEffect(() => {
     applyPreferences(readStoredTheme());
