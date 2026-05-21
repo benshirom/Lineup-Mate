@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { getThemeColors, typography } from '@/lib/platform';
 
 const sections = [
   {
@@ -61,7 +61,7 @@ export default function FestivalLineupPlanningGuide() {
           <header className="mb-8">
             <Link href="/faq" className="text-sm font-bold hover:opacity-80" style={{ color: c.acc }}>← Back to FAQ</Link>
             <p className="mt-6 text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.accB }}>Festival planning guide</p>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', letterSpacing: '-0.04em', lineHeight: 1 }}>
+            <h1 className="mt-2 text-4xl font-black sm:text-5xl" style={{ fontFamily: typography.display, letterSpacing: typography.tight, lineHeight: 1 }}>
               How to plan a festival lineup without turning it into a spreadsheet nightmare.
             </h1>
             <p className="mt-4 text-base leading-relaxed" style={{ color: c.muted }}>
@@ -83,7 +83,7 @@ export default function FestivalLineupPlanningGuide() {
 
           <section className="mt-8 rounded-[28px] p-6" style={{ background: `linear-gradient(135deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
             <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>Lineup·Mate approach</p>
-            <h2 className="mt-2 text-2xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif' }}>
+            <h2 className="mt-2 text-2xl font-black" style={{ fontFamily: typography.display }}>
               The lineup is public. The plan is personal.
             </h2>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>
