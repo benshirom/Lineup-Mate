@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/AuthContext';
+import BrandHeading from '@/components/marketing/BrandHeading';
 import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 import { getThemeColors } from '@/lib/platform';
@@ -203,9 +204,9 @@ const LoginPage = () => {
               <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: c.accB }} />
               Crew-ready planning
             </div>
-            <h2 className="text-4xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', letterSpacing: '-0.04em', lineHeight: 1 }}>
+            <BrandHeading className="text-4xl font-black" tight lineHeight={1}>
               Your next set should not depend on group chat chaos.
-            </h2>
+            </BrandHeading>
             <p className="mt-4 text-sm leading-relaxed" style={{ color: c.muted }}>
               Sign in to keep your festival plan close: saved artists, shared groups, and the next move your crew can actually follow.
             </p>
@@ -225,7 +226,7 @@ const LoginPage = () => {
 
           <section className="w-full rounded-[28px] p-6 shadow-2xl sm:p-8" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
-            <h1 className="text-3xl font-black" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', letterSpacing: '-0.03em' }}>{titles[view]}</h1>
+            <BrandHeading as="h1" className="text-3xl font-black" tight>{titles[view]}</BrandHeading>
             <p className="mb-6 mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>{subtitles[view]}</p>
 
             {message && <div className="mb-4 rounded-2xl p-3 text-sm font-bold" style={{ background: '#16a34a20', color: '#16a34a', border: '1px solid #16a34a40' }}>{message}</div>}
