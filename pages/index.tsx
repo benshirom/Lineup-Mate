@@ -202,6 +202,9 @@ export default function Home() {
                 <a href="#how-it-works" className="tap-active rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
                   See how it works
                 </a>
+                <a href="/faq" className="tap-active rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+                  FAQ
+                </a>
                 {isAdmin && (
                   <button type="button" onClick={() => router.push('/admin')} className="tap-active rounded-full px-5 py-3 text-sm font-extrabold transition hover:brightness-105" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
                     {t.importSync}
@@ -350,6 +353,9 @@ export default function Home() {
             <p className="mt-3 max-w-2xl text-sm leading-relaxed" style={{ color: c.muted }}>
               Lineup·Mate is designed for the moment when everyone wants to see something different. Save your picks, open a group, and use the schedule as a shared decision layer.
             </p>
+            <a href="/faq" className="mt-5 inline-flex rounded-full px-5 py-3 text-sm font-black" style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.txt }}>
+              Read the FAQ
+            </a>
           </div>
         </section>
 
