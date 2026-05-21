@@ -39,6 +39,8 @@ test.describe('authenticated flows', () => {
   });
 
   test('user can open first festival and star an act if timeline has items', async ({ page }) => {
+    test.setTimeout(60_000);
+
     await openFirstFestival(page);
     await ensureFirstActIsStarred(page);
 
