@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import BrandHeading from '@/components/marketing/BrandHeading';
 import Navbar from '@/components/Navbar';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors, typography } from '@/lib/platform';
+import { getThemeColors } from '@/lib/platform';
 
 const faqs = [
   {
@@ -61,9 +62,9 @@ export default function FaqPage() {
         <section className="mx-auto max-w-4xl px-4 py-10 sm:py-16">
           <div className="mb-8">
             <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.accB }}>FAQ</p>
-            <h1 className="mt-2 text-4xl font-black sm:text-5xl" style={{ fontFamily: typography.display, letterSpacing: typography.tight }}>
+            <BrandHeading as="h1" tight className="mt-2 text-4xl font-black sm:text-5xl">
               Festival planning, explained clearly.
-            </h1>
+            </BrandHeading>
             <p className="mt-4 max-w-2xl text-base leading-relaxed" style={{ color: c.muted }}>
               Everything a new user should understand before building a lineup, saving artists, or planning with a crew.
             </p>
@@ -71,7 +72,7 @@ export default function FaqPage() {
 
           <div className="mb-6 rounded-[28px] p-5" style={{ background: `linear-gradient(135deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
             <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>Guide</p>
-            <h2 className="mt-2 text-2xl font-black" style={{ fontFamily: typography.display }}>Need a better way to plan the lineup?</h2>
+            <BrandHeading className="mt-2 text-2xl font-black">Need a better way to plan the lineup?</BrandHeading>
             <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>
               Read the practical planning guide before you start saving artists and coordinating with friends.
             </p>
@@ -90,7 +91,7 @@ export default function FaqPage() {
           </div>
 
           <div className="mt-8 rounded-[28px] p-5 sm:p-6" style={{ background: `linear-gradient(135deg, ${c.surf}, ${c.surf2})`, border: `1px solid ${c.brd}` }}>
-            <h2 className="text-2xl font-black" style={{ fontFamily: typography.display }}>Ready to build your lineup?</h2>
+            <BrandHeading className="text-2xl font-black">Ready to build your lineup?</BrandHeading>
             <p className="mt-2 text-sm" style={{ color: c.muted }}>Start from the festival list, pick your must-see artists, and bring your crew into the plan.</p>
             <Link href="/#events" className="mt-4 inline-flex rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: c.acc }}>
               Choose a festival
