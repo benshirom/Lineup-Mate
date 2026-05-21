@@ -12,6 +12,21 @@ test.describe('public browsing', () => {
     await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first()).toBeVisible({ timeout: 20_000 });
   });
 
+  test('public SEO files are available', async ({ request }) => {
+    const robots = await request.get('/robots.txt');
+    expect(robots.ok()).toBeTruthy();
+    const robotsText = await robots.text();
+    expect(robotsText).toContain('User-agent: *');
+    expect(robotsText).toContain('Sitemap: https://lineup-mate.netlify.app/sitemap.xml');
+
+    const sitemap = await request.get('/sitemap.xml');
+    expect(sitemap.ok()).toBeTruthy();
+    const sitemapText = await sitemap.text();
+    expect(sitemapText).toContain('<loc>https://lineup-mate.netlify.app/</loc>');
+    expect(sitemapText).toContain('<loc>https://lineup-mate.netlify.app/faq</loc>');
+    expect(sitemapText).toContain('<loc>https://lineup-mate.netlify.app/guides/festival-lineup-planning</loc>');
+  });
+
   test('guest can open the FAQ page from the homepage and continue to the planning guide', async ({ page }) => {
     await page.goto('/');
 
