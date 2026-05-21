@@ -5,6 +5,7 @@ interface SeoProps {
   description?: string;
   canonicalPath?: string;
   image?: string;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
 }
 
 const SITE_URL = 'https://lineup-mate.netlify.app';
@@ -17,8 +18,10 @@ export default function Seo({
   description = DEFAULT_DESCRIPTION,
   canonicalPath = '/',
   image = DEFAULT_IMAGE,
+  structuredData,
 }: SeoProps) {
   const canonical = `${SITE_URL}${canonicalPath}`;
+  const structuredDataItems = Array.isArray(structuredData) ? structuredData : structuredData ? [structuredData] : [];
 
   return (
     <Head>
@@ -37,6 +40,14 @@ export default function Seo({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
       <meta name="theme-color" content="#080B12" />
+
+      {structuredDataItems.map((item, index) => (
+        <script
+          key={`structured-data-${index}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
+        />
+      ))}
     </Head>
   );
 }
