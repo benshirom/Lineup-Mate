@@ -1,0 +1,32 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#080B12"/>
+  <circle cx="1010" cy="120" r="220" fill="#8B5CF6" fill-opacity="0.22"/>
+  <circle cx="160" cy="520" r="260" fill="#06B6D4" fill-opacity="0.16"/>
+  <path d="M96 468C196 372 296 544 396 448C496 352 596 524 696 428C796 332 896 504 996 408C1056 350 1100 364 1136 396" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round" opacity="0.58"/>
+  <path d="M96 508C196 412 296 584 396 488C496 392 596 564 696 468C796 372 896 544 996 448C1056 390 1100 404 1136 436" stroke="#06B6D4" stroke-width="4" stroke-linecap="round" opacity="0.46"/>
+  <rect x="82" y="84" width="1036" height="462" rx="44" fill="#111827" fill-opacity="0.82" stroke="#273244" stroke-width="2"/>
+  <rect x="126" y="128" width="154" height="42" rx="21" fill="#06B6D4" fill-opacity="0.14" stroke="#06B6D4" stroke-opacity="0.34"/>
+  <circle cx="150" cy="149" r="6" fill="#06B6D4"/>
+  <text x="170" y="155" fill="#67E8F9" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">CREW READY</text>
+  <text x="126" y="255" fill="#F8FAFC" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="74" font-weight="900" letter-spacing="-3">Lineup·Mate</text>
+  <text x="126" y="318" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="600">Your festival plan, without the chaos.</text>
+  <g transform="translate(126 372)">
+    <rect width="268" height="74" rx="22" fill="#151E2E" stroke="#273244"/>
+    <rect x="18" y="18" width="6" height="38" rx="3" fill="#8B5CF6"/>
+    <text x="38" y="33" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">22:30 · Main floor</text>
+    <text x="38" y="55" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900">Crew pick saved</text>
+  </g>
+  <g transform="translate(418 372)">
+    <rect width="268" height="74" rx="22" fill="#151E2E" stroke="#F59E0B" stroke-opacity="0.42"/>
+    <rect x="18" y="18" width="6" height="38" rx="3" fill="#F59E0B"/>
+    <text x="38" y="33" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">00:10 · Forest</text>
+    <text x="38" y="55" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900">Clash detected</text>
+  </g>
+  <g transform="translate(710 372)">
+    <rect width="268" height="74" rx="22" fill="#151E2E" stroke="#273244"/>
+    <rect x="18" y="18" width="6" height="38" rx="3" fill="#06B6D4"/>
+    <text x="38" y="33" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800">01:45 · Dome</text>
+    <text x="38" y="55" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900">Next crew move</text>
+  </g>
+  <text x="126" y="500" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Save artists · avoid clashes · sync your crew</text>
+</svg>
