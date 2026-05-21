@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
+import FestivalCard from '@/components/marketing/FestivalCard';
+import MarketingFeatureCard from '@/components/marketing/MarketingFeatureCard';
 import ProductPreviewCard from '@/components/marketing/ProductPreviewCard';
 import Seo from '@/components/Seo';
 import { useAuth } from '@/lib/AuthContext';
-import { formatDateRange, genreFilters, getThemeColors } from '@/lib/platform';
+import { genreFilters, getThemeColors } from '@/lib/platform';
 
 interface Festival {
   id: number;
@@ -165,8 +167,6 @@ export default function Home() {
     setSavedFestivalIds(Object.fromEntries((savedRows || []).map((row) => [row.festival_id, true])));
   };
 
-  const getFestivalName = (festival: Festival) => festival.name;
-  const getFestivalLocation = (festival: Festival) => festival.location;
   const nudgeFestival = festivals.find((festival) => festival.id === loginNudgeFestivalId);
 
   return (
@@ -226,14 +226,13 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {featureCards.map((card, index) => (
-              <article key={card.title} className="rounded-[24px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full text-sm font-black" style={{ background: `${index === 1 ? c.warning : index === 2 ? c.accB : c.acc}1f`, color: index === 1 ? c.warning : index === 2 ? c.accB : c.acc }}>
-                  {index + 1}
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: c.muted }}>{card.eyebrow}</p>
-                <h3 className="mt-1 text-xl font-black">{card.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>{card.body}</p>
-              </article>
+              <MarketingFeatureCard
+                key={card.title}
+                index={index}
+                eyebrow={card.eyebrow}
+                title={card.title}
+                body={card.body}
+              />
             ))}
           </div>
         </section>
@@ -262,51 +261,15 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredFestivals.map((festival) => {
               const festivalStats = stats[festival.id] || { performances: 0, stages: 0, days: 0, festival_id: festival.id };
-              const isSaved = savedFestivalIds[festival.id];
               return (
-                <article key={festival.id} data-testid="festival-card" className="fade-up overflow-hidden rounded-[24px] shadow-xl transition hover:-translate-y-1 hover:shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}`, borderTop: `2px solid ${festival.color || c.acc}` }}>
-                  <div className="p-5">
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-black shadow-sm" style={{ background: `${festival.color || c.acc}18`, border: `1px solid ${festival.color || c.acc}33`, color: festival.color || c.acc }}>
-                          {(festival.name || 'F').slice(0, 1).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="text-base font-black leading-snug" style={{ fontFamily: 'Space Grotesk, Inter, sans-serif', letterSpacing: '-0.01em' }}>{getFestivalName(festival)}</h3>
-                          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: festival.color || c.acc }}>{festival.genre_label || festival.genre || 'Festival'}</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleSavedFestival(festival.id)}
-                        className="shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold transition"
-                        style={{ background: isSaved ? `${c.acc}22` : c.surf2, color: isSaved ? c.acc : c.muted, border: `1px solid ${isSaved ? c.acc : c.brd}` }}
-                      >
-                        {isSaved ? '✓ Saved' : '+ Save'}
-                      </button>
-                    </div>
-
-                    <div className="mb-4 space-y-1 text-xs" style={{ color: c.muted }}>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: c.accB }} /><span className="truncate">{getFestivalLocation(festival) || 'Location TBA'}</span></div>
-                      <div className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: c.star }} /><span>{formatDateRange(festival.start_date, festival.end_date)}</span></div>
-                    </div>
-
-                    <div className="mb-4 grid grid-cols-3 gap-1.5 text-center text-xs">
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.performances}</b><span style={{ color: c.muted }}>{t.artists}</span></div>
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.stages}</b><span style={{ color: c.muted }}>{t.stages}</span></div>
-                      <div className="rounded-xl py-2" style={{ background: c.surf2 }}><b className="block text-base font-black" style={{ color: c.txt }}>{festivalStats.days}</b><span style={{ color: c.muted }}>{t.days}</span></div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/festival/${festival.id}`)}
-                      className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white transition hover:brightness-110"
-                      style={{ background: c.acc, boxShadow: `0 4px 16px ${c.acc}33` }}
-                    >
-                      {t.viewLineup}
-                    </button>
-                  </div>
-                </article>
+                <FestivalCard
+                  key={festival.id}
+                  festival={festival}
+                  stats={festivalStats}
+                  isSaved={Boolean(savedFestivalIds[festival.id])}
+                  onToggleSaved={toggleSavedFestival}
+                  onOpen={(festivalId) => router.push(`/festival/${festivalId}`)}
+                />
               );
             })}
           </div>
@@ -333,7 +296,7 @@ export default function Home() {
               <p className="text-xs font-black uppercase tracking-[0.18em]" style={{ color: c.acc }}>Save your lineup</p>
               <h2 className="mt-2 text-2xl font-black">Create a free account first</h2>
               <p className="mt-2 text-sm leading-relaxed" style={{ color: c.muted }}>
-                Sign in to save {nudgeFestival ? getFestivalName(nudgeFestival) : 'this festival'}, mark your must-see artists, and plan with your crew.
+                Sign in to save {nudgeFestival ? nudgeFestival.name : 'this festival'}, mark your must-see artists, and plan with your crew.
               </p>
               <div className="mt-5 flex gap-2">
                 <button type="button" onClick={() => setLoginNudgeFestivalId(null)} className="flex-1 rounded-2xl px-4 py-3 text-sm font-bold" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>Maybe later</button>
