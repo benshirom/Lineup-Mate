@@ -27,6 +27,22 @@ const sections = [
   }
 ];
 
+const guideStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: 'How to plan a festival lineup with friends',
+  description: 'A practical guide for planning a festival lineup, saving must-see artists, avoiding schedule clashes, and coordinating with friends on mobile.',
+  author: {
+    '@type': 'Organization',
+    name: 'Lineup·Mate'
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'Lineup·Mate'
+  },
+  mainEntityOfPage: 'https://lineup-mate.netlify.app/guides/festival-lineup-planning'
+};
+
 export default function FestivalLineupPlanningGuide() {
   const { theme } = useAuth();
   const c = getThemeColors(theme);
@@ -37,6 +53,7 @@ export default function FestivalLineupPlanningGuide() {
         title="How to plan a festival lineup with friends | Lineup·Mate Guide"
         description="A practical guide for planning a festival lineup, saving must-see artists, avoiding schedule clashes, and coordinating with friends on mobile."
         canonicalPath="/guides/festival-lineup-planning"
+        structuredData={guideStructuredData}
       />
       <Navbar />
       <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
