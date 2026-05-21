@@ -31,6 +31,19 @@ const faqs = [
   }
 ];
 
+const faqStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer
+    }
+  }))
+};
+
 export default function FaqPage() {
   const { theme } = useAuth();
   const c = getThemeColors(theme);
@@ -41,6 +54,7 @@ export default function FaqPage() {
         title="Lineup·Mate FAQ — Festival planner questions"
         description="Answers about Lineup·Mate, mobile festival planning, saving artists, avoiding schedule clashes, and planning festival lineups with friends."
         canonicalPath="/faq"
+        structuredData={faqStructuredData}
       />
       <Navbar />
       <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
