@@ -125,10 +125,16 @@ test.describe.serial('group collaboration flows', () => {
     await expect(page.getByRole('heading', { name: groupName })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/members/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /^List$/i })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByTestId('group-list-row').first(),
+      'Group schedule should default to List view and render list rows.'
+    ).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole('button', { name: /^Timeline$/i }).click();
-    await expect(page.getByTestId('group-performance-block').first()).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByTestId('group-performance-block').first(),
+      'Timeline view should render timeline performance blocks after switching from List.'
+    ).toBeVisible({ timeout: 30_000 });
 
     await page.goto(festivalUrl);
     await expect(page.getByTestId('festival-performance-block').first()).toBeVisible({ timeout: 20_000 });
