@@ -140,17 +140,17 @@ export default function AdminUsers() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select style={selectStyle} value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}>
+        <select data-testid="users-role-filter" style={selectStyle} value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}>
           <option value="">All Roles</option>
           <option value="user">User</option>
           <option value="admin">Admin</option>
         </select>
-        <select style={selectStyle} value={blockedFilter} onChange={(e) => { setBlockedFilter(e.target.value); setPage(0); }}>
+        <select data-testid="users-blocked-filter" style={selectStyle} value={blockedFilter} onChange={(e) => { setBlockedFilter(e.target.value); setPage(0); }}>
           <option value="">All Statuses</option>
           <option value="false">Active</option>
           <option value="true">Blocked</option>
         </select>
-        <select style={selectStyle} value={verifiedFilter} onChange={(e) => { setVerifiedFilter(e.target.value); setPage(0); }}>
+        <select data-testid="users-verified-filter" style={selectStyle} value={verifiedFilter} onChange={(e) => { setVerifiedFilter(e.target.value); setPage(0); }}>
           <option value="">All Verification</option>
           <option value="verified">Verified</option>
           <option value="unverified">Unverified</option>

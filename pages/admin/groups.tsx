@@ -162,7 +162,7 @@ export default function AdminGroups() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select style={selectStyle} value={blockedFilter} onChange={(e) => { setBlockedFilter(e.target.value); setPage(0); }}>
+        <select data-testid="groups-blocked-filter" style={selectStyle} value={blockedFilter} onChange={(e) => { setBlockedFilter(e.target.value); setPage(0); }}>
           <option value="">All Statuses</option>
           <option value="false">Active</option>
           <option value="true">Blocked</option>

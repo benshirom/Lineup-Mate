@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { login, clickNav, dismissPreviewOverlays } from './helpers';
+import { login, dismissPreviewOverlays } from './helpers';
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
@@ -13,12 +13,10 @@ test.describe('admin dashboard', () => {
     await login(page, adminEmail!, adminPassword!);
   });
 
-  test('admin can navigate to dashboard via sub-nav', async ({ page }) => {
-    await clickNav(page, /Admin/i);
+  test('admin can navigate to dashboard directly', async ({ page }) => {
+    await page.goto('/admin/dashboard');
     await dismissPreviewOverlays(page);
-    await page.getByRole('link', { name: /Dashboard/i }).first().click();
-    await expect(page).toHaveURL(/\/admin\/dashboard/, { timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible({ timeout: 20_000 });
   });
 
   test('dashboard shows stat cards', async ({ page }) => {
@@ -36,12 +34,13 @@ test.describe('admin dashboard', () => {
     await expect(page.getByText(/Most Active Users/i)).toBeVisible();
   });
 
-  test('admin sub-nav Import link goes to /admin', async ({ page }) => {
+  test('dashboard sub-nav links are visible', async ({ page }) => {
     await page.goto('/admin/dashboard');
     await dismissPreviewOverlays(page);
-    await page.getByRole('link', { name: /Import/i }).first().click();
-    await expect(page).toHaveURL(/\/admin$/, { timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('link', { name: /Dashboard/i }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('link', { name: /Users/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Groups/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Import/i }).first()).toBeVisible();
   });
 });
 

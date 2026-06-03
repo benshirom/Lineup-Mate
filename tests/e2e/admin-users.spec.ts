@@ -29,22 +29,20 @@ test.describe('admin user management', () => {
 
   test('role filter shows only selected role', async ({ page }) => {
     await expect(page.getByRole('columnheader', { name: /Email/i })).toBeVisible({ timeout: 15_000 });
-    await page.selectOption('select:near(:text("All Roles"))', 'admin');
-    await page.waitForTimeout(500);
-    const roleButtons = page.getByRole('button', { name: /^admin$/i });
-    const count = await roleButtons.count();
+    await page.locator('[data-testid="users-role-filter"]').selectOption('admin');
+    await page.waitForTimeout(800);
+    // After filtering to 'admin', there should be no 'user' role buttons
     const userButtons = page.getByRole('button', { name: /^user$/i });
-    const userCount = await userButtons.count();
-    expect(userCount).toBe(0);
-    expect(count).toBeGreaterThanOrEqual(0);
+    expect(await userButtons.count()).toBe(0);
   });
 
   test('blocked filter shows only blocked users', async ({ page }) => {
     await expect(page.getByRole('columnheader', { name: /Email/i })).toBeVisible({ timeout: 15_000 });
-    await page.selectOption('select:near(:text("All Statuses"))', 'true');
-    await page.waitForTimeout(500);
-    const activeCount = await page.getByText('Active').count();
-    expect(activeCount).toBe(0);
+    await page.locator('[data-testid="users-blocked-filter"]').selectOption('true');
+    await page.waitForTimeout(800);
+    // After filtering to blocked only, there should be no 'Active' badges
+    const activeSpans = page.locator('span', { hasText: /^Active$/ });
+    expect(await activeSpans.count()).toBe(0);
   });
 
   test('shows pagination info', async ({ page }) => {
