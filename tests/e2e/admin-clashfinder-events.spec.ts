@@ -17,7 +17,7 @@ test.describe('admin Clashfinder event browser', () => {
 
   test('admin can search Clashfinder events, select Ozora, and preview it', async ({ page }) => {
     await test.step('open admin page from responsive navigation', async () => {
-      await clickNav(page, /Admin/i);
+      await page.goto('/admin');
       await expect(page.getByRole('heading', { name: /Clashfinder Import|Clashfinder Import & Sync/i })).toBeVisible({ timeout: 20_000 });
     });
 
