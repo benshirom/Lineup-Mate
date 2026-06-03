@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 
-function groupCount(rows: { id: string | number }[], key: keyof typeof rows[0]) {
+function groupCount(rows: Record<string, unknown>[], key: string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const row of rows) {
     const k = String(row[key]);
@@ -67,8 +67,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   ]);
 
   // Most active users
-  const prefCounts = groupCount((allPrefs ?? []) as { id: string }[], 'user_id' as never);
-  const topUserIds = topN(prefCounts as Record<string, number>, 10);
+  const prefCounts = groupCount((allPrefs ?? []) as Record<string, unknown>[], 'user_id');
+  const topUserIds = topN(prefCounts, 10);
   let mostActiveUsers: { id: string; display_name: string | null; email: string | null; preferenceCount: number }[] = [];
   if (topUserIds.length > 0) {
     const { data: profiles } = await supabaseAdmin
@@ -82,8 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Most saved festivals
-  const savedCounts = groupCount((allSaved ?? []) as { id: string }[], 'festival_id' as never);
-  const topFestIds = topN(savedCounts as Record<string, number>, 5);
+  const savedCounts = groupCount((allSaved ?? []) as Record<string, unknown>[], 'festival_id');
+  const topFestIds = topN(savedCounts, 5);
   let mostSavedFestivals: { id: number; name: string; saveCount: number }[] = [];
   if (topFestIds.length > 0) {
     const { data: festivals } = await supabaseAdmin
@@ -97,8 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Most popular groups
-  const memberCounts = groupCount((allMembers ?? []) as { id: string }[], 'group_id' as never);
-  const topGroupIds = topN(memberCounts as Record<string, number>, 5);
+  const memberCounts = groupCount((allMembers ?? []) as Record<string, unknown>[], 'group_id');
+  const topGroupIds = topN(memberCounts, 5);
   let mostPopularGroups: { id: number; name: string; festivalName: string; memberCount: number }[] = [];
   if (topGroupIds.length > 0) {
     const { data: groups } = await supabaseAdmin
