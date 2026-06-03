@@ -23,20 +23,30 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
   const c = getThemeColors(theme);
 
   useEffect(() => {
-    if (authReady && (!user || profile?.role !== 'admin')) {
+    if (!authReady) return;
+    if (!user) {
+      router.push('/');
+      return;
+    }
+    // profile is loaded asynchronously after authReady; wait for it
+    if (profile !== null && profile.role !== 'admin') {
       router.push('/');
     }
   }, [authReady, user, profile, router]);
 
-  if (!authReady || !user || profile?.role !== 'admin') {
+  if (!authReady || !user || profile === null) {
     return (
       <div style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <Navbar />
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80, color: c.muted }}>
-          {!authReady ? 'Loading…' : 'Redirecting…'}
+          Loading…
         </div>
       </div>
     );
+  }
+
+  if (profile.role !== 'admin') {
+    return null;
   }
 
   return (
