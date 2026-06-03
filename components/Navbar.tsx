@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
             </>
           )}
           {isAdmin && (
-            <Link href="/admin" className="text-sm hover:opacity-80 transition-opacity" style={navLinkStyle('/admin')}>
+            <Link href="/admin/dashboard" className="text-sm hover:opacity-80 transition-opacity" style={navLinkStyle('/admin/dashboard')}>
               Admin
             </Link>
           )}
@@ -121,7 +121,7 @@ const Navbar: React.FC = () => {
                 {t.navProfile}
               </Link>
               {isAdmin && (
-                <Link href="/admin" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.muted }}>
+                <Link href="/admin/dashboard" onClick={close} className="rounded-2xl px-4 py-3 text-sm font-semibold hover:opacity-80" style={{ color: c.muted }}>
                   Admin
                 </Link>
               )}
