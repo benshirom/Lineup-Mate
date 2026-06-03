@@ -238,11 +238,12 @@ export default function FestivalPage() {
   }, [selectedDayPerformances]);
 
   const hours = useMemo(() => {
-    if (visiblePerformances.length === 0) return Array.from({ length: 8 }, (_, index) => index);
-    const min = Math.floor(Math.min(...visiblePerformances.map((performance) => hourNumber(performance.startTime))));
-    const max = Math.ceil(Math.max(...visiblePerformances.map((performance) => hourNumber(performance.endTime))));
+    const base = selectedDayPerformances.length > 0 ? selectedDayPerformances : visiblePerformances;
+    if (base.length === 0) return Array.from({ length: 8 }, (_, index) => index);
+    const min = Math.floor(Math.min(...base.map((performance) => hourNumber(performance.startTime))));
+    const max = Math.ceil(Math.max(...base.map((performance) => hourNumber(performance.endTime))));
     return Array.from({ length: Math.max(1, max - min) }, (_, index) => min + index);
-  }, [visiblePerformances]);
+  }, [selectedDayPerformances, visiblePerformances]);
 
   const requireLogin = () => {
     if (!user) {
