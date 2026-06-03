@@ -4,6 +4,26 @@ export function localPart(email: string) {
   return email.split('@')[0];
 }
 
+export const TEST_ADMIN_PREFIX = '[TEST_ADMIN]';
+
+export async function cleanupTestAdminData(baseURL: string, adminToken: string) {
+  try {
+    const groupsRes = await fetch(
+      `${baseURL}/api/admin/groups?search=${encodeURIComponent(TEST_ADMIN_PREFIX)}&limit=100`,
+      { headers: { Authorization: `Bearer ${adminToken}` } }
+    );
+    if (groupsRes.ok) {
+      const { groups } = await groupsRes.json() as { groups: Array<{ id: number }> };
+      for (const g of groups ?? []) {
+        await fetch(`${baseURL}/api/admin/groups/${g.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+      }
+    }
+  } catch (_) { /* ignore */ }
+}
+
 export function festivalIdFromUrl(url: string) {
   return new URL(url).pathname.match(/\/festival\/(\d+)/)?.[1] || null;
 }
