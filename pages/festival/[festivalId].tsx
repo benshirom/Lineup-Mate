@@ -375,7 +375,23 @@ export default function FestivalPage() {
       setTimeout(() => scrollToDay(selectedDay), 50);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, selectedDay, refTime]);
+  }, [tab, refTime]);
+
+  // Sync selected day button as user scrolls the timeline
+  useEffect(() => {
+    if (tab !== 'timeline') return;
+    const el = timelineRef.current;
+    if (!el || !refTime || !hours.length || !days.length) return;
+    const onScroll = () => {
+      const visibleAbsHour = minHour + el.scrollLeft / hourWidth;
+      const visibleDate = new Date(refTime + visibleAbsHour * 36e5).toLocaleDateString('sv');
+      const match = [...days].reverse().find((d) => d <= visibleDate);
+      if (match) setSelectedDay(match);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, days, refTime, hours, minHour, hourWidth]);
 
   const renderStarButton = (performance: PerformanceItem, compact = false) => {
     const isGoing = performance.status === 'going';
