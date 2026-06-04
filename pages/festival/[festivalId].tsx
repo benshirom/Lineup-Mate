@@ -42,9 +42,8 @@ function timeLabel(dateString: string) {
   return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function hourNumber(dateString: string) {
-  const date = new Date(dateString);
-  return date.getHours() + date.getMinutes() / 60;
+function absHour(dateString: string, refTime: number): number {
+  return (new Date(dateString).getTime() - refTime) / 36e5;
 }
 
 function durationHours(start: string, end: string) {
@@ -73,22 +72,20 @@ function detectConflicts(performances: PerformanceItem[]): Set<number> {
   return conflictIds;
 }
 
-function useNowLine(hours: number[], minHour: number, hourWidth: number, selectedDay: string) {
+function useNowLine(hours: number[], minHour: number, hourWidth: number, refTime: number) {
   const [nowLeft, setNowLeft] = useState<number | null>(null);
 
   useEffect(() => {
     const update = () => {
-      const now = new Date();
-      const todayStr = now.toLocaleDateString('sv');
-      if (selectedDay && todayStr !== selectedDay) { setNowLeft(null); return; }
-      const nowHour = now.getHours() + now.getMinutes() / 60;
-      if (hours.length === 0 || nowHour < hours[0] || nowHour > hours[hours.length - 1] + 1) { setNowLeft(null); return; }
-      setNowLeft((nowHour - minHour) * hourWidth);
+      if (!refTime) { setNowLeft(null); return; }
+      const nowAbsHour = (Date.now() - refTime) / 36e5;
+      if (hours.length === 0 || nowAbsHour < hours[0] || nowAbsHour > hours[hours.length - 1] + 1) { setNowLeft(null); return; }
+      setNowLeft((nowAbsHour - minHour) * hourWidth);
     };
     update();
     const id = setInterval(update, 60_000);
     return () => clearInterval(id);
-  }, [hours, minHour, hourWidth, selectedDay]);
+  }, [hours, minHour, hourWidth, refTime]);
 
   return nowLeft;
 }
@@ -135,6 +132,7 @@ export default function FestivalPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [popId, setPopId] = useState<number | null>(null);
   const nowLineRef = useRef<HTMLDivElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
 
   const c = getThemeColors(theme);
   const hourWidth = useHourWidth();
@@ -210,11 +208,26 @@ export default function FestivalPage() {
     loadData();
   }, [festivalId, supabase, user, day]);
 
+  const refTime = useMemo(() => {
+    if (!performances.length) return 0;
+    const d = new Date(Math.min(...performances.map((p) => new Date(p.startTime).getTime())));
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, [performances]);
+
+  const scrollToDay = (dayDate: string) => {
+    if (!refTime || !timelineRef.current) return;
+    const absH = (new Date(dayDate + 'T00:00:00').getTime() - refTime) / 36e5;
+    const minH = hours[0] || 0;
+    timelineRef.current.scrollTo({ left: Math.max(0, (absH - minH) * hourWidth), behavior: 'smooth' });
+  };
+
   const selectDay = (nextDay: string) => {
     setSelectedDay(nextDay);
     if (festivalId) {
       router.replace(`/festival/${festivalId}?day=${nextDay}`, undefined, { shallow: true });
     }
+    scrollToDay(nextDay);
   };
 
   const selectedDayPerformances = useMemo(() => {
@@ -224,6 +237,10 @@ export default function FestivalPage() {
   const visiblePerformances = useMemo(() => {
     return selectedDayPerformances.filter((performance) => activeStages[performance.stageName] !== false);
   }, [selectedDayPerformances, activeStages]);
+
+  const timelinePerformances = useMemo(() => {
+    return performances.filter((performance) => activeStages[performance.stageName] !== false);
+  }, [performances, activeStages]);
 
   const allStages = useMemo(() => {
     const stageMap = new Map<string, string>();
@@ -238,13 +255,11 @@ export default function FestivalPage() {
   }, [selectedDayPerformances]);
 
   const hours = useMemo(() => {
-    // Use all festival performances for a consistent axis across all days
-    const base = performances.length > 0 ? performances : visiblePerformances;
-    if (base.length === 0) return Array.from({ length: 8 }, (_, index) => index);
-    const min = Math.floor(Math.min(...base.map((performance) => hourNumber(performance.startTime))));
-    const max = Math.ceil(Math.max(...base.map((performance) => hourNumber(performance.endTime))));
-    return Array.from({ length: Math.max(1, max - min) }, (_, index) => min + index);
-  }, [performances, visiblePerformances]);
+    if (!performances.length || !refTime) return Array.from({ length: 8 }, (_, i) => i);
+    const min = Math.floor(Math.min(...performances.map((p) => absHour(p.startTime, refTime))));
+    const max = Math.ceil(Math.max(...performances.map((p) => absHour(p.endTime, refTime))));
+    return Array.from({ length: Math.max(1, max - min) }, (_, i) => min + i);
+  }, [performances, refTime]);
 
   const requireLogin = () => {
     if (!user) {
@@ -341,7 +356,7 @@ export default function FestivalPage() {
   };
 
   const minHour = hours[0] || 0;
-  const nowLeft = useNowLine(hours, minHour, hourWidth, selectedDay);
+  const nowLeft = useNowLine(hours, minHour, hourWidth, refTime);
 
   const conflictIds = useMemo(() => detectConflicts(performances), [performances]);
   const dayConflictCount = useMemo(
@@ -354,6 +369,29 @@ export default function FestivalPage() {
       nowLineRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
   }, [nowLeft, tab]);
+
+  useEffect(() => {
+    if (tab === 'timeline' && selectedDay && refTime) {
+      setTimeout(() => scrollToDay(selectedDay), 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, refTime]);
+
+  // Sync selected day button as user scrolls the timeline
+  useEffect(() => {
+    if (tab !== 'timeline') return;
+    const el = timelineRef.current;
+    if (!el || !refTime || !hours.length || !days.length) return;
+    const onScroll = () => {
+      const visibleAbsHour = minHour + el.scrollLeft / hourWidth;
+      const visibleDate = new Date(refTime + visibleAbsHour * 36e5).toLocaleDateString('sv');
+      const match = [...days].reverse().find((d) => d <= visibleDate);
+      if (match) setSelectedDay(match);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, days, refTime, hours, minHour, hourWidth]);
 
   const renderStarButton = (performance: PerformanceItem, compact = false) => {
     const isGoing = performance.status === 'going';
@@ -593,23 +631,27 @@ export default function FestivalPage() {
                     })}
                   </div>
 
-                  {visiblePerformances.length === 0 ? (
-                    <p style={{ color: c.muted }}>No shows this day.</p>
+                  {timelinePerformances.length === 0 ? (
+                    <p style={{ color: c.muted }}>No shows to display.</p>
                   ) : (
-                    <div className="relative overflow-x-auto scroll-thin">
+                    <div ref={timelineRef} className="relative overflow-x-auto scroll-thin">
                       <p className="mb-2 text-[10px] font-bold sm:hidden" style={{ color: c.muted }}>← swipe to see full timeline →</p>
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         {/* Hour header */}
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
-                          {hours.map((hour) => (
-                            <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>
-                              {`${String(hour % 24).padStart(2, '0')}:00`}
-                            </div>
-                          ))}
+                          {hours.map((hour) => {
+                            const isMidnight = hour % 24 === 0 && hour !== hours[0];
+                            const dateLabel = isMidnight ? new Date(refTime + hour * 36e5).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
+                            return (
+                              <div key={hour} className="shrink-0 pl-2 text-xs font-bold relative" style={{ width: hourWidth, color: isMidnight ? c.acc : c.muted, borderLeft: `${isMidnight ? 2 : 1}px solid ${isMidnight ? c.acc : c.brd}` }}>
+                                {dateLabel ? <span style={{ color: c.acc, fontWeight: 800 }}>{dateLabel}</span> : `${String(hour % 24).padStart(2, '0')}:00`}
+                              </div>
+                            );
+                          })}
                         </div>
 
-                        {dayStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
-                          const stageItems = visiblePerformances.filter((performance) => performance.stageName === stage.name);
+                        {allStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
+                          const stageItems = timelinePerformances.filter((performance) => performance.stageName === stage.name);
                           return (
                             <div key={stage.name} className="mb-2 flex items-stretch" data-testid="festival-stage-row">
                               {/* Sticky stage label */}
@@ -621,9 +663,12 @@ export default function FestivalPage() {
                               </div>
                               <div className="relative h-14 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}06`, border: `1px solid ${c.brd}` }}>
                                 {/* Hour grid lines */}
-                                {hours.map((hour) => (
-                                  <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
-                                ))}
+                                {hours.map((hour) => {
+                                  const isMidnight = hour % 24 === 0 && hour !== hours[0];
+                                  return (
+                                    <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: isMidnight ? 2 : 1, background: isMidnight ? `${c.acc}66` : c.brd }} />
+                                  );
+                                })}
                                 {/* Now line */}
                                 {nowLeft !== null && (
                                   <div
@@ -634,7 +679,7 @@ export default function FestivalPage() {
                                 )}
                                 {/* Performance blocks */}
                                 {stageItems.map((performance) => {
-                                  const left = (hourNumber(performance.startTime) - minHour) * hourWidth;
+                                  const left = (absHour(performance.startTime, refTime) - minHour) * hourWidth;
                                   const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
                                   const isGoing = performance.status === 'going';
                                   const hasConflict = conflictIds.has(performance.id);
