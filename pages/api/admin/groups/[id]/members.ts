@@ -19,12 +19,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { data: members, error } = await supabaseAdmin
     .from('group_members')
-    .select('user_id, role, created_at, profile:profiles(display_name, email)')
+    .select('user_id, role, created_at')
     .eq('group_id', groupId);
 
   if (error) return res.status(500).json({ error: error.message });
 
   const userIds = (members ?? []).map((m) => m.user_id);
+
+  const { data: profiles } = userIds.length > 0
+    ? await supabaseAdmin.from('profiles').select('id, display_name, email').in('id', userIds)
+    : { data: [] };
+  const profileMap: Record<string, { display_name: string | null; email: string | null }> = {};
+  for (const p of profiles ?? []) profileMap[p.id] = { display_name: p.display_name, email: p.email };
   let prefCountMap: Record<string, number> = {};
 
   if (userIds.length > 0 && festivalId) {
@@ -41,8 +47,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const result = (members ?? []).map((m) => ({
     userId: m.user_id,
-    displayName: (m.profile as { display_name?: string } | null)?.display_name ?? null,
-    email: (m.profile as { email?: string } | null)?.email ?? null,
+    displayName: profileMap[m.user_id]?.display_name ?? null,
+    email: profileMap[m.user_id]?.email ?? null,
     role: m.role,
     joinedAt: m.created_at,
     preferenceCount: prefCountMap[m.user_id] ?? 0,
