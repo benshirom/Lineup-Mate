@@ -11,13 +11,68 @@ interface PerformanceInfo { id: number; artist_name: string; stage_name: string;
 interface FestivalInfo { id: number; name: string; year: number; location: string | null; start_date: string | null; end_date: string | null; description?: string | null; emoji?: string | null; color?: string | null; genre?: string | null; genre_label?: string | null; website?: string | null; }
 interface GroupData { id: number; name: string; invite_code: string; festival_id: number; festival?: FestivalInfo | null; }
 
+type ThemeColors = ReturnType<typeof getThemeColors>;
+
+function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  if (prefs.length === 0) return null;
+
+  if (prefs.length === 1) {
+    return (
+      <span
+        data-testid="group-performance-picks"
+        className="max-w-[100px] truncate rounded-full px-2 py-0.5 text-[10px] font-bold"
+        style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}
+      >
+        ★ {prefs[0].user_label}
+      </span>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block" data-testid="group-performance-picks">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+        style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}
+      >
+        ★ {prefs.length}
+      </button>
+      {open && (
+        <div
+          className="absolute bottom-full left-0 mb-1 rounded-xl p-2 shadow-lg z-50"
+          style={{ background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120 }}
+        >
+          {prefs.map((p) => (
+            <div key={p.user_id} className="truncate py-0.5 text-[11px] font-semibold" style={{ color: c.txt }}>
+              {statusLabel(p.status)} {p.user_label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function memberLabel(member: GroupMember): string {
   if (member.profile?.display_name) return member.profile.display_name;
   if (member.profile?.email) return member.profile.email.split('@')[0];
   return `User·${member.user_id.slice(0, 6)}`;
 }
 function timeLabel(dateString: string) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-function hourNumber(dateString: string) { const d = new Date(dateString); return d.getHours() + d.getMinutes() / 60; }
+function absHour(dateString: string, refTime: number): number { return (new Date(dateString).getTime() - refTime) / 36e5; }
 function durationHours(start: string, end: string) { return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5); }
 function festivalTitle(festival: FestivalInfo) { return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`; }
 function statusLabel(status: string) { if (status === 'going') return '★'; if (status === 'maybe') return '?'; return '×'; }
@@ -47,6 +102,7 @@ export default function GroupPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const nowLineRef = useRef<HTMLDivElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!authReady) return;
@@ -175,33 +231,58 @@ export default function GroupPage() {
     return stageOrder.filter((name) => stageMap.has(name)).map((name) => ({ name, color: stageMap.get(name) || c.acc }));
   }, [selectedDayPerformances, stageOrder, c.acc]);
   const listPerformances = useMemo(() => visiblePerformances, [visiblePerformances]);
-  const hours = useMemo(() => {
-    if (visiblePerformances.length === 0) return Array.from({ length: 8 }, (_, i) => i);
-    const min = Math.floor(Math.min(...visiblePerformances.map((p) => hourNumber(p.start_time))));
-    const max = Math.ceil(Math.max(...visiblePerformances.map((p) => hourNumber(p.end_time))));
-    return Array.from({ length: Math.max(1, max - min) }, (_, i) => min + i);
-  }, [visiblePerformances]);
 
-  const minHour = hours[0] || 0;
+  const refTime = useMemo(() => {
+    if (!sortedPerformances.length) return 0;
+    const d = new Date(Math.min(...sortedPerformances.map((p) => new Date(p.start_time).getTime())));
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, [sortedPerformances]);
+
+  const timelinePerformances = useMemo(() => sortedPerformances.filter((p) => activeStages[p.stage_name] !== false), [sortedPerformances, activeStages]);
+
+  const hours = useMemo(() => {
+    if (!sortedPerformances.length || !refTime) return Array.from({ length: 8 }, (_, i) => i);
+    const min = Math.floor(Math.min(...sortedPerformances.map((p) => absHour(p.start_time, refTime))));
+    const max = Math.ceil(Math.max(...sortedPerformances.map((p) => absHour(p.end_time, refTime))));
+    return Array.from({ length: Math.max(1, max - min) }, (_, i) => min + i);
+  }, [sortedPerformances, refTime]);
+
   const hourWidth = useHourWidth();
   const stageLabelWidth = useStageLabelWidth();
+
+  const minHour = hours[0] || 0;
+
+  const scrollToDay = (dayDate: string) => {
+    if (!refTime || !timelineRef.current) return;
+    const absH = (new Date(dayDate + 'T00:00:00').getTime() - refTime) / 36e5;
+    timelineRef.current.scrollTo({ left: Math.max(0, (absH - minHour) * hourWidth), behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (viewMode === 'timeline' && selectedDay && refTime) {
+      setTimeout(() => scrollToDay(selectedDay), 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, selectedDay, refTime]);
 
   const copyInviteCode = async () => { if (!group?.invite_code) return; await navigator.clipboard.writeText(group.invite_code); setCopied(true); setTimeout(() => setCopied(false), 1600); };
 
   const renderPeoplePills = (performanceId: number, mode: 'compact' | 'full' = 'full') => {
     const prefs = performancePreferenceMap[performanceId] ?? [];
-    if (prefs.length === 0) return <span className="text-[10px] font-semibold opacity-60">No group picks</span>;
-    const visiblePrefs = mode === 'compact' ? prefs.slice(0, 3) : prefs;
-    const hiddenCount = prefs.length - visiblePrefs.length;
+    if (prefs.length === 0) return null;
+    if (mode === 'compact') {
+      return <PicksBadge prefs={prefs} c={c} />;
+    }
     return (
       <div
-        className={mode === 'compact' ? 'flex max-h-6 flex-wrap gap-1 overflow-hidden' : 'flex max-h-24 flex-wrap gap-1 overflow-y-auto pr-1'}
+        className="flex max-h-24 flex-wrap gap-1 overflow-y-auto pr-1"
         data-testid="group-performance-picks"
         title={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}
       >
-        {visiblePrefs.map((pref) => (
+        {prefs.map((pref) => (
           <span
-            key={`${pref.user_id}-${pref.status}-${mode}`}
+            key={`${pref.user_id}-${pref.status}`}
             className="max-w-[140px] truncate rounded-full px-2 py-1 text-[10px] font-bold"
             style={{
               background: pref.status === 'going' ? `${c.star}22` : c.accSoft,
@@ -212,15 +293,6 @@ export default function GroupPage() {
             {statusLabel(pref.status)} {pref.user_label}
           </span>
         ))}
-        {hiddenCount > 0 && (
-          <span
-            data-testid="group-picks-overflow"
-            className="rounded-full px-2 py-1 text-[10px] font-bold"
-            style={{ background: c.surf2, color: c.txt, border: `1px solid ${c.brd}` }}
-          >
-            +{hiddenCount}
-          </span>
-        )}
       </div>
     );
   };
@@ -382,7 +454,7 @@ export default function GroupPage() {
                         key={day}
                         type="button"
                         data-testid="group-day-tab"
-                        onClick={() => setSelectedDay(day)}
+                        onClick={() => { setSelectedDay(day); scrollToDay(day); }}
                         className="tap-active whitespace-nowrap rounded-full px-4 text-xs font-bold"
                         style={{
                           background: selectedDay === day ? c.acc : c.surf,
@@ -501,19 +573,23 @@ export default function GroupPage() {
               {/* ── Timeline view (secondary) ────────────────────── */}
               {viewMode === 'timeline' && (
                 <section className="rounded-3xl p-4 shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }} data-testid="group-timeline">
-                  {visiblePerformances.length === 0 ? (
-                    <p style={{ color: c.muted }}>No performances this day with the selected stage filters.</p>
+                  {timelinePerformances.length === 0 ? (
+                    <p style={{ color: c.muted }}>No performances with the selected stage filters.</p>
                   ) : (
-                    <div className="relative overflow-x-auto scroll-thin" data-testid="group-timeline-scroll">
+                    <div ref={timelineRef} className="relative overflow-x-auto scroll-thin" data-testid="group-timeline-scroll">
                       <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
                         <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
-                          {hours.map((hour) => (
-                            <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: c.muted, borderLeft: `1px solid ${c.brd}` }}>
-                              {`${String(hour % 24).padStart(2, '0')}:00`}
-                            </div>
-                          ))}
+                          {hours.map((hour) => {
+                            const isMidnight = hour % 24 === 0 && hour !== hours[0];
+                            const dateLabel = isMidnight ? new Date(refTime + hour * 36e5).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null;
+                            return (
+                              <div key={hour} className="shrink-0 pl-2 text-xs font-bold" style={{ width: hourWidth, color: isMidnight ? c.acc : c.muted, borderLeft: `${isMidnight ? 2 : 1}px solid ${isMidnight ? c.acc : c.brd}` }}>
+                                {dateLabel ? <span style={{ color: c.acc, fontWeight: 800 }}>{dateLabel}</span> : `${String(hour % 24).padStart(2, '0')}:00`}
+                              </div>
+                            );
+                          })}
                         </div>
-                        {dayStages.filter((s) => activeStages[s.name] !== false).map((stage) => (
+                        {allStages.filter((s) => activeStages[s.name] !== false).map((stage) => (
                           <div key={stage.name} className="mb-2 flex items-stretch" data-testid="group-stage-row">
                             <div
                               className="shrink-0 pr-2 text-right text-xs font-bold leading-tight flex items-center justify-end"
@@ -522,13 +598,17 @@ export default function GroupPage() {
                               <span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}18` }}>{stage.name}</span>
                             </div>
                             <div className="relative h-20 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}06`, border: `1px solid ${c.brd}` }}>
-                              {hours.map((hour) => (
-                                <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: 1, background: c.brd }} />
-                              ))}
-                              {visiblePerformances.filter((p) => p.stage_name === stage.name).map((p) => {
-                                const left = (hourNumber(p.start_time) - minHour) * hourWidth;
+                              {hours.map((hour) => {
+                                const isMidnight = hour % 24 === 0 && hour !== hours[0];
+                                return (
+                                  <div key={hour} className="absolute top-0 h-full" style={{ left: (hour - minHour) * hourWidth, width: isMidnight ? 2 : 1, background: isMidnight ? `${c.acc}66` : c.brd }} />
+                                );
+                              })}
+                              {timelinePerformances.filter((p) => p.stage_name === stage.name).map((p) => {
+                                const left = (absHour(p.start_time, refTime) - minHour) * hourWidth;
                                 const width = Math.max(60, durationHours(p.start_time, p.end_time) * hourWidth - 4);
-                                const hasPicks = (performancePreferenceMap[p.id] ?? []).length > 0;
+                                const prefs = performancePreferenceMap[p.id] ?? [];
+                                const hasPicks = prefs.length > 0;
                                 return (
                                   <div
                                     key={p.id}
