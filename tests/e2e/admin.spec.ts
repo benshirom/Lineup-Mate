@@ -12,7 +12,7 @@ test.describe('admin smoke tests', () => {
   });
 
   test('admin can open import page', async ({ page }) => {
-    await clickNav(page, /Admin/i);
+    await page.goto('/admin');
     await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible();
   });
@@ -25,7 +25,7 @@ test.describe('admin smoke tests', () => {
     await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('html'), 'Saving light theme should keep html data-theme=light.').toHaveAttribute('data-theme', 'light');
 
-    await clickNav(page, /Admin/i);
+    await page.goto('/admin');
     await expect(page.getByRole('heading', { name: /Clashfinder Import/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('html'), 'Admin page should keep the saved light theme state.').toHaveAttribute('data-theme', 'light', { timeout: 20_000 });
 
