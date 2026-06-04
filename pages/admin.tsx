@@ -1,7 +1,34 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { getThemeColors } from '@/lib/platform';
+
+const NAV_LINKS = [
+  { href: '/admin/dashboard', label: 'Dashboard' },
+  { href: '/admin/users', label: 'Users' },
+  { href: '/admin/groups', label: 'Groups' },
+  { href: '/admin', label: 'Import' },
+];
+
+function AdminSubNav({ c }: { c: ReturnType<typeof getThemeColors> }) {
+  const router = useRouter();
+  return (
+    <div style={{ background: c.surf, borderBottom: `1px solid ${c.brd}` }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px', display: 'flex', gap: 8, overflowX: 'auto' as const }}>
+        {NAV_LINKS.map((link) => {
+          const isActive = router.pathname === link.href;
+          return (
+            <Link key={link.href} href={link.href} style={{ display: 'inline-block', padding: '10px 16px', fontSize: 14, fontWeight: isActive ? 600 : 400, color: isActive ? '#fff' : c.txt, background: isActive ? c.acc : 'transparent', borderRadius: 0, borderBottom: isActive ? `2px solid ${c.acc}` : '2px solid transparent', textDecoration: 'none', whiteSpace: 'nowrap' as const }}>
+              {link.label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 type RawShape =
   | {
@@ -176,6 +203,7 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
+        <AdminSubNav c={c} />
         <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
           <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
             <h1 className="text-3xl font-bold mb-4">Admin</h1>
@@ -190,6 +218,7 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
+        <AdminSubNav c={c} />
         <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
           <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
             <h1 className="text-3xl font-bold mb-4">Admin</h1>
@@ -204,6 +233,7 @@ export default function AdminPage() {
     return (
       <>
         <Navbar />
+        <AdminSubNav c={c} />
         <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
           <section className="max-w-3xl mx-auto rounded-2xl p-5" style={cardStyle}>
             <h1 className="text-3xl font-bold mb-4">Admin</h1>
@@ -219,6 +249,7 @@ export default function AdminPage() {
   return (
     <>
       <Navbar />
+      <AdminSubNav c={c} />
       <main className="mobile-shell-padding p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
