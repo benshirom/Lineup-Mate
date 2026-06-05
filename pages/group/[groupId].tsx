@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
@@ -86,7 +87,7 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
       >
         ★ {prefs.length}
       </button>
-      {open && pos && (
+      {open && pos && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div
           onPointerEnter={(e) => { if (e.pointerType === 'mouse') keepOpen(); }}
           onPointerLeave={(e) => { if (e.pointerType === 'mouse') scheduleHide(); }}
@@ -98,7 +99,8 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
               {statusLabel(p.status)} {p.user_label}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
