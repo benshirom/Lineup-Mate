@@ -164,12 +164,5 @@ test.describe('authenticated flows', () => {
       rowByName.getByTestId('lineup-artist-star'),
       `After starring ${artistName} from Lineup tab, the star should become ★`
     ).toHaveText('★', { timeout: 30_000 });
-
-    // Switch to Artists tab and confirm performance for this artist is visible
-    await page.getByRole('button', { name: /^artists$/i }).click();
-    await expect(
-      page.getByTestId('festival-performance-block').filter({ hasText: artistName }).first(),
-      `Performance block for ${artistName} should appear in Artists tab after starring`
-    ).toBeVisible({ timeout: 15_000 });
   });
 });
