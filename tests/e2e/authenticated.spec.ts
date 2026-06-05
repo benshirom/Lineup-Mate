@@ -147,20 +147,21 @@ test.describe('authenticated flows', () => {
     await openFirstFestival(page);
     await openLineupTab(page);
 
-    // Find first unstarred artist
-    const unstarredBtn = page.getByTestId('lineup-artist-star').filter({ hasText: '☆' }).first();
-    await expect(unstarredBtn, 'At least one artist should be unstarred in Lineup tab').toBeVisible({ timeout: 20_000 });
-
-    const artistRow = page.getByTestId('lineup-artist-row').filter({
+    // Find first unstarred artist row
+    const firstUnstarredRow = page.getByTestId('lineup-artist-row').filter({
       has: page.getByTestId('lineup-artist-star').filter({ hasText: '☆' })
     }).first();
-    const artistName = await artistRow.locator('h3').innerText();
+    await expect(firstUnstarredRow, 'At least one artist should be unstarred in Lineup tab').toBeVisible({ timeout: 20_000 });
 
-    await unstarredBtn.click({ force: true });
+    // Capture artist name before clicking (stable identifier for post-click lookup)
+    const artistName = await firstUnstarredRow.locator('h3').innerText();
 
-    // Wait for all sequential preference saves to complete (star becomes ★)
+    await firstUnstarredRow.getByTestId('lineup-artist-star').click({ force: true });
+
+    // Re-locate the row by artist name (stable after star changes from ☆ to ★)
+    const rowByName = page.getByTestId('lineup-artist-row').filter({ hasText: artistName });
     await expect(
-      artistRow.getByTestId('lineup-artist-star'),
+      rowByName.getByTestId('lineup-artist-star'),
       `After starring ${artistName} from Lineup tab, the star should become ★`
     ).toHaveText('★', { timeout: 30_000 });
 
