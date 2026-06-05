@@ -24,7 +24,8 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
     const rect = btnRef.current.getBoundingClientRect();
     const estimatedHeight = prefs.length * 22 + 16;
     const spaceBelow = window.innerHeight - rect.bottom;
-    const top = spaceBelow > estimatedHeight + 8 ? rect.bottom + 4 : rect.top - estimatedHeight - 4;
+    // -1px overlap so there is no gap between button and popup hover areas
+    const top = spaceBelow > estimatedHeight + 8 ? rect.bottom - 1 : rect.top - estimatedHeight + 1;
     return { top, left: rect.left };
   };
 
@@ -32,6 +33,11 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
     if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
     setPos(computePos());
     setOpen(true);
+  };
+
+  // Cancel pending hide without triggering a re-render (used by popup onPointerEnter)
+  const keepOpen = () => {
+    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
   };
 
   const scheduleHide = () => {
@@ -68,12 +74,10 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
       <button
         ref={btnRef}
         type="button"
-        onMouseEnter={show}
-        onMouseLeave={scheduleHide}
+        onPointerEnter={(e) => { if (e.pointerType === 'mouse') show(); }}
+        onPointerLeave={(e) => { if (e.pointerType === 'mouse') scheduleHide(); }}
         onClick={(e) => {
           e.stopPropagation();
-          // On touch devices pointerType is 'touch' — toggle on tap.
-          // On mouse devices pointerType is 'mouse' — hover handles it, ignore click.
           const pt = (e.nativeEvent as PointerEvent).pointerType;
           if (pt === 'touch' || pt === 'pen') { open ? setOpen(false) : show(); }
         }}
@@ -84,10 +88,10 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
       </button>
       {open && pos && (
         <div
-          onMouseEnter={show}
-          onMouseLeave={scheduleHide}
-          className="rounded-xl p-2 shadow-lg"
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120 }}
+          onPointerEnter={(e) => { if (e.pointerType === 'mouse') keepOpen(); }}
+          onPointerLeave={(e) => { if (e.pointerType === 'mouse') scheduleHide(); }}
+          className="rounded-xl shadow-lg"
+          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120, padding: '5px 8px 4px' }}
         >
           {prefs.map((p) => (
             <div key={p.user_id} className="truncate py-0.5 text-[11px] font-semibold" style={{ color: c.txt }}>
