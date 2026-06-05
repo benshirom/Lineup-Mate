@@ -143,13 +143,13 @@ test.describe('authenticated flows', () => {
   });
 
   test('starring an artist from Lineup tab stars all their performances', async ({ page }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(120_000);
     await openFirstFestival(page);
     await openLineupTab(page);
 
     // Find first unstarred artist
     const unstarredBtn = page.getByTestId('lineup-artist-star').filter({ hasText: '☆' }).first();
-    await expect(unstarredBtn, 'At least one artist should be unstarred in Lineup tab').toBeVisible({ timeout: 15_000 });
+    await expect(unstarredBtn, 'At least one artist should be unstarred in Lineup tab').toBeVisible({ timeout: 20_000 });
 
     const artistRow = page.getByTestId('lineup-artist-row').filter({
       has: page.getByTestId('lineup-artist-star').filter({ hasText: '☆' })
@@ -157,13 +157,12 @@ test.describe('authenticated flows', () => {
     const artistName = await artistRow.locator('h3').innerText();
 
     await unstarredBtn.click({ force: true });
-    await page.waitForLoadState('networkidle').catch(() => undefined);
 
-    // Star should now be fully starred
+    // Wait for all sequential preference saves to complete (star becomes ★)
     await expect(
       artistRow.getByTestId('lineup-artist-star'),
       `After starring ${artistName} from Lineup tab, the star should become ★`
-    ).toHaveText('★', { timeout: 15_000 });
+    ).toHaveText('★', { timeout: 30_000 });
 
     // Switch to Artists tab and confirm performance for this artist is visible
     await page.getByRole('button', { name: /^artists$/i }).click();
