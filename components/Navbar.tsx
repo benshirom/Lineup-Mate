@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { createDesignSystem } from '@/lib/designSystem';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const Navbar: React.FC = () => {
   const { user, profile, supabase, theme, t } = useAuth();
@@ -60,6 +61,7 @@ const Navbar: React.FC = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <NotificationBell />
               <Link
                 href="/profile"
                 data-testid="user-profile-link"

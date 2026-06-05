@@ -1,8 +1,10 @@
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
+import { LiveBadge } from '@/components/LiveBadge';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
+import { isFestivalActive, formatMinutesUntil } from '@/lib/festivalUtils';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 type FestivalTab = 'artists' | 'lineup' | 'timeline' | 'info';
@@ -89,11 +91,52 @@ function useNowLine(hours: number[], minHour: number, hourWidth: number, refTime
       setNowLeft((nowAbsHour - minHour) * hourWidth);
     };
     update();
-    const id = setInterval(update, 60_000);
+    const id = setInterval(update, 30_000);
     return () => clearInterval(id);
   }, [hours, minHour, hourWidth, refTime]);
 
   return nowLeft;
+}
+
+function useNowPlaying(performances: PerformanceItem[]): Set<number> {
+  const [nowIds, setNowIds] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    const update = () => {
+      const now = Date.now();
+      setNowIds(new Set(
+        performances
+          .filter(p =>
+            new Date(p.startTime).getTime() <= now &&
+            new Date(p.endTime).getTime() > now
+          )
+          .map(p => p.id)
+      ));
+    };
+    update();
+    const id = setInterval(update, 30_000);
+    return () => clearInterval(id);
+  }, [performances]);
+  return nowIds;
+}
+
+function useNextPerformance(
+  performances: PerformanceItem[],
+  preferences: Record<number, PreferenceStatus>
+): PerformanceItem | null {
+  const [next, setNext] = useState<PerformanceItem | null>(null);
+  useEffect(() => {
+    const update = () => {
+      const now = Date.now();
+      const upcoming = performances
+        .filter(p => preferences[p.id] === 'going' && new Date(p.startTime).getTime() > now)
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      setNext(upcoming[0] ?? null);
+    };
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, [performances, preferences]);
+  return next;
 }
 
 function useHourWidth() {
@@ -137,8 +180,10 @@ export default function FestivalPage() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [popId, setPopId] = useState<number | null>(null);
+  const [conflictWarning, setConflictWarning] = useState<{ newPerf: PerformanceItem; existing: PerformanceItem } | null>(null);
   const nowLineRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  const lastManualScrollRef = useRef(0);
 
   const c = getThemeColors(theme);
   const hourWidth = useHourWidth();
@@ -291,9 +336,29 @@ export default function FestivalPage() {
       });
 
       if (rpcError) throw rpcError;
-      setPerformances((current) => current.map((performance) => (
-        performance.id === performanceId ? { ...performance, status } : performance
-      )));
+      setPerformances((current) => {
+        const updated = current.map((performance) => (
+          performance.id === performanceId ? { ...performance, status } : performance
+        ));
+        // Check for conflict when marking as going
+        if (status === 'going') {
+          const newPerf = updated.find(p => p.id === performanceId);
+          if (newPerf) {
+            const newStart = new Date(newPerf.startTime).getTime();
+            const newEnd = new Date(newPerf.endTime).getTime();
+            const existing = updated.find(p =>
+              p.id !== performanceId &&
+              p.status === 'going' &&
+              new Date(p.startTime).getTime() < newEnd &&
+              new Date(p.endTime).getTime() > newStart
+            );
+            if (existing) {
+              setConflictWarning({ newPerf, existing });
+            }
+          }
+        }
+        return updated;
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not save your preference.');
     } finally {
@@ -372,6 +437,16 @@ export default function FestivalPage() {
 
   const minHour = hours[0] || 0;
   const nowLeft = useNowLine(hours, minHour, hourWidth, refTime);
+  const nowPlayingIds = useNowPlaying(performances);
+
+  const prefMap = useMemo(() => {
+    const map: Record<number, PreferenceStatus> = {};
+    performances.forEach(p => { if (p.status) map[p.id] = p.status; });
+    return map;
+  }, [performances]);
+
+  const festivalIsActive = festival ? isFestivalActive(festival) : false;
+  const nextPerformance = useNextPerformance(performances, prefMap);
 
   const conflictIds = useMemo(() => detectConflicts(performances), [performances]);
   const dayConflictCount = useMemo(
@@ -396,8 +471,11 @@ export default function FestivalPage() {
   }, [performances]);
 
   useEffect(() => {
-    if (nowLeft !== null && nowLineRef.current) {
-      nowLineRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (nowLeft !== null && nowLineRef.current && tab === 'timeline') {
+      // Only auto-scroll if user hasn't manually scrolled in last 5 minutes
+      if (Date.now() - lastManualScrollRef.current > 5 * 60_000) {
+        nowLineRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
     }
   }, [nowLeft, tab]);
 
@@ -414,6 +492,7 @@ export default function FestivalPage() {
     const el = timelineRef.current;
     if (!el || !refTime || !hours.length || !days.length) return;
     const onScroll = () => {
+      lastManualScrollRef.current = Date.now();
       const visibleAbsHour = minHour + el.scrollLeft / hourWidth;
       const visibleDate = new Date(refTime + visibleAbsHour * 36e5).toLocaleDateString('sv');
       const match = [...days].reverse().find((d) => d <= visibleDate);
@@ -488,6 +567,48 @@ export default function FestivalPage() {
                   {!user && <p className="mt-3 text-xs font-semibold" style={{ color: c.muted }}>Browse freely — sign in to save acts or create groups.</p>}
                 </div>
               </header>
+
+              {/* ── What's Next banner ──────────────────────────── */}
+              {festivalIsActive && nextPerformance && (
+                <div
+                  data-testid="whats-next-banner"
+                  className="whats-next-banner mb-4 fade-up"
+                >
+                  <span className="whats-next-label">▶ הבא שלך:</span>
+                  <strong style={{ color: '#f1f5f9' }}>{nextPerformance.artistName}</strong>
+                  <span className="whats-next-stage">{nextPerformance.stageName}</span>
+                  <span className="whats-next-time">
+                    {formatMinutesUntil(new Date(nextPerformance.startTime).getTime() - Date.now())}
+                  </span>
+                </div>
+              )}
+
+              {/* ── Conflict warning ─────────────────────────────── */}
+              {conflictWarning && (
+                <div
+                  data-testid="conflict-warning-banner"
+                  className="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold fade-up"
+                  style={{
+                    background: `${c.danger}12`,
+                    border: `1px solid ${c.danger}44`,
+                    color: c.danger,
+                  }}
+                >
+                  <span className="text-lg shrink-0">⚠</span>
+                  <div className="flex-1 min-w-0">
+                    <b>{conflictWarning.newPerf.artistName}</b> מתנגש עם{' '}
+                    <b>{conflictWarning.existing.artistName}</b> ב-{conflictWarning.existing.stageName}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConflictWarning(null)}
+                    className="shrink-0 text-xs font-bold opacity-70 hover:opacity-100"
+                    aria-label="Dismiss conflict warning"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
 
               {/* ── Sticky tab bar + day selector ───────────────── */}
               <div
@@ -598,6 +719,7 @@ export default function FestivalPage() {
                     {visiblePerformances.map((performance) => {
                       const isGoing = performance.status === 'going';
                       const hasConflict = conflictIds.has(performance.id);
+                      const isLive = nowPlayingIds.has(performance.id);
                       return (
                         <article
                           key={performance.id}
@@ -605,9 +727,11 @@ export default function FestivalPage() {
                           className="overflow-hidden rounded-2xl perf-card"
                           style={{
                             background: c.surf,
-                            border: `1px solid ${isGoing && hasConflict ? `${c.danger}55` : isGoing ? `${c.star}44` : c.brd}`,
+                            border: `1px solid ${isLive ? '#ef444444' : isGoing && hasConflict ? `${c.danger}55` : isGoing ? `${c.star}44` : c.brd}`,
                             borderLeft: `4px solid ${performance.stageColor}`,
-                            boxShadow: isGoing
+                            boxShadow: isLive
+                              ? '0 0 16px rgba(239,68,68,0.2)'
+                              : isGoing
                               ? `0 0 14px ${isGoing && hasConflict ? `${c.danger}18` : `${c.star}12`}`
                               : 'none',
                             minHeight: 72,
@@ -615,7 +739,10 @@ export default function FestivalPage() {
                         >
                           <div className="flex items-center gap-3 px-4 py-3.5">
                             <div className="min-w-0 flex-1">
-                              <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>{performance.artistName}</h3>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>{performance.artistName}</h3>
+                                {isLive && <LiveBadge />}
+                              </div>
                               <p className="text-[11px] font-semibold mt-0.5" style={{ color: performance.stageColor }}>{performance.stageName}</p>
                               <p className="text-xs mt-0.5" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</p>
                             </div>
@@ -647,6 +774,7 @@ export default function FestivalPage() {
                     {artistRoster.map((artist) => {
                       const isAll = artist.starState === 'all';
                       const isMixed = artist.starState === 'mixed';
+                      const isAnyLive = artist.performances.some(p => nowPlayingIds.has(p.id));
                       const dayLabels = Array.from(new Set(artist.performances.map((p) => p.dayDate)))
                         .sort()
                         .map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
@@ -657,15 +785,18 @@ export default function FestivalPage() {
                           className="overflow-hidden rounded-2xl"
                           style={{
                             background: c.surf,
-                            border: `1px solid ${isAll ? `${c.star}44` : c.brd}`,
-                            boxShadow: isAll ? `0 0 14px ${c.star}12` : 'none',
+                            border: `1px solid ${isAnyLive ? '#ef444433' : isAll ? `${c.star}44` : c.brd}`,
+                            boxShadow: isAnyLive ? '0 0 14px rgba(239,68,68,0.15)' : isAll ? `0 0 14px ${c.star}12` : 'none',
                           }}
                         >
                           <div className="flex items-center gap-3 px-4 py-3.5">
                             <div className="min-w-0 flex-1">
-                              <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>
-                                {artist.artistName}
-                              </h3>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>
+                                  {artist.artistName}
+                                </h3>
+                                {isAnyLive && <LiveBadge />}
+                              </div>
                               <p className="text-xs mt-0.5" style={{ color: c.muted }}>
                                 {artist.performances.length} set{artist.performances.length !== 1 ? 's' : ''}
                                 {' · '}{dayLabels.join(', ')}
@@ -770,7 +901,9 @@ export default function FestivalPage() {
                                     ref={nowLineRef}
                                     className="now-line absolute top-0 h-full z-10 pointer-events-none"
                                     style={{ left: nowLeft, width: 2, background: c.danger, borderRadius: 2 }}
-                                  />
+                                  >
+                                    <span className="now-label">NOW</span>
+                                  </div>
                                 )}
                                 {/* Performance blocks */}
                                 {stageItems.map((performance) => {
@@ -778,11 +911,12 @@ export default function FestivalPage() {
                                   const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
                                   const isGoing = performance.status === 'going';
                                   const hasConflict = conflictIds.has(performance.id);
+                                  const isLive = nowPlayingIds.has(performance.id);
                                   return (
                                     <div
                                       key={performance.id}
                                       data-testid="festival-performance-block"
-                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}–${timeLabel(performance.endTime)}${hasConflict ? ' ⚠ Time conflict!' : ''}`}
+                                      title={`${performance.artistName} · ${timeLabel(performance.startTime)}–${timeLabel(performance.endTime)}${hasConflict ? ' ⚠ Time conflict!' : ''}${isLive ? ' 🔴 LIVE' : ''}`}
                                       className={`perf-block absolute top-1.5 h-11 overflow-hidden rounded-xl text-left text-xs font-bold ${isGoing && hasConflict ? 'conflict-block' : ''}`}
                                       style={{
                                         left,
@@ -792,13 +926,19 @@ export default function FestivalPage() {
                                         paddingLeft: 10,
                                         paddingRight: 34,
                                         color: c.txt,
-                                        boxShadow: isGoing
+                                        boxShadow: isLive
+                                          ? `inset 0 0 0 2px rgba(239,68,68,0.6), 0 2px 10px rgba(239,68,68,0.2)`
+                                          : isGoing
                                           ? `inset 0 0 0 1px ${performance.stageColor}44, 0 2px 10px ${performance.stageColor}33`
                                           : `inset 0 0 0 1px ${c.brd}`,
                                       }}
                                     >
                                       <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
-                                      <span className="block truncate text-[10px]" style={{ color: c.muted }}>{timeLabel(performance.startTime)} – {timeLabel(performance.endTime)}</span>
+                                      <span className="block truncate text-[10px]" style={{ color: c.muted }}>
+                                        {isLive ? (
+                                          <span style={{ color: '#ef4444', fontWeight: 800 }}>● LIVE</span>
+                                        ) : `${timeLabel(performance.startTime)} – ${timeLabel(performance.endTime)}`}
+                                      </span>
                                       {hasConflict && isGoing && (
                                         <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: c.danger }}>⚠</span>
                                       )}
@@ -814,6 +954,21 @@ export default function FestivalPage() {
                     </div>
                   )}
                 </section>
+              )}
+
+              {/* ── Go to Now floating button ────────────────────── */}
+              {tab === 'timeline' && nowLeft !== null && (
+                <button
+                  type="button"
+                  data-testid="go-to-now-btn"
+                  onClick={() =>
+                    nowLineRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+                  }
+                  className="go-to-now-btn"
+                  aria-label="Scroll to current time"
+                >
+                  ▶ עכשיו
+                </button>
               )}
 
               {/* ── Info tab (About + Groups) ─────────────────────── */}

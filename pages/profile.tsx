@@ -1,6 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { useAuth } from '@/lib/AuthContext';
 import { getThemeColors, type ThemeMode } from '@/lib/platform';
 
@@ -298,6 +299,10 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </form>
+
+              <div className="lg:col-span-2">
+                <NotificationPreferences />
+              </div>
 
               <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <h2 className="mb-1 text-xl font-black">Your Data</h2>

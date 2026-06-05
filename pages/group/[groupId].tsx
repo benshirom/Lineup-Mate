@@ -141,8 +141,18 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [welcomeToast, setWelcomeToast] = useState(false);
   const nowLineRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (router.query.welcome === '1') {
+      setWelcomeToast(true);
+      router.replace(`/group/${groupId}`, undefined, { shallow: true });
+      setTimeout(() => setWelcomeToast(false), 4000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query.welcome]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -394,6 +404,20 @@ export default function GroupPage() {
   return (
     <>
       <Navbar />
+      {welcomeToast && (
+        <div
+          className="toast-slide-in fixed bottom-24 left-1/2 z-50 max-w-xs rounded-2xl px-4 py-3 text-sm font-bold shadow-xl"
+          style={{
+            transform: 'translateX(-50%)',
+            background: '#1e293b',
+            color: '#f1f5f9',
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}
+          role="status"
+        >
+          🎵 ברוך הבא לקבוצה!
+        </div>
+      )}
       <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-7xl px-4 py-6 md:py-8">
           <header className="fade-up mb-6 overflow-hidden rounded-3xl shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>

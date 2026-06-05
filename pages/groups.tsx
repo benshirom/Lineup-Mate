@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
+import { ShareSheet } from '@/components/ShareSheet';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
 
@@ -42,6 +43,7 @@ export default function GroupsPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [shareSheetGroup, setShareSheetGroup] = useState<UserGroup | null>(null);
   const [groupName, setGroupName] = useState('');
   const [selectedFestivalId, setSelectedFestivalId] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -172,17 +174,8 @@ export default function GroupsPage() {
     window.setTimeout(() => setCopiedCode(null), 1600);
   };
 
-  const shareGroup = async (group: UserGroup) => {
-    const shareText = `Join my Lineup-Mate group "${group.name}" for ${group.festival_name}! Invite code: ${group.invite_code}`;
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({ title: group.name, text: shareText });
-        return;
-      } catch {
-        // fall through to WhatsApp
-      }
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer');
+  const openShareSheet = (group: UserGroup) => {
+    setShareSheetGroup(group);
   };
 
   const handleCreateGroup = async (event: FormEvent) => {
@@ -376,13 +369,22 @@ export default function GroupsPage() {
                   <div className="flex flex-wrap gap-2">
                     <button type="button" data-testid="open-group-schedule" onClick={() => router.push(`/group/${group.id}`)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: group.festival_color }}>Open Schedule</button>
                     <button type="button" onClick={() => router.push(`/festival/${group.festival_id}`)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Festival</button>
-                    <button type="button" onClick={() => shareGroup(group)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Share</button>
+                    <button type="button" data-testid="share-btn" onClick={() => openShareSheet(group)} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Share</button>
                   </div>
                 </div>
               </article>
             ))}
           </div>
         </section>
+
+        {shareSheetGroup && (
+          <ShareSheet
+            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/join/${shareSheetGroup.invite_code}`}
+            title={`${shareSheetGroup.festival_name} – ${shareSheetGroup.name}`}
+            text={`הצטרף לקבוצה שלי "${shareSheetGroup.name}" ב-${shareSheetGroup.festival_name}! 🎵`}
+            onClose={() => setShareSheetGroup(null)}
+          />
+        )}
 
         {showCreateModal && (
           <div data-testid="create-group-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(5px)' }} onClick={resetCreateForm}>
