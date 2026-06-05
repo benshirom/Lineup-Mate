@@ -31,12 +31,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       supabaseAdmin.from('group_members').select('group_id, role, created_at').eq('user_id', user.id),
     ]);
 
+    const MAX_PREFERENCES = 5000;
+    const MAX_SAVED_FESTIVALS = 1000;
+    const allPreferences = preferences ?? [];
+    const allSavedFestivals = savedFestivals ?? [];
+    const truncatedPreferences = allPreferences.length > MAX_PREFERENCES;
+    const truncatedSavedFestivals = allSavedFestivals.length > MAX_SAVED_FESTIVALS;
+
     const exportData = {
       exported_at: new Date().toISOString(),
       profile,
-      performance_preferences: preferences ?? [],
-      saved_festivals: savedFestivals ?? [],
+      performance_preferences: truncatedPreferences ? allPreferences.slice(0, MAX_PREFERENCES) : allPreferences,
+      saved_festivals: truncatedSavedFestivals ? allSavedFestivals.slice(0, MAX_SAVED_FESTIVALS) : allSavedFestivals,
       group_memberships: groupMemberships ?? [],
+      ...(truncatedPreferences || truncatedSavedFestivals
+        ? { truncated: true, warning: 'Some data was truncated due to size limits.' }
+        : {}),
     };
 
     res.setHeader('Content-Type', 'application/json');

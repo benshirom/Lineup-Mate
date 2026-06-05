@@ -168,7 +168,8 @@ export default function FestivalPage() {
           .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
           .eq('festival_id', festivalId)
           .eq('is_active', true)
-          .order('start_time');
+          .order('start_time')
+          .limit(500);
 
         if (perfError) throw perfError;
 

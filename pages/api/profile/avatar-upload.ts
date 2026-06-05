@@ -106,8 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       public_id: payload.public_id
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Could not upload avatar.';
-    return res.status(500).json({ error: message });
+    return res.status(500).json({ error: 'Could not upload avatar.' });
   }
 }
 

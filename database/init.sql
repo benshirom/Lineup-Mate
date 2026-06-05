@@ -304,11 +304,13 @@ to authenticated
 using (auth.uid() = owner_user_id)
 with check (auth.uid() = owner_user_id);
 
--- MVP policy: memberships are readable by signed-in users so group schedule pages can resolve members safely.
-create policy "Authenticated users can read group memberships"
+-- Only members of a group can see its membership list (replaced the open MVP policy via 20260605_security_fixes.sql).
+create policy "Group members can read their own group memberships"
 on public.group_members for select
 to authenticated
-using (true);
+using (
+  group_id in (select public.my_group_ids())
+);
 
 create policy "Users can join groups through RPC"
 on public.group_members for insert
