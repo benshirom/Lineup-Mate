@@ -35,8 +35,19 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
   };
 
   const scheduleHide = () => {
-    hideTimer.current = setTimeout(() => setOpen(false), 120);
+    hideTimer.current = setTimeout(() => setOpen(false), 150);
   };
+
+  // Close on touch outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: TouchEvent) => {
+      if (btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener('touchstart', handler);
+    return () => document.removeEventListener('touchstart', handler);
+  }, [open]);
 
   if (prefs.length === 0) return null;
 
@@ -59,7 +70,13 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
         type="button"
         onMouseEnter={show}
         onMouseLeave={scheduleHide}
-        onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : show(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          // On touch devices pointerType is 'touch' — toggle on tap.
+          // On mouse devices pointerType is 'mouse' — hover handles it, ignore click.
+          const pt = (e.nativeEvent as PointerEvent).pointerType;
+          if (pt === 'touch' || pt === 'pen') { open ? setOpen(false) : show(); }
+        }}
         className="rounded-full px-2 py-0.5 text-[10px] font-bold"
         style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}
       >
