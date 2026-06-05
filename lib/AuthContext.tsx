@@ -78,10 +78,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .single();
 
     if (data?.is_blocked) {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('auth_blocked_error', 'Your account has been suspended by an administrator.');
-      }
       await supabase.auth.signOut();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/blocked';
+      }
       return;
     }
 
