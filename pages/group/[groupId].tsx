@@ -17,6 +17,7 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const computePos = () => {
     if (!btnRef.current) return null;
@@ -27,8 +28,15 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
     return { top, left: rect.left };
   };
 
-  const show = () => { setPos(computePos()); setOpen(true); };
-  const hide = () => setOpen(false);
+  const show = () => {
+    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
+    setPos(computePos());
+    setOpen(true);
+  };
+
+  const scheduleHide = () => {
+    hideTimer.current = setTimeout(() => setOpen(false), 120);
+  };
 
   if (prefs.length === 0) return null;
 
@@ -50,8 +58,8 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
         ref={btnRef}
         type="button"
         onMouseEnter={show}
-        onMouseLeave={hide}
-        onClick={(e) => { e.stopPropagation(); open ? hide() : show(); }}
+        onMouseLeave={scheduleHide}
+        onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : show(); }}
         className="rounded-full px-2 py-0.5 text-[10px] font-bold"
         style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}
       >
@@ -59,8 +67,8 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
       </button>
       {open && pos && (
         <div
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={hide}
+          onMouseEnter={show}
+          onMouseLeave={scheduleHide}
           className="rounded-xl p-2 shadow-lg"
           style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120 }}
         >
