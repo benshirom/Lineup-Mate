@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -7,6 +8,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const auth = await requireAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+
+  const allowed = await applyRateLimit(req, res, 'admin-users');
+  if (!allowed) return;
 
   const supabaseAdmin = getSupabaseAdmin();
   const { search, role, is_blocked, page = '0', limit = '50' } = req.query as Record<string, string>;

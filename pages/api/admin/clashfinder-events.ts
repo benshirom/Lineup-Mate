@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
 import { fetchClashfinderEventsList, normalizeClashfinderEventsList } from '@/lib/clashfinderEvents';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -12,6 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!admin.ok) {
     return res.status(admin.status).json({ error: admin.error });
   }
+
+  const allowed = await applyRateLimit(req, res, 'admin-clashfinder-events');
+  if (!allowed) return;
 
   const scope = req.query.scope === 'core' ? 'core' : 'all';
   const search = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';

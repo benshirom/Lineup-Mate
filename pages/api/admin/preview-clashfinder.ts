@@ -3,6 +3,7 @@ import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfin
 import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import type { NormalizedClashfinderPerformance } from '@/lib/clashfinder';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
 import { z } from 'zod';
 
 const bodySchema = z.object({
@@ -66,6 +67,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!admin.ok) {
     return res.status(admin.status).json({ error: admin.error });
   }
+
+  const allowed = await applyRateLimit(req, res, 'admin-clashfinder-preview');
+  if (!allowed) return;
 
   const parsed = bodySchema.safeParse(req.body);
   if (!parsed.success) {
