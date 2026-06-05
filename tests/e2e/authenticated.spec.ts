@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openProfile } from './helpers';
+import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openLineupTab, openProfile } from './helpers';
 
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
@@ -140,5 +140,36 @@ test.describe('authenticated flows', () => {
     await page.getByLabel(/Theme/i).selectOption('dark');
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  });
+
+  test('starring an artist from Lineup tab stars all their performances', async ({ page }) => {
+    test.setTimeout(60_000);
+    await openFirstFestival(page);
+    await openLineupTab(page);
+
+    // Find first unstarred artist
+    const unstarredBtn = page.getByTestId('lineup-artist-star').filter({ hasText: '☆' }).first();
+    await expect(unstarredBtn, 'At least one artist should be unstarred in Lineup tab').toBeVisible({ timeout: 15_000 });
+
+    const artistRow = page.getByTestId('lineup-artist-row').filter({
+      has: page.getByTestId('lineup-artist-star').filter({ hasText: '☆' })
+    }).first();
+    const artistName = await artistRow.locator('h3').innerText();
+
+    await unstarredBtn.click({ force: true });
+    await page.waitForLoadState('networkidle').catch(() => undefined);
+
+    // Star should now be fully starred
+    await expect(
+      artistRow.getByTestId('lineup-artist-star'),
+      `After starring ${artistName} from Lineup tab, the star should become ★`
+    ).toHaveText('★', { timeout: 15_000 });
+
+    // Switch to Artists tab and confirm performance for this artist is visible
+    await page.getByRole('button', { name: /^artists$/i }).click();
+    await expect(
+      page.getByTestId('festival-performance-block').filter({ hasText: artistName }).first(),
+      `Performance block for ${artistName} should appear in Artists tab after starring`
+    ).toBeVisible({ timeout: 15_000 });
   });
 });
