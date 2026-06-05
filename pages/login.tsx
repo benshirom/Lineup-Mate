@@ -60,6 +60,15 @@ const LoginPage = () => {
     if (user && view !== 'update-password') router.push('/');
   }, [user, router, view]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const msg = window.localStorage.getItem('auth_blocked_error');
+    if (msg) {
+      setError(msg);
+      window.localStorage.removeItem('auth_blocked_error');
+    }
+  }, []);
+
   const isEmailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email]);
   const isPasswordValid = password.length >= 6;
 

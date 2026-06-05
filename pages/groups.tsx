@@ -84,8 +84,9 @@ export default function GroupsPage() {
 
       const { data: groupRows, error: groupsError } = await supabase
         .from('groups')
-        .select('id, name, invite_code, festival_id, created_at, festivals(id, name, year, location, start_date, end_date, emoji, color)')
+        .select('id, name, invite_code, festival_id, created_at, is_blocked, festivals(id, name, year, location, start_date, end_date, emoji, color)')
         .in('id', groupIds)
+        .eq('is_blocked', false)
         .order('created_at', { ascending: false });
 
       if (groupsError) throw groupsError;
