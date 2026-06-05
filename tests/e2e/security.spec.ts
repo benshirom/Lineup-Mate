@@ -84,3 +84,65 @@ test.describe('security: input validation on admin clashfinder endpoints', () =>
     expect([400, 401]).toContain(response.status());
   });
 });
+
+test.describe('security: IDOR — profile endpoints reject cross-user access', () => {
+  test('DELETE /api/profile/delete-account without token returns 401', async ({ request }) => {
+    const response = await request.delete('/api/profile/delete-account');
+    expect(response.status()).toBe(401);
+  });
+
+  test('GET /api/profile/export-data without token returns 401', async ({ request }) => {
+    const response = await request.get('/api/profile/export-data');
+    expect(response.status()).toBe(401);
+  });
+
+  test('DELETE /api/profile/delete-account with invalid token returns 401', async ({ request }) => {
+    const response = await request.delete('/api/profile/delete-account', {
+      headers: { Authorization: 'Bearer this-is-not-a-valid-jwt' },
+    });
+    expect(response.status()).toBe(401);
+  });
+
+  test('GET /api/profile/export-data with invalid token returns 401', async ({ request }) => {
+    const response = await request.get('/api/profile/export-data', {
+      headers: { Authorization: 'Bearer this-is-not-a-valid-jwt' },
+    });
+    expect(response.status()).toBe(401);
+  });
+});
+
+test.describe('security: admin endpoints reject non-admin tokens', () => {
+  const adminEndpoints = [
+    { method: 'GET', path: '/api/admin/stats' },
+    { method: 'GET', path: '/api/admin/users' },
+    { method: 'GET', path: '/api/admin/groups' },
+    { method: 'GET', path: '/api/admin/clashfinder-events' },
+  ];
+
+  for (const { method, path } of adminEndpoints) {
+    test(`${method} ${path} returns 401 with invalid token`, async ({ request }) => {
+      const response = await request.fetch(path, {
+        method,
+        headers: { Authorization: 'Bearer invalid-token' },
+      });
+      expect(response.status()).toBe(401);
+    });
+  }
+});
+
+test.describe('security: HTTP method enforcement', () => {
+  test('GET /api/profile/delete-account returns 405', async ({ request }) => {
+    const response = await request.get('/api/profile/delete-account');
+    expect(response.status()).toBe(405);
+  });
+
+  test('POST /api/profile/export-data returns 405', async ({ request }) => {
+    const response = await request.post('/api/profile/export-data', { data: {} });
+    expect(response.status()).toBe(405);
+  });
+
+  test('DELETE /api/admin/stats returns 405', async ({ request }) => {
+    const response = await request.delete('/api/admin/stats');
+    expect(response.status()).toBe(405);
+  });
+});
