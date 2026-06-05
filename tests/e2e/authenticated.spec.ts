@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openProfile } from './helpers';
+import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openLineupTab, openProfile } from './helpers';
 
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
@@ -140,5 +140,29 @@ test.describe('authenticated flows', () => {
     await page.getByLabel(/Theme/i).selectOption('dark');
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  });
+
+  test('starring an artist from Lineup tab stars all their performances', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openFirstFestival(page);
+    await openLineupTab(page);
+
+    // Find first unstarred artist row
+    const firstUnstarredRow = page.getByTestId('lineup-artist-row').filter({
+      has: page.getByTestId('lineup-artist-star').filter({ hasText: '☆' })
+    }).first();
+    await expect(firstUnstarredRow, 'At least one artist should be unstarred in Lineup tab').toBeVisible({ timeout: 20_000 });
+
+    // Capture artist name before clicking (stable identifier for post-click lookup)
+    const artistName = await firstUnstarredRow.locator('h3').innerText();
+
+    await firstUnstarredRow.getByTestId('lineup-artist-star').click({ force: true });
+
+    // Re-locate the row by artist name (stable after star changes from ☆ to ★)
+    const rowByName = page.getByTestId('lineup-artist-row').filter({ hasText: artistName });
+    await expect(
+      rowByName.getByTestId('lineup-artist-star'),
+      `After starring ${artistName} from Lineup tab, the star should become ★`
+    ).toHaveText('★', { timeout: 30_000 });
   });
 });

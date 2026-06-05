@@ -152,6 +152,14 @@ export async function ensureFirstActIsStarred(page: Page) {
   }
 }
 
+export async function openLineupTab(page: Page) {
+  await dismissPreviewOverlays(page);
+  const lineupTab = page.getByRole('button', { name: /^lineup$/i });
+  await expect(lineupTab, 'Festival page should have a Lineup tab button').toBeVisible({ timeout: 20_000 });
+  await lineupTab.click();
+  await expect(page.getByTestId('lineup-tab'), 'Lineup tab panel should appear after clicking Lineup').toBeVisible({ timeout: 10_000 });
+}
+
 export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
   await dismissPreviewOverlays(page);

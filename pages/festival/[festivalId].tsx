@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
-type FestivalTab = 'artists' | 'timeline' | 'info';
+type FestivalTab = 'artists' | 'lineup' | 'timeline' | 'info';
 
 interface Festival {
   id: number;
@@ -36,6 +36,12 @@ interface PerformanceItem {
   endTime: string;
   dayDate: string;
   status: PreferenceStatus | null;
+}
+
+interface ArtistRosterItem {
+  artistName: string;
+  performances: PerformanceItem[];
+  starState: 'all' | 'none' | 'mixed';
 }
 
 function timeLabel(dateString: string) {
@@ -294,6 +300,14 @@ export default function FestivalPage() {
     }
   };
 
+  const toggleArtistStar = async (artist: ArtistRosterItem) => {
+    if (!requireLogin()) return;
+    const newStatus: PreferenceStatus | null = artist.starState === 'all' ? null : 'going';
+    for (const perf of artist.performances) {
+      await updatePreference(perf.id, newStatus);
+    }
+  };
+
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!festival || !requireLogin()) return;
@@ -363,6 +377,22 @@ export default function FestivalPage() {
     () => selectedDayPerformances.filter((p) => conflictIds.has(p.id)).length,
     [selectedDayPerformances, conflictIds]
   );
+
+  const artistRoster = useMemo((): ArtistRosterItem[] => {
+    const map = new Map<string, PerformanceItem[]>();
+    performances.forEach((p) => {
+      if (!map.has(p.artistName)) map.set(p.artistName, []);
+      map.get(p.artistName)!.push(p);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([artistName, perfs]) => {
+        const goingCount = perfs.filter((p) => p.status === 'going').length;
+        const starState: ArtistRosterItem['starState'] =
+          goingCount === 0 ? 'none' : goingCount === perfs.length ? 'all' : 'mixed';
+        return { artistName, performances: perfs, starState };
+      });
+  }, [performances]);
 
   useEffect(() => {
     if (nowLeft !== null && nowLineRef.current) {
@@ -470,8 +500,11 @@ export default function FestivalPage() {
                 }}
               >
                 <div className="flex items-center gap-2 overflow-x-auto scroll-hidden pb-1">
-                  {(['artists', 'timeline', 'info'] as FestivalTab[]).map((nextTab) => {
-                    const tabLabel = nextTab === 'artists' ? 'Artists' : nextTab === 'timeline' ? 'Timeline' : 'Info';
+                  {(['artists', 'lineup', 'timeline', 'info'] as FestivalTab[]).map((nextTab) => {
+                    const tabLabel =
+                      nextTab === 'artists' ? 'Artists' :
+                      nextTab === 'lineup' ? 'Lineup' :
+                      nextTab === 'timeline' ? 'Timeline' : 'Info';
                     return (
                       <button
                         key={nextTab}
@@ -498,7 +531,7 @@ export default function FestivalPage() {
                   )}
                 </div>
 
-                {days.length > 0 && tab !== 'info' && (
+                {days.length > 0 && tab !== 'info' && tab !== 'lineup' && (
                   <div className="flex gap-2 overflow-x-auto scroll-hidden pt-2" data-testid="festival-day-tabs">
                     {days.map((nextDay) => {
                       const savedOnDay = performances.filter((p) => p.dayDate === nextDay && p.status === 'going').length;
@@ -601,6 +634,67 @@ export default function FestivalPage() {
                     <p className="mt-4 text-sm" style={{ color: c.muted }}>No shows this day.</p>
                   )}
                 </>
+              )}
+
+              {/* ── Lineup tab (Artist Roster) ──────────────────── */}
+              {tab === 'lineup' && (
+                <div data-testid="lineup-tab">
+                  {artistRoster.length === 0 && !loading && (
+                    <p className="mt-4 text-sm" style={{ color: c.muted }}>No artists found.</p>
+                  )}
+                  <div className="space-y-2">
+                    {artistRoster.map((artist) => {
+                      const isAll = artist.starState === 'all';
+                      const isMixed = artist.starState === 'mixed';
+                      const dayLabels = Array.from(new Set(artist.performances.map((p) => p.dayDate)))
+                        .sort()
+                        .map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
+                      return (
+                        <article
+                          key={artist.artistName}
+                          data-testid="lineup-artist-row"
+                          className="overflow-hidden rounded-2xl"
+                          style={{
+                            background: c.surf,
+                            border: `1px solid ${isAll ? `${c.star}44` : c.brd}`,
+                            boxShadow: isAll ? `0 0 14px ${c.star}12` : 'none',
+                          }}
+                        >
+                          <div className="flex items-center gap-3 px-4 py-3.5">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>
+                                {artist.artistName}
+                              </h3>
+                              <p className="text-xs mt-0.5" style={{ color: c.muted }}>
+                                {artist.performances.length} set{artist.performances.length !== 1 ? 's' : ''}
+                                {' · '}{dayLabels.join(', ')}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              data-testid="lineup-artist-star"
+                              onClick={() => toggleArtistStar(artist)}
+                              aria-label={isAll ? `Unstar all sets by ${artist.artistName}` : `Star all sets by ${artist.artistName}`}
+                              className="inline-flex items-center justify-center rounded-full font-black transition"
+                              style={{
+                                width: 44,
+                                height: 44,
+                                background: isAll ? c.star : isMixed ? `${c.star}55` : 'rgba(0,0,0,.38)',
+                                color: isAll ? '#0f0f00' : 'rgba(255,255,255,0.9)',
+                                border: `1.5px solid ${isAll || isMixed ? c.star : 'rgba(255,255,255,.22)'}`,
+                                boxShadow: isAll ? `0 0 16px ${c.star}66, inset 0 1px 0 rgba(255,255,255,.2)` : 'none',
+                                flexShrink: 0,
+                                opacity: isMixed ? 0.75 : 1,
+                              }}
+                            >
+                              {isAll || isMixed ? '★' : '☆'}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
 
               {/* ── Timeline tab ─────────────────────────────────── */}
