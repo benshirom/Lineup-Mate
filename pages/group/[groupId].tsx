@@ -14,17 +14,20 @@ interface GroupData { id: number; name: string; invite_code: string; festival_id
 type ThemeColors = ReturnType<typeof getThemeColors>;
 
 function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!popupPos) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (popoverRef.current?.contains(target) || btnRef.current?.contains(target)) return;
+      setPopupPos(null);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  }, [popupPos]);
 
   if (prefs.length === 0) return null;
 
@@ -40,20 +43,33 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
     );
   }
 
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (popupPos) { setPopupPos(null); return; }
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const estimatedHeight = prefs.length * 22 + 16;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow > estimatedHeight + 8 ? rect.bottom + 4 : rect.top - estimatedHeight - 4;
+    setPopupPos({ top, left: rect.left });
+  };
+
   return (
-    <div ref={ref} className="relative inline-block" data-testid="group-performance-picks">
+    <div className="inline-block" data-testid="group-performance-picks">
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={toggle}
         className="rounded-full px-2 py-0.5 text-[10px] font-bold"
         style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}
       >
         ★ {prefs.length}
       </button>
-      {open && (
+      {popupPos && (
         <div
-          className="absolute bottom-full left-0 mb-1 rounded-xl p-2 shadow-lg z-50"
-          style={{ background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120 }}
+          ref={popoverRef}
+          className="rounded-xl p-2 shadow-lg"
+          style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 9999, background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120 }}
         >
           {prefs.map((p) => (
             <div key={p.user_id} className="truncate py-0.5 text-[11px] font-semibold" style={{ color: c.txt }}>
@@ -115,10 +131,16 @@ export default function GroupPage() {
       try {
         const { data: groupData, error: groupError } = await supabase
           .from('groups')
-          .select('id, name, invite_code, festival_id, festivals(id, name, year, location, start_date, end_date, description, emoji, color, genre, genre_label, website)')
+          .select('id, name, invite_code, festival_id, is_blocked, festivals(id, name, year, location, start_date, end_date, description, emoji, color, genre, genre_label, website)')
           .eq('id', groupId)
           .single();
         if (groupError) throw groupError;
+
+        if (groupData.is_blocked) {
+          setError('This group has been blocked by an administrator.');
+          setLoading(false);
+          return;
+        }
 
         const mappedGroup: GroupData = {
           id: groupData.id,
@@ -128,6 +150,14 @@ export default function GroupPage() {
           festival: (groupData as any).festivals ?? null
         };
         setGroup(mappedGroup);
+
+        // Auto-save the linked festival for this user (idempotent)
+        if (mappedGroup.festival_id) {
+          supabase.from('saved_festivals').upsert(
+            { user_id: user.id, festival_id: mappedGroup.festival_id },
+            { onConflict: 'user_id,festival_id' }
+          ).then(() => {});
+        }
 
         const { data: memberData, error: membersError } = await supabase.from('group_members').select('user_id, role').eq('group_id', groupId);
         if (membersError) throw membersError;
