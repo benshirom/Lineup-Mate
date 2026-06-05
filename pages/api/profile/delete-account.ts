@@ -1,11 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
     res.setHeader('Allow', 'DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!await applyRateLimit(req, res, 'delete-account')) return;
 
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;

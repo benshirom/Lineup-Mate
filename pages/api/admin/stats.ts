@@ -2,22 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 
-function groupCount(rows: Record<string, unknown>[], key: string): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const row of rows) {
-    const k = String(row[key]);
-    counts[k] = (counts[k] ?? 0) + 1;
-  }
-  return counts;
-}
-
-function topN(counts: Record<string, number>, n: number) {
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, n)
-    .map(([id, count]) => ({ id, count }));
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -44,9 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     { count: blockedGroups },
     { count: totalPerformances },
     { count: totalArtists },
-    { data: allPrefs },
-    { data: allSaved },
-    { data: allMembers },
+    { data: topActiveUserRows },
+    { data: topSavedFestivalRows },
+    { data: topGroupMemberRows },
   ] = await Promise.all([
     supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', ago7),
@@ -61,54 +45,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     supabaseAdmin.from('groups').select('*', { count: 'exact', head: true }).eq('is_blocked', true),
     supabaseAdmin.from('performances').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('artists').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('user_performance_preferences').select('user_id').limit(50000),
-    supabaseAdmin.from('saved_festivals').select('festival_id').limit(50000),
-    supabaseAdmin.from('group_members').select('group_id').limit(50000),
+    supabaseAdmin.rpc('get_top_active_users', { n: 10 }),
+    supabaseAdmin.rpc('get_top_saved_festivals', { n: 5 }),
+    supabaseAdmin.rpc('get_top_groups_by_members', { n: 5 }),
   ]);
 
   // Most active users
-  const prefCounts = groupCount((allPrefs ?? []) as Record<string, unknown>[], 'user_id');
-  const topUserIds = topN(prefCounts, 10);
+  const topUserIds = (topActiveUserRows ?? []) as Array<{ user_id: string; preference_count: number }>;
   let mostActiveUsers: { id: string; display_name: string | null; email: string | null; preferenceCount: number }[] = [];
   if (topUserIds.length > 0) {
     const { data: profiles } = await supabaseAdmin
       .from('profiles')
       .select('id, display_name, email')
-      .in('id', topUserIds.map((u) => u.id));
-    mostActiveUsers = topUserIds.map(({ id, count }) => {
-      const p = profiles?.find((pr) => pr.id === id);
-      return { id, display_name: p?.display_name ?? null, email: p?.email ?? null, preferenceCount: count };
+      .in('id', topUserIds.map((u) => u.user_id));
+    mostActiveUsers = topUserIds.map(({ user_id, preference_count }) => {
+      const p = profiles?.find((pr) => pr.id === user_id);
+      return { id: user_id, display_name: p?.display_name ?? null, email: p?.email ?? null, preferenceCount: preference_count };
     });
   }
 
   // Most saved festivals
-  const savedCounts = groupCount((allSaved ?? []) as Record<string, unknown>[], 'festival_id');
-  const topFestIds = topN(savedCounts, 5);
+  const topFestIds = (topSavedFestivalRows ?? []) as Array<{ festival_id: number; save_count: number }>;
   let mostSavedFestivals: { id: number; name: string; saveCount: number }[] = [];
   if (topFestIds.length > 0) {
     const { data: festivals } = await supabaseAdmin
       .from('festivals')
       .select('id, name')
-      .in('id', topFestIds.map((f) => Number(f.id)));
-    mostSavedFestivals = topFestIds.map(({ id, count }) => {
-      const f = festivals?.find((fe) => String(fe.id) === id);
-      return { id: Number(id), name: f?.name ?? id, saveCount: count };
+      .in('id', topFestIds.map((f) => f.festival_id));
+    mostSavedFestivals = topFestIds.map(({ festival_id, save_count }) => {
+      const f = festivals?.find((fe) => fe.id === festival_id);
+      return { id: festival_id, name: f?.name ?? String(festival_id), saveCount: save_count };
     });
   }
 
   // Most popular groups
-  const memberCounts = groupCount((allMembers ?? []) as Record<string, unknown>[], 'group_id');
-  const topGroupIds = topN(memberCounts, 5);
+  const topGroupIds = (topGroupMemberRows ?? []) as Array<{ group_id: number; member_count: number }>;
   let mostPopularGroups: { id: number; name: string; festivalName: string; memberCount: number }[] = [];
   if (topGroupIds.length > 0) {
     const { data: groups } = await supabaseAdmin
       .from('groups')
       .select('id, name, festival:festivals(name)')
-      .in('id', topGroupIds.map((g) => Number(g.id)));
-    mostPopularGroups = topGroupIds.map(({ id, count }) => {
-      const g = groups?.find((gr) => String(gr.id) === id);
+      .in('id', topGroupIds.map((g) => g.group_id));
+    mostPopularGroups = topGroupIds.map(({ group_id, member_count }) => {
+      const g = groups?.find((gr) => gr.id === group_id);
       const festivalName = (g?.festival as { name?: string } | null)?.name ?? '';
-      return { id: Number(id), name: g?.name ?? id, festivalName, memberCount: count };
+      return { id: group_id, name: g?.name ?? String(group_id), festivalName, memberCount: member_count };
     });
   }
 
