@@ -22,7 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select('user_id, role, created_at')
     .eq('group_id', groupId);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[Admin API Error] group members fetch', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 
   const userIds = (members ?? []).map((m) => m.user_id);
 

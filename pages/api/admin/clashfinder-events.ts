@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       events: events.slice(0, limit)
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown Clashfinder events list error';
-    return res.status(500).json({ error: message });
+    console.error('[Admin API Error] clashfinder events', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

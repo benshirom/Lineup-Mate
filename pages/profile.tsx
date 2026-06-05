@@ -40,6 +40,8 @@ export default function ProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
 
   useEffect(() => {
     if (!authReady) return;
@@ -188,6 +190,49 @@ export default function ProfilePage() {
     }
   };
 
+  const handleExportData = async () => {
+    if (!session) return;
+    setExportingData(true);
+    try {
+      const response = await fetch('/api/profile/export-data', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lineup-mate-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Could not export your data. Please try again.');
+    } finally {
+      setExportingData(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!session) return;
+    const confirmed = window.confirm(
+      'Are you sure you want to permanently delete your account? This cannot be undone.'
+    );
+    if (!confirmed) return;
+    setDeletingAccount(true);
+    try {
+      const response = await fetch('/api/profile/delete-account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('Deletion failed');
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch {
+      setError('Could not delete your account. Please try again.');
+      setDeletingAccount(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -253,6 +298,19 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </form>
+
+              <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+                <h2 className="mb-1 text-xl font-black">Your Data</h2>
+                <p className="mb-4 text-sm" style={{ color: c.muted }}>Download a copy of your data or permanently delete your account.</p>
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={handleExportData} disabled={exportingData} className="rounded-full px-5 py-3 text-sm font-black disabled:opacity-60" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
+                    {exportingData ? 'Exporting…' : 'Export My Data'}
+                  </button>
+                  <button onClick={handleDeleteAccount} disabled={deletingAccount} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: '#ef4444' }}>
+                    {deletingAccount ? 'Deleting…' : 'Delete Account'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </section>

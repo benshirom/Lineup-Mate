@@ -61,9 +61,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     supabaseAdmin.from('groups').select('*', { count: 'exact', head: true }).eq('is_blocked', true),
     supabaseAdmin.from('performances').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('artists').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('user_performance_preferences').select('user_id'),
-    supabaseAdmin.from('saved_festivals').select('festival_id'),
-    supabaseAdmin.from('group_members').select('group_id'),
+    supabaseAdmin.from('user_performance_preferences').select('user_id').limit(50000),
+    supabaseAdmin.from('saved_festivals').select('festival_id').limit(50000),
+    supabaseAdmin.from('group_members').select('group_id').limit(50000),
   ]);
 
   // Most active users

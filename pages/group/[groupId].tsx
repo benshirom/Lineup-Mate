@@ -183,27 +183,46 @@ export default function GroupPage() {
           ).then(() => {});
         }
 
-        const { data: memberData, error: membersError } = await supabase.from('group_members').select('user_id, role').eq('group_id', groupId);
+        // Fetch members and performances in parallel (independent queries)
+        const [
+          { data: memberData, error: membersError },
+          { data: perfData, error: perfError },
+        ] = await Promise.all([
+          supabase.from('group_members').select('user_id, role').eq('group_id', groupId),
+          supabase
+            .from('performances')
+            .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
+            .eq('festival_id', mappedGroup.festival_id)
+            .eq('is_active', true)
+            .order('start_time', { ascending: true }),
+        ]);
         if (membersError) throw membersError;
+        if (perfError) throw perfError;
+
         const rawMembers = (memberData ?? []) as Array<{ user_id: string; role: 'owner' | 'member' }>;
         const memberIds = rawMembers.map((m) => m.user_id);
 
-        let profilesById: Record<string, Profile> = {};
-        if (memberIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await supabase.from('profiles').select('id, display_name, email').in('id', memberIds);
-          if (profilesError) throw profilesError;
-          profilesById = Object.fromEntries((profilesData ?? []).map((p: any) => [p.id, { display_name: p.display_name, email: p.email }]));
-        }
+        // Fetch profiles and preferences in parallel (both depend on memberIds)
+        const [profilesResult, prefsResult] = await Promise.all([
+          memberIds.length > 0
+            ? supabase.from('profiles').select('id, display_name, email').in('id', memberIds)
+            : Promise.resolve({ data: [], error: null }),
+          memberIds.length > 0
+            ? supabase
+                .from('user_performance_preferences')
+                .select('performance_id, status, user_id')
+                .in('user_id', memberIds)
+                .neq('status', null)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+        if (profilesResult.error) throw profilesResult.error;
+        if (prefsResult.error) throw prefsResult.error;
+
+        const profilesById = Object.fromEntries(
+          (profilesResult.data ?? []).map((p: any) => [p.id, { display_name: p.display_name, email: p.email }])
+        ) as Record<string, Profile>;
         const memberList = rawMembers.map((m) => ({ ...m, profile: profilesById[m.user_id] ?? null }));
         setMembers(memberList);
-
-        const { data: perfData, error: perfError } = await supabase
-          .from('performances')
-          .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
-          .eq('festival_id', mappedGroup.festival_id)
-          .eq('is_active', true)
-          .order('start_time', { ascending: true });
-        if (perfError) throw perfError;
 
         const perfMap: Record<number, PerformanceInfo> = {};
         perfData?.forEach((p: any) => {
@@ -219,18 +238,23 @@ export default function GroupPage() {
         });
         setPerformances(perfMap);
 
+        // Build a lookup map for member labels (O(n) instead of O(n²) .find())
+        const memberLabelById = Object.fromEntries(
+          memberList.map((m) => [m.user_id, memberLabel(m)])
+        ) as Record<string, string>;
+
         if (memberIds.length > 0) {
-          const { data: prefs, error: prefsError } = await supabase
-            .from('user_performance_preferences')
-            .select('performance_id, status, user_id')
-            .in('user_id', memberIds)
-            .neq('status', null);
-          if (prefsError) throw prefsError;
           const perfIds = new Set(Object.keys(perfMap).map(Number));
-          setPerformancePrefs((prefs ?? []).filter((p: any) => perfIds.has(p.performance_id)).map((p: any) => {
-            const match = memberList.find((m) => m.user_id === p.user_id);
-            return { performance_id: p.performance_id, status: p.status, user_id: p.user_id, user_label: match ? memberLabel(match) : `User·${p.user_id.slice(0, 6)}` };
-          }));
+          setPerformancePrefs(
+            (prefsResult.data ?? [])
+              .filter((p: any) => perfIds.has(p.performance_id))
+              .map((p: any) => ({
+                performance_id: p.performance_id,
+                status: p.status,
+                user_id: p.user_id,
+                user_label: memberLabelById[p.user_id] ?? `User·${p.user_id.slice(0, 6)}`,
+              }))
+          );
         } else {
           setPerformancePrefs([]);
         }

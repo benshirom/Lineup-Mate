@@ -3,6 +3,11 @@ import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfin
 import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import { importNormalizedFestival } from '@/lib/importFestival';
 import { requireAdmin } from '@/lib/adminAuth';
+import { z } from 'zod';
+
+const bodySchema = z.object({
+  slug: z.string().trim().min(1, 'Missing Clashfinder slug.').max(200),
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -15,10 +20,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(admin.status).json({ error: admin.error });
   }
 
-  const slug = typeof req.body?.slug === 'string' ? req.body.slug.trim() : '';
-  if (!slug) {
-    return res.status(400).json({ error: 'Missing Clashfinder slug.' });
+  const parsed = bodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid input.' });
   }
+  const { slug } = parsed.data;
 
   try {
     const raw = await fetchClashfinderEvent(slug);
@@ -59,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       deactivated: result.deactivatedPerformances
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown import error';
-    return res.status(500).json({ error: message });
+    console.error('[Admin API Error] import-clashfinder', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
