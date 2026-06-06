@@ -15,8 +15,8 @@ test.describe('Notification bell', () => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    // Use .first() because both desktop and mobile navs render a bell
-    const bell = page.getByTestId('notification-bell').first();
+    // Use :visible so this works on both desktop (desktop nav bell) and mobile (mobile nav bell)
+    const bell = page.locator('[data-testid="notification-bell"]:visible');
     await expect(bell).toBeVisible({ timeout: 5000 });
   });
 
@@ -24,7 +24,7 @@ test.describe('Notification bell', () => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    const bell = page.getByTestId('notification-bell').first();
+    const bell = page.locator('[data-testid="notification-bell"]:visible');
     await expect(bell).toBeVisible({ timeout: 5000 });
 
     await bell.locator('button').first().click();
