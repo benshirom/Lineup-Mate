@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!await applyRateLimit(req, res, 'delete-account')) return;
 
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   const supabaseAdmin = getSupabaseAdmin();

@@ -56,7 +56,7 @@ export default function Home() {
         .order('start_date');
 
       if (error) {
-        setError(error.message);
+        setError('Failed to load festivals. Please try again.');
         setLoading(false);
         return;
       }

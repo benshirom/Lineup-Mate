@@ -220,3 +220,39 @@ test.describe('security: cross-user data isolation', () => {
     expect(response.status()).toBe(403);
   });
 });
+
+test.describe('security: XSS payload rejection on admin endpoints', () => {
+  const xssPayloads = [
+    '<script>alert(1)</script>',
+    '"><img src=x onerror=alert(1)>',
+    "'; DROP TABLE users; --",
+  ];
+
+  for (const payload of xssPayloads) {
+    test(`preview-clashfinder rejects XSS slug: ${payload.slice(0, 30)}`, async ({ request }) => {
+      const response = await request.post('/api/admin/preview-clashfinder', {
+        headers: { Authorization: 'Bearer fake-token' },
+        data: { slug: payload },
+      });
+      // Auth fails first (401) or validation catches it (400) — never 200 or 500
+      expect([400, 401]).toContain(response.status());
+    });
+  }
+});
+
+test.describe('security: cron endpoint only accepts header secret', () => {
+  test('GET /api/cron/check-notifications with secret in query param returns 401', async ({ request }) => {
+    const response = await request.get('/api/cron/check-notifications?secret=any-value');
+    expect(response.status()).toBe(401);
+  });
+
+  test('POST /api/cron/check-notifications with secret in query param returns 401', async ({ request }) => {
+    const response = await request.post('/api/cron/check-notifications?secret=any-value');
+    expect(response.status()).toBe(401);
+  });
+
+  test('GET /api/cron/check-notifications without any secret returns 401', async ({ request }) => {
+    const response = await request.get('/api/cron/check-notifications');
+    expect(response.status()).toBe(401);
+  });
+});

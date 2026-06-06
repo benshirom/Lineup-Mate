@@ -155,7 +155,7 @@ export default function AdminPage() {
       setEvents(data.events || []);
       setEventsCount(data.count ?? data.events?.length ?? 0);
     } catch (error: unknown) {
-      setEventsError(error instanceof Error ? error.message : 'Unknown events list error');
+      setEventsError('Failed to load Clashfinder events. Please try again.');
     } finally {
       setLoadingAction(null);
     }
@@ -179,7 +179,7 @@ export default function AdminPage() {
       const data = (await response.json()) as AdminResponse;
       setResult(data);
     } catch (error: unknown) {
-      setResult({ error: error instanceof Error ? error.message : 'Unknown error' });
+      setResult({ error: 'Request failed. Please try again.' });
     } finally {
       setLoadingAction(null);
     }
