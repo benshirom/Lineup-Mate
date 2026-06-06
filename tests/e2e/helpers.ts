@@ -158,13 +158,16 @@ export async function ensureFirstActIsStarred(page: Page) {
   }
 }
 
-export async function openLineupTab(page: Page) {
+export async function openArtistsTab(page: Page) {
   await dismissPreviewOverlays(page);
-  const lineupTab = page.getByRole('button', { name: /^lineup$/i });
-  await expect(lineupTab, 'Festival page should have a Lineup tab button').toBeVisible({ timeout: 20_000 });
-  await lineupTab.click();
-  await expect(page.getByTestId('lineup-tab'), 'Lineup tab panel should appear after clicking Lineup').toBeVisible({ timeout: 10_000 });
+  const artistsTab = page.getByRole('button', { name: /^artists$/i });
+  await expect(artistsTab, 'Festival page should have an Artists tab button').toBeVisible({ timeout: 20_000 });
+  await artistsTab.click();
+  await expect(page.getByTestId('artists-tab'), 'Artists tab panel should appear after clicking Artists').toBeVisible({ timeout: 10_000 });
 }
+
+/** @deprecated Use openArtistsTab instead */
+export const openLineupTab = openArtistsTab;
 
 export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');

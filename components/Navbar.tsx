@@ -19,6 +19,7 @@ const Navbar: React.FC = () => {
   const handleSignOut = async () => {
     setMenuOpen(false);
     await supabase.auth.signOut();
+    router.push('/');
   };
 
   const close = () => setMenuOpen(false);

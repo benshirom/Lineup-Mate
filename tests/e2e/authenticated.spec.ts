@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openLineupTab, openProfile } from './helpers';
+import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openArtistsTab, openProfile } from './helpers';
 
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
@@ -142,10 +142,10 @@ test.describe('authenticated flows', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 
-  test('starring an artist from Lineup tab stars all their performances', async ({ page }) => {
+  test('starring an artist from Artists tab stars all their performances', async ({ page }) => {
     test.setTimeout(120_000);
     await openFirstFestival(page);
-    await openLineupTab(page);
+    await openArtistsTab(page);
 
     // Find first unstarred artist row
     const firstUnstarredRow = page.getByTestId('lineup-artist-row').filter({
