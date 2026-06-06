@@ -44,18 +44,25 @@ export async function dismissPreviewOverlays(page: Page) {
 export async function expectAuthenticated(page: Page) {
   await dismissPreviewOverlays(page);
 
-  // Wait for any of: desktop profile chip, mobile hamburger, or nav links.
-  // Using locator.or() so Playwright polls all three simultaneously and
-  // returns as soon as any one becomes visible (up to 20s for slow hydration).
-  const authIndicator = page
-    .getByTestId('user-profile-link')
-    .or(page.getByLabel(/Open menu/i))
-    .or(page.getByRole('link', { name: /My Schedule|Groups/i }).first());
-
-  await expect(
-    authIndicator.first(),
-    'Expected an authenticated navigation element after login, but none was visible.'
-  ).toBeVisible({ timeout: 20_000 });
+  // Use waitForFunction so we evaluate actual rendered visibility (getBoundingClientRect)
+  // rather than CSS class names. This handles responsive nav correctly on both
+  // desktop (profile link visible, hamburger hidden) and mobile (hamburger visible,
+  // profile link hidden inside the md:flex-only container).
+  await page.waitForFunction(
+    () => {
+      const isVis = (el: Element | null) => {
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      };
+      return (
+        isVis(document.querySelector('[data-testid="user-profile-link"]')) ||
+        isVis(document.querySelector('button[aria-label="Open menu"]')) ||
+        isVis(document.querySelector('a[href="/my-schedule"]'))
+      );
+    },
+    { timeout: 20_000 }
+  );
 }
 
 export async function login(page: Page, email: string, password: string) {

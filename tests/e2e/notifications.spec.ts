@@ -15,8 +15,8 @@ test.describe('Notification bell', () => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    // Notification bell should be visible in the navbar for authenticated users
-    const bell = page.getByTestId('notification-bell');
+    // Use .first() because both desktop and mobile navs render a bell
+    const bell = page.getByTestId('notification-bell').first();
     await expect(bell).toBeVisible({ timeout: 5000 });
   });
 
@@ -24,7 +24,7 @@ test.describe('Notification bell', () => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    const bell = page.getByTestId('notification-bell');
+    const bell = page.getByTestId('notification-bell').first();
     await expect(bell).toBeVisible({ timeout: 5000 });
 
     await bell.locator('button').first().click();
