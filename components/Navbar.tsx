@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { createDesignSystem } from '@/lib/designSystem';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const Navbar: React.FC = () => {
   const { user, profile, supabase, theme, t } = useAuth();
@@ -60,6 +61,7 @@ const Navbar: React.FC = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
+              <NotificationBell />
               <Link
                 href="/profile"
                 data-testid="user-profile-link"
@@ -94,14 +96,17 @@ const Navbar: React.FC = () => {
         <Link href="/" onClick={close} className="text-sm font-extrabold tracking-tight" style={{ color: c.primary, fontFamily: ds.typography.heading }}>
           {t.appName}
         </Link>
-        <button
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          className="tap-active flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold transition-all"
-          style={{ background: c.surfaceElevated, color: c.text, border: `1px solid ${c.border}` }}
-        >
-          {menuOpen ? '×' : '☰'}
-        </button>
+        <div className="flex items-center gap-2">
+          {user && <NotificationBell />}
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className="tap-active flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold transition-all"
+            style={{ background: c.surfaceElevated, color: c.text, border: `1px solid ${c.border}` }}
+          >
+            {menuOpen ? '×' : '☰'}
+          </button>
+        </div>
       </div>
 
       {menuOpen && (

@@ -44,19 +44,25 @@ export async function dismissPreviewOverlays(page: Page) {
 export async function expectAuthenticated(page: Page) {
   await dismissPreviewOverlays(page);
 
-  const desktopProfileLink = page.getByTestId('user-profile-link');
-  if (await desktopProfileLink.isVisible().catch(() => false)) return;
-
-  const openMenuButton = page.getByLabel(/Open menu/i);
-  if (await openMenuButton.isVisible().catch(() => false)) {
-    await expect(openMenuButton, 'Authenticated mobile users should see the hamburger menu').toBeVisible({ timeout: 15_000 });
-    return;
-  }
-
-  await expect(
-    page.getByRole('link', { name: /Profile|Schedule|Groups/i }).first(),
-    'Expected an authenticated navigation element after login, but none was visible.'
-  ).toBeVisible({ timeout: 15_000 });
+  // Use waitForFunction so we evaluate actual rendered visibility (getBoundingClientRect)
+  // rather than CSS class names. This handles responsive nav correctly on both
+  // desktop (profile link visible, hamburger hidden) and mobile (hamburger visible,
+  // profile link hidden inside the md:flex-only container).
+  await page.waitForFunction(
+    () => {
+      const isVis = (el: Element | null) => {
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      };
+      return (
+        isVis(document.querySelector('[data-testid="user-profile-link"]')) ||
+        isVis(document.querySelector('button[aria-label="Open menu"]')) ||
+        isVis(document.querySelector('a[href="/my-schedule"]'))
+      );
+    },
+    { timeout: 20_000 }
+  );
 }
 
 export async function login(page: Page, email: string, password: string) {

@@ -24,7 +24,19 @@ export const translations = {
   stages: 'stages',
   days: 'days',
   signInToSave: 'Sign in to build your personal lineup and sync plans with friends.',
-  importSync: 'Import / Sync'
+  importSync: 'Import / Sync',
+  notifications: 'Notifications',
+  notificationsEmpty: 'No notifications yet',
+  notificationsMarkRead: 'Mark all as read',
+  notifPrefsTitle: 'Notification Settings',
+  notifPrefsSetStarting: 'Notify before a set',
+  notifPrefsSetStartingDesc: 'Get an alert before sets you marked as "Going"',
+  notifPrefsMinutesBefore: 'How many minutes before:',
+  notifPrefsGroupChanges: 'Group activity',
+  notifPrefsGroupChangesDesc: 'When group members add shows to their schedule',
+  notifPrefsSaving: 'Saving…',
+  notifPrefsSaved: '✓ Saved!',
+  notifPrefsSave: 'Save Settings'
 } as const;
 
 export const genreFilters = [

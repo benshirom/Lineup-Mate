@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import supabase from './supabaseClient';
 import { translations, type ThemeMode } from './platform';
@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(() => readStoredTheme());
+  const pendingInviteHandled = useRef(false);
 
   const applyPreferences = useCallback((nextTheme: ThemeMode) => {
     setTheme(nextTheme);
@@ -145,9 +146,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         loadProfile(session.user.id);
+        // Handle pending invite code from join page
+        if (!pendingInviteHandled.current && typeof window !== 'undefined') {
+          const pendingCode = sessionStorage.getItem('pendingInviteCode');
+          if (pendingCode) {
+            pendingInviteHandled.current = true;
+            sessionStorage.removeItem('pendingInviteCode');
+            supabase
+              .rpc('join_group_by_invite_code', { p_invite_code: pendingCode.toLowerCase() })
+              .then(({ data: groupId, error }) => {
+                if (!error && groupId && typeof window !== 'undefined') {
+                  window.location.href = `/group/${groupId}?welcome=1`;
+                }
+              });
+          }
+        }
       } else {
         setProfile(null);
         applyPreferences(DEFAULT_THEME);
+        pendingInviteHandled.current = false;
       }
     });
 
