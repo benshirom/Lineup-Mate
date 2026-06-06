@@ -1074,15 +1074,20 @@ export default function FestivalPage() {
                               disabled={savingInfo}
                               onClick={async () => {
                                 setSavingInfo(true);
-                                const { error: updateError } = await supabase
-                                  .from('festivals')
-                                  .update({ description: editDescription || null, location: editLocation || null, website: editWebsite || null })
-                                  .eq('id', festival.id);
-                                if (!updateError) {
-                                  setFestival((prev) => prev ? { ...prev, description: editDescription || null, location: editLocation || null, website: editWebsite || null } : prev);
-                                  setEditingInfo(false);
+                                try {
+                                  const { data: { session } } = await supabase.auth.getSession();
+                                  const res = await fetch(`/api/admin/festivals/${festival.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                                    body: JSON.stringify({ description: editDescription || null, location: editLocation || null, website: editWebsite || null }),
+                                  });
+                                  if (res.ok) {
+                                    setFestival((prev) => prev ? { ...prev, description: editDescription || null, location: editLocation || null, website: editWebsite || null } : prev);
+                                    setEditingInfo(false);
+                                  }
+                                } finally {
+                                  setSavingInfo(false);
                                 }
-                                setSavingInfo(false);
                               }}
                               className="flex-1 tap-active rounded-2xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
                               style={{ background: festival.color || c.acc }}
