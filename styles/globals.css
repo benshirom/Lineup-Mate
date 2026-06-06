@@ -5,6 +5,10 @@
 @tailwind utilities;
 
 /* ── Base ──────────────────────────────────────────────────────────────── */
+html {
+  background-color: #080B12;
+}
+
 body {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
