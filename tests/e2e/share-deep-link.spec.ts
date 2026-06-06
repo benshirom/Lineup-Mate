@@ -61,11 +61,11 @@ test.describe('Share sheet', () => {
     await expect(page.getByTestId('share-sheet')).not.toBeVisible({ timeout: 3000 }).catch(() => undefined);
   });
 
-  test('Copy link button copies join URL to clipboard', async ({ page, context }) => {
-    // Grant clipboard permissions (WebKit doesn't support clipboard-write)
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() =>
-      context.grantPermissions(['clipboard-read'])
-    );
+  test('Copy link button copies join URL to clipboard', async ({ page, context, browserName }) => {
+    // WebKit (Safari) has no clipboard API support in Playwright
+    test.skip(browserName === 'webkit', 'Clipboard API not supported in WebKit');
+
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
     await page.goto('/groups');
     await page.waitForSelector('[data-testid="group-card"]', { timeout: 15000 }).catch(() => null);
