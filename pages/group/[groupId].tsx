@@ -418,7 +418,7 @@ export default function GroupPage() {
           🎵 ברוך הבא לקבוצה!
         </div>
       )}
-      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-7xl px-4 py-6 md:py-8">
           <header className="fade-up mb-6 overflow-hidden rounded-3xl shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <div className="h-px" style={{ background: c.brd }} />

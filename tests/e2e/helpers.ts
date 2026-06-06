@@ -109,7 +109,7 @@ export async function signOut(page: Page) {
   await page.getByRole('button', { name: /Sign out/i }).first().click();
   await page.waitForURL(/\/(login)?$/, { timeout: 20_000 }).catch(() => undefined);
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'domcontentloaded' }).catch(() => undefined);
   await dismissPreviewOverlays(page);
   await expect(
     page.getByLabel('Email').or(page.getByRole('button', { name: /^Sign in$/i })).first(),
@@ -154,6 +154,8 @@ export async function ensureFirstActIsStarred(page: Page) {
   const label = await starButton.getAttribute('aria-label');
   if (label?.toLowerCase().includes('add')) {
     await starButton.click({ force: true });
+    // Wait for button label to update, confirming the save was persisted (important on WebKit)
+    await expect(starButton).toHaveAttribute('aria-label', /Remove from my schedule/i, { timeout: 10_000 }).catch(() => undefined);
     await page.waitForLoadState('networkidle').catch(() => undefined);
   }
 }

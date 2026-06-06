@@ -36,7 +36,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
 
   if (!authReady || !user || profile === null) {
     return (
-      <div style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <div style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <Navbar />
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80, color: c.muted }}>
           Loading…
@@ -50,7 +50,7 @@ export default function AdminLayout({ title, children }: AdminLayoutProps) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+    <div style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
       <Navbar />
 
       {/* Sub-navigation */}

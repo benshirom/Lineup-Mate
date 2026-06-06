@@ -4,6 +4,16 @@ import { useAuth } from '@/lib/AuthContext';
 import Navbar from '@/components/Navbar';
 import { getThemeColors } from '@/lib/platform';
 
+function isNativePlatform(platform: string): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Capacitor } = require('@capacitor/core');
+    return Capacitor.getPlatform() === platform;
+  } catch {
+    return false;
+  }
+}
+
 type SocialProvider = 'google';
 type View = 'login' | 'signup' | 'forgot' | 'update-password';
 
@@ -42,6 +52,8 @@ const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const showAppleButton = isNativePlatform('ios');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -64,8 +76,9 @@ const LoginPage = () => {
   const isEmailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email]);
   const isPasswordValid = password.length >= 6;
 
-  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/login?type=recovery` : undefined;
-  const authRedirectTo = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
+  const redirectTo = appUrl ? `${appUrl}/login?type=recovery` : undefined;
+  const authRedirectTo = appUrl ? `${appUrl}/` : undefined;
 
   const reset = () => {
     setError(null);
@@ -84,6 +97,34 @@ const LoginPage = () => {
     } catch (err: unknown) {
       setError(getFriendlyAuthError(err instanceof Error ? err.message : 'Social login failed.'));
       setSocialLoading(null);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    reset();
+    setAppleLoading(true);
+    try {
+      const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+      const result = await SignInWithApple.authorize({
+        clientId: process.env.NEXT_PUBLIC_APPLE_CLIENT_ID ?? 'com.lineupmate.app',
+        redirectURI: authRedirectTo ?? '/',
+        scopes: 'email name',
+      });
+      const identityToken = result?.response?.identityToken;
+      if (!identityToken) throw new Error('No identity token from Apple');
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: identityToken,
+      });
+      if (error) throw error;
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes('user cancel')) {
+        // User cancelled — no error to show
+      } else {
+        setError(getFriendlyAuthError(err instanceof Error ? err.message : 'Apple login failed.'));
+      }
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -181,7 +222,7 @@ const LoginPage = () => {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
+      <main style={{ minHeight: '100dvh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md rounded-[28px] p-8 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
           <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
           <h1 className="mb-6 text-3xl font-black">{titles[view]}</h1>
@@ -191,9 +232,14 @@ const LoginPage = () => {
 
           {view !== 'forgot' && view !== 'update-password' && (
             <>
-              <button type="button" disabled={socialLoading !== null || submitting} onClick={() => handleSocialLogin('google')} className="mb-4 w-full rounded-2xl px-4 py-3 text-sm font-bold transition hover:opacity-80 disabled:opacity-50" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
+              <button type="button" disabled={socialLoading !== null || submitting || appleLoading} onClick={() => handleSocialLogin('google')} className="mb-3 w-full rounded-2xl px-4 py-3 text-sm font-bold transition hover:opacity-80 disabled:opacity-50" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
                 {socialLoading === 'google' ? 'Redirecting…' : '🌐  Continue with Google'}
               </button>
+              {showAppleButton && (
+                <button type="button" disabled={appleLoading || socialLoading !== null || submitting} onClick={handleAppleSignIn} className="mb-4 w-full rounded-2xl px-4 py-3 text-sm font-bold transition hover:opacity-80 disabled:opacity-50" style={{ background: '#000', border: '1px solid #333', color: '#fff' }}>
+                  {appleLoading ? 'Redirecting…' : '🍎  Continue with Apple'}
+                </button>
+              )}
               <div className="mb-4 flex items-center gap-3">
                 <div className="h-px flex-1" style={{ background: c.brd }} />
                 <span className="text-xs" style={{ color: c.muted }}>or use email</span>

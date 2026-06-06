@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { getThemeColors } from '@/lib/platform';
 import supabase from '@/lib/supabaseClient';
+import { sessionStore } from '@/lib/storage';
 
 interface GroupPreview {
   festival_name: string;
@@ -70,7 +71,7 @@ export default function JoinPage() {
 
   const handleLoginRedirect = () => {
     if (typeof code === 'string') {
-      sessionStorage.setItem('pendingInviteCode', code);
+      sessionStore.set('pendingInviteCode', code);
     }
     router.push('/login');
   };
@@ -79,7 +80,7 @@ export default function JoinPage() {
     return (
       <>
         <Navbar />
-        <main className="mobile-shell-padding flex items-center justify-center" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+        <main className="mobile-shell-padding flex items-center justify-center" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
           <p style={{ color: c.muted }}>טוען…</p>
         </main>
       </>
@@ -90,7 +91,7 @@ export default function JoinPage() {
     return (
       <>
         <Navbar />
-        <main className="mobile-shell-padding flex items-center justify-center p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+        <main className="mobile-shell-padding flex items-center justify-center p-4" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
           <div className="text-center max-w-sm">
             <div className="text-5xl mb-4">🔍</div>
             <h1 className="text-2xl font-black mb-2">קישור לא נמצא</h1>
@@ -108,7 +109,7 @@ export default function JoinPage() {
     return (
       <>
         <Navbar />
-        <main className="mobile-shell-padding flex items-center justify-center" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+        <main className="mobile-shell-padding flex items-center justify-center" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
           <p style={{ color: c.muted }}>מצטרף לקבוצה…</p>
         </main>
       </>
@@ -118,7 +119,7 @@ export default function JoinPage() {
   return (
     <>
       <Navbar />
-      <main className="mobile-shell-padding flex items-center justify-center p-4" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding flex items-center justify-center p-4" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <div className="w-full max-w-sm">
           {/* Preview card */}
           <div

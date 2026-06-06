@@ -7,6 +7,38 @@ interface ShareSheetProps {
   onClose: () => void;
 }
 
+function isNative(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Capacitor } = require('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+async function openExternalUrl(url: string): Promise<void> {
+  if (isNative()) {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url });
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+
+async function nativeShare(shareData: { title: string; text: string; url: string }): Promise<boolean> {
+  if (isNative()) {
+    const { Share } = await import('@capacitor/share');
+    await Share.share(shareData);
+    return true;
+  }
+  if (typeof navigator !== 'undefined' && 'share' in navigator) {
+    await navigator.share(shareData);
+    return true;
+  }
+  return false;
+}
+
 export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
   const [copied, setCopied] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -22,49 +54,37 @@ export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => { setCopied(false); onClose(); }, 1800);
     } catch {
-      // fallback for older browsers
+      // Fallback for environments without clipboard API
       const el = document.createElement('textarea');
       el.value = url;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
       document.body.appendChild(el);
       el.select();
-      document.execCommand('copy');
+      try { document.execCommand('copy'); } catch { /* ignore */ }
       document.body.removeChild(el);
-      setCopied(true);
-      setTimeout(() => { setCopied(false); onClose(); }, 1800);
     }
+    setCopied(true);
+    setTimeout(() => { setCopied(false); onClose(); }, 1800);
   };
 
-  const shareWhatsApp = () => {
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`,
-      '_blank',
-      'noopener,noreferrer'
-    );
+  const shareWhatsApp = async () => {
+    await openExternalUrl(`https://wa.me/?text=${encodeURIComponent(`${text}\n${url}`)}`);
     onClose();
   };
 
-  const shareTelegram = () => {
-    window.open(
-      `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-      '_blank',
-      'noopener,noreferrer'
-    );
+  const shareTelegram = async () => {
+    await openExternalUrl(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
     onClose();
   };
 
-  const shareNative = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text, url });
-        onClose();
-      } catch {
-        // user cancelled
-      }
-    }
+  const shareNativeOrSystem = async () => {
+    const shared = await nativeShare({ title, text, url });
+    if (shared) onClose();
   };
+
+  const hasNativeShare = isNative() || (typeof navigator !== 'undefined' && 'share' in navigator);
 
   return (
     <div
@@ -130,10 +150,10 @@ export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
             Telegram
           </button>
 
-          {typeof navigator !== 'undefined' && 'share' in navigator && (
+          {hasNativeShare && (
             <button
               type="button"
-              onClick={shareNative}
+              onClick={shareNativeOrSystem}
               className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-bold transition-all"
               style={{
                 background: 'rgba(255,255,255,0.06)',

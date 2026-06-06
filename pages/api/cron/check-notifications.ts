@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { sendPushNotification } from '@/lib/webpush';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,9 +22,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const now = new Date();
     const windowStart = new Date(now.getTime() + 2 * 60_000);   // 2 min from now
-    const windowEnd = new Date(now.getTime() + 63 * 60_000);    // 63 min from now (covers 60-min preference + 3 min tolerance)
+    const windowEnd = new Date(now.getTime() + 63 * 60_000);    // 63 min from now
 
-    // Find performances starting in the next 2-20 minutes (wide window to catch various notify_before_minutes values)
+    // Find performances starting in the next 2-63 minutes
     const { data: performances, error: perfError } = await supabaseAdmin
       .from('performances')
       .select('id, artist_id, start_time, artists(name)')
@@ -74,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const pref of goingPrefs) {
       const minutesBefore = enabledUsers.get(pref.user_id);
-      if (minutesBefore === undefined) continue; // user disabled notifications
+      if (minutesBefore === undefined) continue;
 
       const perf = perfMap.get(pref.performance_id);
       if (!perf) continue;
@@ -82,7 +83,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const startTime = new Date(perf.start_time);
       const minutesUntil = (startTime.getTime() - now.getTime()) / 60_000;
 
-      // Check if this performance falls within the user's notification window
       if (minutesUntil < minutesBefore - 3 || minutesUntil > minutesBefore + 3) continue;
 
       const artistName = (perf as any).artists?.name || 'Artist';
@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, message: 'No notifications to send (timing mismatch)' });
     }
 
-    // Deduplicate: skip notifications already sent for these user+performance+type combos
+    // Deduplicate
     const { data: existing } = await supabaseAdmin
       .from('notifications')
       .select('user_id, performance_id, type')
@@ -123,7 +123,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (insertError) throw insertError;
 
-    return res.status(200).json({ sent: toInsert.length });
+    // Send Web Push notifications to all subscribed devices
+    let pushSent = 0;
+    const expiredEndpoints: string[] = [];
+
+    for (const notif of toInsert) {
+      const { data: subs } = await supabaseAdmin
+        .from('push_subscriptions')
+        .select('endpoint, p256dh, auth')
+        .eq('user_id', notif.user_id)
+        .eq('platform', 'web');
+
+      for (const sub of subs ?? []) {
+        const ok = await sendPushNotification(sub, {
+          title: notif.title,
+          body: notif.body,
+          url: '/',
+          tag: `perf-${notif.performance_id}`,
+        });
+        if (ok) {
+          pushSent++;
+        } else {
+          expiredEndpoints.push(sub.endpoint);
+        }
+      }
+    }
+
+    // Clean up expired subscriptions
+    if (expiredEndpoints.length > 0) {
+      await supabaseAdmin
+        .from('push_subscriptions')
+        .delete()
+        .in('endpoint', expiredEndpoints);
+    }
+
+    return res.status(200).json({ sent: toInsert.length, pushSent });
   } catch (err: unknown) {
     console.error('check-notifications error:', err);
     return res.status(500).json({ error: 'Internal error' });
