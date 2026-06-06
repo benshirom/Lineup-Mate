@@ -12,7 +12,7 @@ const BlockedPage = () => {
     <>
       <Navbar />
       <main
-        style={{ minHeight: '100vh', background: c.bg, color: c.txt }}
+        style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}
         className="flex flex-col items-center justify-center p-4"
       >
         <div

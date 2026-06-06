@@ -541,7 +541,7 @@ export default function FestivalPage() {
   return (
     <>
       <Navbar />
-      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-7xl px-4 py-6 md:py-8">
           {loading && <p style={{ color: c.muted }}>Loading lineup…</p>}
           {error && <p className="mb-4 rounded-2xl p-4 text-sm font-semibold" style={{ background: `${c.danger}18`, color: c.danger, border: `1px solid ${c.danger}44` }}>{error}</p>}

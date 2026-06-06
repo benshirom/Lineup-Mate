@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Session, User } from '@supabase/supabase-js';
 import supabase from './supabaseClient';
 import { translations, type ThemeMode } from './platform';
+import { storage, sessionStore } from './storage';
 
 type TranslationSet = typeof translations;
 
@@ -44,17 +45,29 @@ function normalizeTheme(value: unknown): ThemeMode {
 }
 
 function readStoredTheme(): ThemeMode {
-  if (typeof window === 'undefined') return DEFAULT_THEME;
-  return normalizeTheme(window.localStorage.getItem('lineup-mate-theme'));
+  return normalizeTheme(storage.get('lineup-mate-theme'));
 }
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface AuthProviderProps {
+  children: React.ReactNode;
+  onNavigate?: (path: string) => void;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(() => readStoredTheme());
   const pendingInviteHandled = useRef(false);
+
+  const navigate = useCallback((path: string) => {
+    if (onNavigate) {
+      onNavigate(path);
+    } else if (typeof window !== 'undefined') {
+      window.location.href = path;
+    }
+  }, [onNavigate]);
 
   const applyPreferences = useCallback((nextTheme: ThemeMode) => {
     setTheme(nextTheme);
@@ -65,10 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       document.documentElement.dataset.theme = nextTheme;
     }
 
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem('lineup-mate-language');
-      window.localStorage.setItem('lineup-mate-theme', nextTheme);
-    }
+    storage.remove('lineup-mate-language');
+    storage.set('lineup-mate-theme', nextTheme);
   }, []);
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -80,9 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (data?.is_blocked) {
       await supabase.auth.signOut();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/blocked';
-      }
+      navigate('/blocked');
       return;
     }
 
@@ -103,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     applyPreferences(nextTheme);
-  }, [applyPreferences]);
+  }, [applyPreferences, navigate]);
 
   const refreshProfile = useCallback(async () => {
     if (user?.id) await loadProfile(user.id);
@@ -147,16 +156,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         loadProfile(session.user.id);
         // Handle pending invite code from join page
-        if (!pendingInviteHandled.current && typeof window !== 'undefined') {
-          const pendingCode = sessionStorage.getItem('pendingInviteCode');
+        if (!pendingInviteHandled.current) {
+          const pendingCode = sessionStore.get('pendingInviteCode');
           if (pendingCode) {
             pendingInviteHandled.current = true;
-            sessionStorage.removeItem('pendingInviteCode');
+            sessionStore.remove('pendingInviteCode');
             supabase
               .rpc('join_group_by_invite_code', { p_invite_code: pendingCode.toLowerCase() })
               .then(({ data: groupId, error }) => {
-                if (!error && groupId && typeof window !== 'undefined') {
-                  window.location.href = `/group/${groupId}?welcome=1`;
+                if (!error && groupId) {
+                  navigate(`/group/${groupId}?welcome=1`);
                 }
               });
           }
@@ -171,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, [applyPreferences, loadProfile]);
+  }, [applyPreferences, loadProfile, navigate]);
 
   const value: AuthContextProps = {
     user,

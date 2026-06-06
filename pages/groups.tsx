@@ -300,7 +300,7 @@ export default function GroupsPage() {
   return (
     <>
       <Navbar />
-      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-6xl px-4 py-8">
           <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

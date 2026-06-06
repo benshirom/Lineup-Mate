@@ -162,7 +162,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main className="mobile-shell-padding" style={{ minHeight: '100vh', background: c.bg, color: c.txt }}>
+      <main className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
           <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr] lg:items-center">
             <div className="fade-up">

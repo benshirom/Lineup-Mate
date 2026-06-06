@@ -1,0 +1,32 @@
+{
+  "name": "Lineup Mate",
+  "short_name": "LineupMate",
+  "description": "תכנן לוח זמנים לפסטיבל עם חברים",
+  "theme_color": "#8B5CF6",
+  "background_color": "#080B12",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/?source=pwa",
+  "lang": "he",
+  "dir": "rtl",
+  "categories": ["entertainment", "music", "social"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "לוח הזמנים שלי",
+      "url": "/my-schedule",
+      "description": "הופעות שבחרתי"
+    },
+    {
+      "name": "הקבוצות שלי",
+      "url": "/groups",
+      "description": "תכנון עם חברים"
+    }
+  ]
+}

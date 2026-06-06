@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { getThemeColors } from '@/lib/platform';
+import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush } from '@/lib/pushNotifications';
 
 interface Prefs {
   notify_set_starting: boolean;
@@ -11,7 +12,7 @@ interface Prefs {
 const MINUTE_OPTIONS = [10, 15, 30, 60];
 
 export function NotificationPreferences() {
-  const { user, supabase, theme, t } = useAuth();
+  const { user, session, supabase, theme, t } = useAuth();
   const c = getThemeColors(theme);
   const [prefs, setPrefs] = useState<Prefs>({
     notify_set_starting: true,
@@ -21,6 +22,20 @@ export function NotificationPreferences() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Push notification state
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>('default');
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    isPushSupported().then((supported) => {
+      setPushSupported(supported);
+      if (supported) {
+        getPushPermission().then(setPushPermission);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -52,6 +67,27 @@ export function NotificationPreferences() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const handleEnablePush = async () => {
+    if (!session?.access_token) return;
+    setPushLoading(true);
+    const ok = await subscribeToPush(session.access_token);
+    if (ok) {
+      setPushPermission('granted');
+    } else {
+      const perm = await getPushPermission();
+      setPushPermission(perm);
+    }
+    setPushLoading(false);
+  };
+
+  const handleDisablePush = async () => {
+    if (!session?.access_token) return;
+    setPushLoading(true);
+    await unsubscribeFromPush(session.access_token);
+    setPushPermission('default');
+    setPushLoading(false);
+  };
+
   if (!user || loading) return null;
 
   return (
@@ -62,6 +98,41 @@ export function NotificationPreferences() {
       style={{ background: c.surf, border: `1px solid ${c.brd}` }}
     >
       <h2 className="text-lg font-extrabold">{t.notifPrefsTitle}</h2>
+
+      {/* Web Push enable / disable */}
+      {pushSupported && (
+        <div className="rounded-2xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
+          <p className="text-sm font-bold mb-1" style={{ color: c.txt }}>התראות Push</p>
+          <p className="text-xs mb-3" style={{ color: c.muted }}>
+            קבל התראות גם כשהדפדפן סגור
+          </p>
+          {pushPermission === 'granted' ? (
+            <button
+              type="button"
+              disabled={pushLoading}
+              onClick={handleDisablePush}
+              className="rounded-full px-4 py-2 text-xs font-bold transition-all disabled:opacity-50"
+              style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.muted }}
+            >
+              {pushLoading ? 'מעדכן…' : '🔕 בטל התראות Push'}
+            </button>
+          ) : pushPermission === 'denied' ? (
+            <p className="text-xs font-bold" style={{ color: c.danger }}>
+              ❌ גישה לנוטיפיקציות נחסמה. שחרר בהגדרות הדפדפן.
+            </p>
+          ) : (
+            <button
+              type="button"
+              disabled={pushLoading}
+              onClick={handleEnablePush}
+              className="rounded-full px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-50"
+              style={{ background: c.acc }}
+            >
+              {pushLoading ? 'מאשר…' : '🔔 הפעל התראות Push'}
+            </button>
+          )}
+        </div>
+      )}
 
       <label className="flex items-center justify-between gap-4 cursor-pointer">
         <div>
