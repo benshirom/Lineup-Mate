@@ -20,8 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const now = new Date();
-    const windowStart = new Date(now.getTime() + 2 * 60_000);  // 2 min from now
-    const windowEnd = new Date(now.getTime() + 20 * 60_000);   // 20 min from now
+    const windowStart = new Date(now.getTime() + 2 * 60_000);   // 2 min from now
+    const windowEnd = new Date(now.getTime() + 63 * 60_000);    // 63 min from now (covers 60-min preference + 3 min tolerance)
 
     // Find performances starting in the next 2-20 minutes (wide window to catch various notify_before_minutes values)
     const { data: performances, error: perfError } = await supabaseAdmin
@@ -99,17 +99,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, message: 'No notifications to send (timing mismatch)' });
     }
 
-    // Insert notifications, ignoring duplicates via unique index
+    // Deduplicate: skip notifications already sent for these user+performance+type combos
+    const { data: existing } = await supabaseAdmin
+      .from('notifications')
+      .select('user_id, performance_id, type')
+      .in('performance_id', notifications.map(n => n.performance_id))
+      .eq('type', 'set_starting');
+
+    const existingSet = new Set(
+      (existing || []).map(n => `${n.user_id}:${n.performance_id}:${n.type}`)
+    );
+    const toInsert = notifications.filter(
+      n => !existingSet.has(`${n.user_id}:${n.performance_id}:${n.type}`)
+    );
+
+    if (toInsert.length === 0) {
+      return res.status(200).json({ sent: 0, message: 'All notifications already sent' });
+    }
+
     const { error: insertError } = await supabaseAdmin
       .from('notifications')
-      .upsert(notifications, {
-        onConflict: 'user_id,performance_id,type',
-        ignoreDuplicates: true,
-      });
+      .insert(toInsert);
 
     if (insertError) throw insertError;
 
-    return res.status(200).json({ sent: notifications.length });
+    return res.status(200).json({ sent: toInsert.length });
   } catch (err: unknown) {
     console.error('check-notifications error:', err);
     return res.status(500).json({ error: 'Internal error' });
