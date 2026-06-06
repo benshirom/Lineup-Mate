@@ -92,7 +92,7 @@ test.describe('Share sheet', () => {
 
 test.describe('Join page', () => {
   test('Join page shows not-found state for invalid invite code', async ({ page }) => {
-    await page.goto('/join/invalid000');
+    await page.goto('/join/invalid000', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(3000);
 
     // Should show not-found state
