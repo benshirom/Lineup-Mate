@@ -187,6 +187,7 @@ export default function FestivalPage() {
   const [editWebsite, setEditWebsite] = useState('');
   const [savingInfo, setSavingInfo] = useState(false);
   const [fetchingDescription, setFetchingDescription] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const nowLineRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const lastManualScrollRef = useRef(0);
@@ -992,6 +993,7 @@ export default function FestivalPage() {
                               setEditDescription(festival.description || '');
                               setEditLocation(festival.location || '');
                               setEditWebsite(festival.website || '');
+                              setFetchError(null);
                               setEditingInfo(true);
                             }}
                             className="tap-active rounded-full px-3 py-1 text-xs font-bold"
@@ -1011,6 +1013,7 @@ export default function FestivalPage() {
                                 disabled={fetchingDescription}
                                 onClick={async () => {
                                   setFetchingDescription(true);
+                                  setFetchError(null);
                                   try {
                                     const { data: { session } } = await supabase.auth.getSession();
                                     const res = await fetch('/api/admin/fetch-festival-info', {
@@ -1018,8 +1021,14 @@ export default function FestivalPage() {
                                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
                                       body: JSON.stringify({ festivalId: festival.id, festivalName: festival.name }),
                                     });
-                                    const json = await res.json() as { description?: string; error?: string };
-                                    if (json.description) setEditDescription(json.description);
+                                    const json = await res.json() as { description?: string | null; error?: string };
+                                    if (json.description) {
+                                      setEditDescription(json.description);
+                                    } else {
+                                      setFetchError(json.error ?? 'No description found.');
+                                    }
+                                  } catch {
+                                    setFetchError('Request failed.');
                                   } finally {
                                     setFetchingDescription(false);
                                   }
@@ -1038,6 +1047,9 @@ export default function FestivalPage() {
                               className="w-full rounded-2xl px-4 py-3 text-sm outline-none resize-none"
                               style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
                             />
+                            {fetchError && (
+                              <p className="mt-1 text-xs font-semibold" style={{ color: c.danger }}>{fetchError}</p>
+                            )}
                           </div>
                           <div>
                             <label className="mb-1 block text-xs font-semibold" style={{ color: c.muted }}>Location</label>

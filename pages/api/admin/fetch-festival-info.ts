@@ -12,22 +12,23 @@ interface ResponseData {
 }
 
 async function fetchFromWikipedia(festivalName: string): Promise<string | null> {
+  // Strip trailing year (e.g. "Ozora Festival 2026" → "Ozora Festival")
+  const baseName = festivalName.replace(/\s+\d{4}$/, '').trim();
+
+  const candidates = [
+    baseName,
+    `${baseName} (festival)`,
+    festivalName,
+  ];
+
   try {
-    // Search Wikipedia for the festival
-    const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(festivalName)}`;
-    const res = await fetch(searchUrl, { headers: { 'User-Agent': 'lineup-mate/1.0' } });
-    if (res.ok) {
-      const data = await res.json() as { extract?: string; type?: string };
-      if (data.type !== 'disambiguation' && data.extract) return data.extract;
-    }
-    // Fallback: try with "festival" appended
-    const res2 = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(festivalName + ' (festival)')}`,
-      { headers: { 'User-Agent': 'lineup-mate/1.0' } }
-    );
-    if (res2.ok) {
-      const data2 = await res2.json() as { extract?: string; type?: string };
-      if (data2.type !== 'disambiguation' && data2.extract) return data2.extract;
+    for (const candidate of candidates) {
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(candidate)}`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'lineup-mate/1.0' } });
+      if (res.ok) {
+        const data = await res.json() as { extract?: string; type?: string };
+        if (data.type !== 'disambiguation' && data.extract) return data.extract;
+      }
     }
   } catch (_) { /* ignore */ }
   return null;
