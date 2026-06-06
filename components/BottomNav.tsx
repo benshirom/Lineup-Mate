@@ -19,6 +19,7 @@ const BottomNav: React.FC = () => {
   return (
     <nav
       aria-label="Mobile bottom navigation"
+      data-testid="bottom-nav"
       className="glass-nav md:hidden fixed bottom-0 inset-x-0 z-40 flex justify-around items-stretch pb-safe"
       style={{
         background: `${ds.colors.surface}f4`,
