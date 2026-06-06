@@ -164,13 +164,13 @@ function useStageLabelWidth() {
 export default function FestivalPage() {
   const router = useRouter();
   const { festivalId, day } = router.query;
-  const { user, supabase, theme } = useAuth();
+  const { user, supabase, theme, profile } = useAuth();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [performances, setPerformances] = useState<PerformanceItem[]>([]);
   const [days, setDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [activeStages, setActiveStages] = useState<Record<string, boolean>>({});
-  const [tab, setTab] = useState<FestivalTab>('artists');
+  const [tab, setTab] = useState<FestivalTab>('lineup');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -181,6 +181,12 @@ export default function FestivalPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [popId, setPopId] = useState<number | null>(null);
   const [conflictWarning, setConflictWarning] = useState<{ newPerf: PerformanceItem; existing: PerformanceItem } | null>(null);
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [fetchingDescription, setFetchingDescription] = useState(false);
   const nowLineRef = useRef<HTMLDivElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const lastManualScrollRef = useRef(0);
@@ -653,7 +659,7 @@ export default function FestivalPage() {
                   )}
                 </div>
 
-                {days.length > 0 && tab !== 'info' && tab !== 'lineup' && (
+                {days.length > 0 && tab !== 'info' && tab !== 'artists' && (
                   <div className="flex gap-2 overflow-x-auto scroll-hidden pt-2" data-testid="festival-day-tabs">
                     {days.map((nextDay) => {
                       const savedOnDay = performances.filter((p) => p.dayDate === nextDay && p.status === 'going').length;
@@ -687,8 +693,74 @@ export default function FestivalPage() {
                 )}
               </div>
 
-              {/* ── Artists tab (default) ─────────────────────────── */}
+              {/* ── Artists tab — alphabetical roster ─────────────── */}
               {tab === 'artists' && (
+                <div data-testid="artists-tab">
+                  {artistRoster.length === 0 && !loading && (
+                    <p className="mt-4 text-sm" style={{ color: c.muted }}>No artists found.</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+                    {artistRoster.map((artist) => {
+                      const isAll = artist.starState === 'all';
+                      const isMixed = artist.starState === 'mixed';
+                      const isAnyLive = artist.performances.some(p => nowPlayingIds.has(p.id));
+                      const dayLabels = Array.from(new Set(artist.performances.map((p) => p.dayDate)))
+                        .sort()
+                        .map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }));
+                      return (
+                        <article
+                          key={artist.artistName}
+                          data-testid="lineup-artist-row"
+                          className="overflow-hidden rounded-2xl"
+                          style={{
+                            background: c.surf,
+                            border: `1px solid ${isAnyLive ? '#ef444433' : isAll ? `${c.star}44` : c.brd}`,
+                            boxShadow: isAnyLive ? '0 0 14px rgba(239,68,68,0.15)' : isAll ? `0 0 14px ${c.star}12` : 'none',
+                          }}
+                        >
+                          <div className="flex items-center gap-2 px-3 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h3 className="truncate text-sm font-bold leading-snug" style={{ color: c.txt }}>
+                                  {artist.artistName}
+                                </h3>
+                                {isAnyLive && <LiveBadge compact />}
+                              </div>
+                              <p className="text-[11px] mt-0.5 truncate" style={{ color: c.muted }}>
+                                {artist.performances.length} set{artist.performances.length !== 1 ? 's' : ''}
+                                {' · '}{dayLabels.join(', ')}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              data-testid="lineup-artist-star"
+                              onClick={() => toggleArtistStar(artist)}
+                              aria-label={isAll ? `Unstar all sets by ${artist.artistName}` : `Star all sets by ${artist.artistName}`}
+                              className="inline-flex items-center justify-center rounded-full font-black transition"
+                              style={{
+                                width: 36,
+                                height: 36,
+                                background: isAll ? c.star : isMixed ? `${c.star}55` : 'rgba(0,0,0,.38)',
+                                color: isAll ? '#0f0f00' : 'rgba(255,255,255,0.9)',
+                                border: `1.5px solid ${isAll || isMixed ? c.star : 'rgba(255,255,255,.22)'}`,
+                                boxShadow: isAll ? `0 0 16px ${c.star}66, inset 0 1px 0 rgba(255,255,255,.2)` : 'none',
+                                flexShrink: 0,
+                                opacity: isMixed ? 0.75 : 1,
+                                fontSize: 14,
+                              }}
+                            >
+                              {isAll || isMixed ? '★' : '☆'}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Lineup tab — per-performance schedule ──────────── */}
+              {tab === 'lineup' && (
                 <>
                   <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="festival-stage-filters">
                     {allStages.map((stage) => {
@@ -762,71 +834,6 @@ export default function FestivalPage() {
                     <p className="mt-4 text-sm" style={{ color: c.muted }}>No shows this day.</p>
                   )}
                 </>
-              )}
-
-              {/* ── Lineup tab (Artist Roster) ──────────────────── */}
-              {tab === 'lineup' && (
-                <div data-testid="lineup-tab">
-                  {artistRoster.length === 0 && !loading && (
-                    <p className="mt-4 text-sm" style={{ color: c.muted }}>No artists found.</p>
-                  )}
-                  <div className="space-y-2">
-                    {artistRoster.map((artist) => {
-                      const isAll = artist.starState === 'all';
-                      const isMixed = artist.starState === 'mixed';
-                      const isAnyLive = artist.performances.some(p => nowPlayingIds.has(p.id));
-                      const dayLabels = Array.from(new Set(artist.performances.map((p) => p.dayDate)))
-                        .sort()
-                        .map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
-                      return (
-                        <article
-                          key={artist.artistName}
-                          data-testid="lineup-artist-row"
-                          className="overflow-hidden rounded-2xl"
-                          style={{
-                            background: c.surf,
-                            border: `1px solid ${isAnyLive ? '#ef444433' : isAll ? `${c.star}44` : c.brd}`,
-                            boxShadow: isAnyLive ? '0 0 14px rgba(239,68,68,0.15)' : isAll ? `0 0 14px ${c.star}12` : 'none',
-                          }}
-                        >
-                          <div className="flex items-center gap-3 px-4 py-3.5">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="truncate font-bold leading-snug" style={{ color: c.txt }}>
-                                  {artist.artistName}
-                                </h3>
-                                {isAnyLive && <LiveBadge />}
-                              </div>
-                              <p className="text-xs mt-0.5" style={{ color: c.muted }}>
-                                {artist.performances.length} set{artist.performances.length !== 1 ? 's' : ''}
-                                {' · '}{dayLabels.join(', ')}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              data-testid="lineup-artist-star"
-                              onClick={() => toggleArtistStar(artist)}
-                              aria-label={isAll ? `Unstar all sets by ${artist.artistName}` : `Star all sets by ${artist.artistName}`}
-                              className="inline-flex items-center justify-center rounded-full font-black transition"
-                              style={{
-                                width: 44,
-                                height: 44,
-                                background: isAll ? c.star : isMixed ? `${c.star}55` : 'rgba(0,0,0,.38)',
-                                color: isAll ? '#0f0f00' : 'rgba(255,255,255,0.9)',
-                                border: `1.5px solid ${isAll || isMixed ? c.star : 'rgba(255,255,255,.22)'}`,
-                                boxShadow: isAll ? `0 0 16px ${c.star}66, inset 0 1px 0 rgba(255,255,255,.2)` : 'none',
-                                flexShrink: 0,
-                                opacity: isMixed ? 0.75 : 1,
-                              }}
-                            >
-                              {isAll || isMixed ? '★' : '☆'}
-                            </button>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </div>
               )}
 
               {/* ── Timeline tab ─────────────────────────────────── */}
@@ -976,8 +983,119 @@ export default function FestivalPage() {
                 <div className="space-y-4">
                   <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[1fr_300px]">
                     <article className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                      <h2 className="mb-3 text-xl font-extrabold">About</h2>
-                      <p className="leading-7 text-sm" style={{ color: c.muted }}>{festival.description || 'No description yet.'}</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xl font-extrabold">About</h2>
+                        {profile?.role === 'admin' && !editingInfo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditDescription(festival.description || '');
+                              setEditLocation(festival.location || '');
+                              setEditWebsite(festival.website || '');
+                              setEditingInfo(true);
+                            }}
+                            className="tap-active rounded-full px-3 py-1 text-xs font-bold"
+                            style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                      {editingInfo ? (
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-xs font-semibold" style={{ color: c.muted }}>Description</label>
+                              <button
+                                type="button"
+                                disabled={fetchingDescription}
+                                onClick={async () => {
+                                  setFetchingDescription(true);
+                                  try {
+                                    const { data: { session } } = await supabase.auth.getSession();
+                                    const res = await fetch('/api/admin/fetch-festival-info', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                                      body: JSON.stringify({ festivalId: festival.id, festivalName: festival.name }),
+                                    });
+                                    const json = await res.json() as { description?: string; error?: string };
+                                    if (json.description) setEditDescription(json.description);
+                                  } finally {
+                                    setFetchingDescription(false);
+                                  }
+                                }}
+                                className="tap-active rounded-full px-2.5 py-1 text-[11px] font-bold disabled:opacity-50"
+                                style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
+                              >
+                                {fetchingDescription ? 'Fetching…' : '🔍 Fetch from Google'}
+                              </button>
+                            </div>
+                            <textarea
+                              rows={5}
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              placeholder="Festival description…"
+                              className="w-full rounded-2xl px-4 py-3 text-sm outline-none resize-none"
+                              style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold" style={{ color: c.muted }}>Location</label>
+                            <input
+                              value={editLocation}
+                              onChange={(e) => setEditLocation(e.target.value)}
+                              placeholder="City, Country"
+                              className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                              style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt, minHeight: 44 }}
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold" style={{ color: c.muted }}>Website</label>
+                            <input
+                              value={editWebsite}
+                              onChange={(e) => setEditWebsite(e.target.value)}
+                              placeholder="https://…"
+                              type="url"
+                              className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                              style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt, minHeight: 44 }}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEditingInfo(false)}
+                              className="flex-1 tap-active rounded-2xl px-4 py-2.5 text-sm font-bold"
+                              style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={savingInfo}
+                              onClick={async () => {
+                                setSavingInfo(true);
+                                const { error: updateError } = await supabase
+                                  .from('festivals')
+                                  .update({ description: editDescription || null, location: editLocation || null, website: editWebsite || null })
+                                  .eq('id', festival.id);
+                                if (!updateError) {
+                                  setFestival((prev) => prev ? { ...prev, description: editDescription || null, location: editLocation || null, website: editWebsite || null } : prev);
+                                  setEditingInfo(false);
+                                }
+                                setSavingInfo(false);
+                              }}
+                              className="flex-1 tap-active rounded-2xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                              style={{ background: festival.color || c.acc }}
+                            >
+                              {savingInfo ? 'Saving…' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        festival.description
+                          ? <p className="leading-7 text-sm" style={{ color: c.muted }}>{festival.description}</p>
+                          : <p className="text-sm italic" style={{ color: `${c.muted}88` }}>No description yet.</p>
+                      )}
                     </article>
                     <aside className="rounded-3xl p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                       <h2 className="mb-3 text-xl font-extrabold">Festival details</h2>
@@ -987,7 +1105,12 @@ export default function FestivalPage() {
                         <div><b style={{ color: c.txt }}>Stages:</b> {allStages.length}</div>
                         <div><b style={{ color: c.txt }}>Days:</b> {days.length}</div>
                         <div><b style={{ color: c.txt }}>Performances:</b> {performances.length}</div>
-                        {festival.website && <div><b style={{ color: c.txt }}>Website:</b> {festival.website}</div>}
+                        {festival.website && (
+                          <div>
+                            <b style={{ color: c.txt }}>Website:</b>{' '}
+                            <a href={festival.website} target="_blank" rel="noopener noreferrer" style={{ color: c.acc }}>{festival.website}</a>
+                          </div>
+                        )}
                         {festival.clashfinder_slug && <div><b style={{ color: c.txt }}>Source:</b> {festival.clashfinder_slug}</div>}
                       </div>
                     </aside>
