@@ -68,6 +68,16 @@ INSERT INTO notification_preferences (user_id)
   SELECT id FROM profiles
   ON CONFLICT DO NOTHING;
 
+-- Enable Realtime broadcasts for the notifications table
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'notifications'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+  END IF;
+END $$;
+
 -- Helper: mark all notifications as read for current user
 CREATE OR REPLACE FUNCTION mark_all_notifications_read()
 RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
