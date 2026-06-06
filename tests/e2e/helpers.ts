@@ -44,19 +44,18 @@ export async function dismissPreviewOverlays(page: Page) {
 export async function expectAuthenticated(page: Page) {
   await dismissPreviewOverlays(page);
 
-  const desktopProfileLink = page.getByTestId('user-profile-link');
-  if (await desktopProfileLink.isVisible().catch(() => false)) return;
-
-  const openMenuButton = page.getByLabel(/Open menu/i);
-  if (await openMenuButton.isVisible().catch(() => false)) {
-    await expect(openMenuButton, 'Authenticated mobile users should see the hamburger menu').toBeVisible({ timeout: 15_000 });
-    return;
-  }
+  // Wait for any of: desktop profile chip, mobile hamburger, or nav links.
+  // Using locator.or() so Playwright polls all three simultaneously and
+  // returns as soon as any one becomes visible (up to 20s for slow hydration).
+  const authIndicator = page
+    .getByTestId('user-profile-link')
+    .or(page.getByLabel(/Open menu/i))
+    .or(page.getByRole('link', { name: /My Schedule|Groups/i }).first());
 
   await expect(
-    page.getByRole('link', { name: /Profile|Schedule|Groups/i }).first(),
+    authIndicator.first(),
     'Expected an authenticated navigation element after login, but none was visible.'
-  ).toBeVisible({ timeout: 15_000 });
+  ).toBeVisible({ timeout: 20_000 });
 }
 
 export async function login(page: Page, email: string, password: string) {

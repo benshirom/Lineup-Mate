@@ -23,12 +23,15 @@ function timeAgo(dateStr: string): string {
   return `לפני ${Math.floor(hrs / 24)} ימים`;
 }
 
+const instanceCounter = { n: 0 };
+
 export function NotificationBell() {
   const { user, supabase, theme } = useAuth();
   const c = getThemeColors(theme);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const instanceId = useRef(`bell-${++instanceCounter.n}`).current;
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -45,7 +48,7 @@ export function NotificationBell() {
       .then(({ data }) => setNotifications(data ?? []));
 
     const channel = supabase
-      .channel(`notifications:${user.id}`)
+      .channel(`notifications:${user.id}:${instanceId}`)
       .on(
         'postgres_changes',
         {
