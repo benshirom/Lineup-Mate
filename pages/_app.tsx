@@ -15,7 +15,7 @@ function AppShell({ Component, pageProps }: AppProps) {
         <>
           <BottomNav />
           {/* spacer so content is not hidden behind the fixed BottomNav */}
-          <div className="md:hidden h-20" style={{ backgroundColor: '#080B12' }} aria-hidden="true" />
+          <div className="md:hidden h-12" style={{ backgroundColor: '#080B12' }} aria-hidden="true" />
         </>
       )}
     </>
