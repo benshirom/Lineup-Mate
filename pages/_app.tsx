@@ -5,6 +5,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import BottomNav from '@/components/BottomNav';
+import IOSInstallBanner from '@/components/IOSInstallBanner';
+import AndroidInstallBanner from '@/components/AndroidInstallBanner';
 
 function AppShell({ Component, pageProps }: AppProps) {
   const { user } = useAuth();
@@ -57,6 +59,8 @@ export default function MyApp(props: AppProps) {
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </Head>
       <AuthProvider onNavigate={(path) => router.push(path)}>
+        <IOSInstallBanner />
+        <AndroidInstallBanner />
         <AppShell {...props} />
       </AuthProvider>
     </>
