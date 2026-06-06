@@ -29,9 +29,9 @@ test.describe('Notification bell', () => {
 
     await bell.locator('button').first().click();
 
-    // Dropdown should appear with "התראות" heading
+    // Dropdown should appear with "Notifications" heading
     await expect(page.locator('.notif-dropdown')).toBeVisible({ timeout: 3000 });
-    await expect(page.locator('.notif-dropdown')).toContainText('התראות');
+    await expect(page.locator('.notif-dropdown')).toContainText('Notifications');
   });
 
   test('Notification preferences form is visible on profile page', async ({ page }) => {
@@ -45,7 +45,7 @@ test.describe('Notification bell', () => {
     await expect(prefsForm.locator('[role="switch"]').first()).toBeVisible();
 
     // Verify minute selector buttons
-    await expect(prefsForm.locator('button:has-text("15 דק׳")')).toBeVisible();
+    await expect(prefsForm.locator('button:has-text("15 min")')).toBeVisible();
   });
 
   test('Notification preferences can be toggled and saved', async ({ page }) => {
@@ -60,7 +60,7 @@ test.describe('Notification bell', () => {
     await saveBtn.click();
 
     // Should show saved confirmation
-    await expect(saveBtn).toContainText(/שמור|נשמר/i, { timeout: 5000 });
+    await expect(saveBtn).toContainText(/Save|Saved/i, { timeout: 5000 });
   });
 
   test('Minute selector changes active option', async ({ page }) => {
@@ -70,8 +70,8 @@ test.describe('Notification bell', () => {
     const prefsForm = page.getByTestId('notification-prefs-form');
     await expect(prefsForm).toBeVisible({ timeout: 10000 });
 
-    // Click "30 דק׳" option
-    const thirtyBtn = prefsForm.locator('button:has-text("30 דק׳")');
+    // Click "30 min" option
+    const thirtyBtn = prefsForm.locator('button:has-text("30 min")');
     await expect(thirtyBtn).toBeVisible();
     await thirtyBtn.click();
 

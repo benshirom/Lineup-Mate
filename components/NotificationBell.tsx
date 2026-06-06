@@ -26,7 +26,7 @@ function timeAgo(dateStr: string): string {
 const instanceCounter = { n: 0 };
 
 export function NotificationBell() {
-  const { user, supabase, theme } = useAuth();
+  const { user, supabase, theme, t } = useAuth();
   const c = getThemeColors(theme);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
@@ -97,7 +97,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={handleOpen}
-        aria-label={`התראות${unreadCount > 0 ? ` (${unreadCount} חדשות)` : ''}`}
+        aria-label={`${t.notifications}${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-base transition-opacity hover:opacity-80"
         style={{
           background: c.surf2,
@@ -119,7 +119,7 @@ export function NotificationBell() {
           style={{ background: c.surf, border: `1px solid ${c.brd}` }}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: c.brd }}>
-            <span className="text-sm font-extrabold" style={{ color: c.txt }}>התראות</span>
+            <span className="text-sm font-extrabold" style={{ color: c.txt }}>{t.notifications}</span>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -127,14 +127,14 @@ export function NotificationBell() {
                 className="text-xs font-bold"
                 style={{ color: c.acc }}
               >
-                סמן הכל כנקרא
+                {t.notificationsMarkRead}
               </button>
             )}
           </div>
 
           {notifications.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm" style={{ color: c.muted }}>
-              אין התראות עדיין
+              {t.notificationsEmpty}
             </div>
           ) : (
             <div className="divide-y" style={{ borderColor: c.brd }}>

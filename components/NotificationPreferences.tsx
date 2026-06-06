@@ -11,7 +11,7 @@ interface Prefs {
 const MINUTE_OPTIONS = [10, 15, 30, 60];
 
 export function NotificationPreferences() {
-  const { user, supabase, theme } = useAuth();
+  const { user, supabase, theme, t } = useAuth();
   const c = getThemeColors(theme);
   const [prefs, setPrefs] = useState<Prefs>({
     notify_set_starting: true,
@@ -61,13 +61,13 @@ export function NotificationPreferences() {
       className="rounded-3xl p-5 space-y-4"
       style={{ background: c.surf, border: `1px solid ${c.brd}` }}
     >
-      <h2 className="text-lg font-extrabold">הגדרות התראות</h2>
+      <h2 className="text-lg font-extrabold">{t.notifPrefsTitle}</h2>
 
       <label className="flex items-center justify-between gap-4 cursor-pointer">
         <div>
-          <p className="text-sm font-bold" style={{ color: c.txt }}>התראה לפני הופעה</p>
+          <p className="text-sm font-bold" style={{ color: c.txt }}>{t.notifPrefsSetStarting}</p>
           <p className="text-xs mt-0.5" style={{ color: c.muted }}>
-            קבל התראה לפני הסטים שסימנת &quot;הולך/ת&quot;
+            {t.notifPrefsSetStartingDesc}
           </p>
         </div>
         <button
@@ -93,7 +93,7 @@ export function NotificationPreferences() {
 
       {prefs.notify_set_starting && (
         <div>
-          <p className="text-xs font-bold mb-2" style={{ color: c.muted }}>כמה דקות לפני:</p>
+          <p className="text-xs font-bold mb-2" style={{ color: c.muted }}>{t.notifPrefsMinutesBefore}</p>
           <div className="flex gap-2 flex-wrap">
             {MINUTE_OPTIONS.map(mins => (
               <button
@@ -107,7 +107,7 @@ export function NotificationPreferences() {
                   border: `1px solid ${prefs.notify_before_minutes === mins ? c.acc : c.brd}`,
                 }}
               >
-                {mins} דק׳
+                {mins} min
               </button>
             ))}
           </div>
@@ -116,9 +116,9 @@ export function NotificationPreferences() {
 
       <label className="flex items-center justify-between gap-4 cursor-pointer">
         <div>
-          <p className="text-sm font-bold" style={{ color: c.txt }}>שינויים בקבוצה</p>
+          <p className="text-sm font-bold" style={{ color: c.txt }}>{t.notifPrefsGroupChanges}</p>
           <p className="text-xs mt-0.5" style={{ color: c.muted }}>
-            כאשר חברי קבוצה מוסיפים הופעות ללוח שלהם
+            {t.notifPrefsGroupChangesDesc}
           </p>
         </div>
         <button
@@ -148,7 +148,7 @@ export function NotificationPreferences() {
         className="w-full rounded-2xl py-3 text-sm font-bold text-white disabled:opacity-50 tap-active"
         style={{ background: saved ? c.success : c.acc }}
       >
-        {saving ? 'שומר…' : saved ? '✓ נשמר!' : 'שמור הגדרות'}
+        {saving ? t.notifPrefsSaving : saved ? t.notifPrefsSaved : t.notifPrefsSave}
       </button>
     </form>
   );
