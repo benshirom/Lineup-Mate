@@ -1,62 +1,105 @@
 import React, { useEffect, useState } from 'react';
+import InstallNotificationPrompt from './InstallNotificationPrompt';
 
 const STORAGE_KEY = 'android-install-dismissed';
+const EXPIRE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 const AndroidInstallBanner: React.FC = () => {
   const [visible, setVisible] = useState(false);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
     if (navigator.webdriver || window.location.hostname === '127.0.0.1') return;
     const isAndroid = /Android/.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const dismissed = localStorage.getItem(STORAGE_KEY);
 
-    if (isAndroid && !isStandalone && !dismissed) {
-      setVisible(true);
-    }
+    if (!isAndroid || isStandalone) return;
+
+    const ts = localStorage.getItem(STORAGE_KEY);
+    const dismissed = ts !== null && Date.now() - Number(ts) < EXPIRE_MS;
+    if (dismissed) return;
+
+    setVisible(true);
+    setCanShare(typeof navigator.share === 'function');
+
+    const onInstalled = () => dismiss(false);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => window.removeEventListener('appinstalled', onInstalled);
   }, []);
 
-  const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
+  const dismiss = (showPrompt = true) => {
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
     setVisible(false);
+    if (showPrompt) setShowNotifPrompt(true);
   };
+
+  const handleShare = async () => {
+    try {
+      await navigator.share({ title: 'Lineup Mate', url: window.location.href });
+    } catch { /* cancelled */ }
+  };
+
+  if (showNotifPrompt) {
+    return <InstallNotificationPrompt onDone={() => setShowNotifPrompt(false)} />;
+  }
 
   if (!visible) return null;
 
   return (
     <div
       dir="rtl"
-      className="fixed top-0 inset-x-0 z-50 flex items-start gap-3 px-4 py-3 shadow-lg"
-      style={{ background: '#1a1040', borderBottom: '1px solid #8B5CF6' }}
+      className="fixed bottom-16 inset-x-3 z-50 rounded-2xl p-4 shadow-xl"
+      style={{ background: '#1a1040', border: '1px solid #8B5CF6' }}
     >
-      {/* App icon */}
-      <div
-        className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm mt-0.5"
-        style={{ background: '#8B5CF6' }}
-      >
-        LM
+      <div className="flex items-start gap-3">
+        <div
+          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm mt-0.5"
+          style={{ background: '#8B5CF6' }}
+        >
+          LM
+        </div>
+
+        <div className="flex-1 min-w-0" style={{ color: '#e2d9f3' }}>
+          <p className="font-bold text-sm leading-tight">Lineup Mate</p>
+          <p className="text-xs mt-0.5" style={{ color: '#a78bfa' }}>
+            הוסף למסך הבית לגישה מהירה
+          </p>
+        </div>
+
+        <button
+          onClick={() => dismiss(true)}
+          aria-label="סגור"
+          className="flex-shrink-0 text-gray-400 hover:text-white transition-colors mt-0.5"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
       </div>
 
-      <div className="flex-1 min-w-0" style={{ color: '#e2d9f3' }}>
-        <p className="font-bold text-sm leading-tight">Lineup Mate</p>
-        <p className="text-xs mt-0.5" style={{ color: '#a78bfa' }}>
-          הוסף למסך הבית: לחץ על{' '}
-          <span className="font-bold" style={{ color: '#c4b5fd' }}>⋮ התפריט</span>
-          {' '}ואז{' '}
-          <span className="font-bold" style={{ color: '#c4b5fd' }}>"הוסף למסך הבית"</span>
-        </p>
+      <div className="mt-3">
+        {canShare ? (
+          <button
+            onClick={handleShare}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white"
+            style={{ background: '#8B5CF6' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            הוסף למסך הבית
+          </button>
+        ) : (
+          <p className="text-xs text-center" style={{ color: '#a78bfa' }}>
+            לחץ על{' '}
+            <strong style={{ color: '#c4b5fd' }}>⋮ התפריט</strong>
+            {' '}ואז{' '}
+            <strong style={{ color: '#c4b5fd' }}>"הוסף למסך הבית"</strong>
+          </p>
+        )}
       </div>
-
-      <button
-        onClick={dismiss}
-        aria-label="סגור"
-        className="flex-shrink-0 text-gray-400 hover:text-white transition-colors mt-0.5"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
     </div>
   );
 };

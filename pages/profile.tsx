@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
@@ -23,6 +23,53 @@ function fileToDataUrl(file: File) {
     reader.onerror = () => reject(new Error('Could not read avatar file.'));
     reader.readAsDataURL(file);
   });
+}
+
+function AppInstallCard() {
+  const [show, setShow] = useState(false);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+    if (isMobile && !isStandalone && !isNative) {
+      setShow(true);
+      setCanShare(typeof navigator.share === 'function');
+    }
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.share({ title: 'Lineup Mate', url: window.location.href });
+    } catch { /* cancelled */ }
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: '#1a1040', border: '1px solid #8B5CF6' }}>
+      <h2 className="mb-1 text-xl font-black" style={{ color: '#e2d9f3' }}>הגדרות אפליקציה</h2>
+      <p className="mb-4 text-sm" style={{ color: '#a78bfa' }}>הוסף את Lineup Mate למסך הבית לגישה מהירה.</p>
+      {canShare ? (
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white"
+          style={{ background: '#8B5CF6' }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+          הוסף למסך הבית
+        </button>
+      ) : (
+        <p className="text-sm" style={{ color: '#c4b5fd' }}>
+          לחץ על <strong>⋮ התפריט</strong> ואז <strong>"הוסף למסך הבית"</strong>
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function ProfilePage() {
@@ -303,6 +350,8 @@ export default function ProfilePage() {
               <div className="lg:col-span-2">
                 <NotificationPreferences />
               </div>
+
+              <AppInstallCard />
 
               <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
                 <h2 className="mb-1 text-xl font-black">Your Data</h2>
