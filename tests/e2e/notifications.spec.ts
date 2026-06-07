@@ -42,7 +42,13 @@ test.describe('Notification bell', () => {
     await expect(prefsForm).toBeVisible({ timeout: 10000 });
 
     // Verify toggle buttons exist
-    await expect(prefsForm.locator('[role="switch"]').first()).toBeVisible();
+    const setStartingSwitch = prefsForm.locator('[role="switch"]').first();
+    await expect(setStartingSwitch).toBeVisible();
+
+    // Ensure the notify_set_starting toggle is on so minute buttons render
+    if ((await setStartingSwitch.getAttribute('aria-checked')) === 'false') {
+      await setStartingSwitch.click();
+    }
 
     // Verify minute selector buttons
     await expect(prefsForm.locator('button:has-text("15 min")')).toBeVisible();
@@ -69,6 +75,12 @@ test.describe('Notification bell', () => {
 
     const prefsForm = page.getByTestId('notification-prefs-form');
     await expect(prefsForm).toBeVisible({ timeout: 10000 });
+
+    // Ensure notify_set_starting toggle is on so minute buttons render
+    const setStartingSwitch = prefsForm.locator('[role="switch"]').first();
+    if ((await setStartingSwitch.getAttribute('aria-checked')) === 'false') {
+      await setStartingSwitch.click();
+    }
 
     // Click "30 min" option
     const thirtyBtn = prefsForm.locator('button:has-text("30 min")');
