@@ -80,7 +80,7 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
         onClick={(e) => {
           e.stopPropagation();
           const pt = (e.nativeEvent as PointerEvent).pointerType;
-          if (pt === 'touch' || pt === 'pen') { open ? setOpen(false) : show(); }
+          if (pt !== 'mouse') { open ? setOpen(false) : show(); }
         }}
         className="rounded-full px-2 py-0.5 text-[10px] font-bold"
         style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}

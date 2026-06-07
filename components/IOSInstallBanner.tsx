@@ -6,7 +6,7 @@ const IOSInstallBanner: React.FC = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (navigator.webdriver) return; // skip during Playwright / automated tests
+    if (navigator.webdriver || window.location.hostname === '127.0.0.1') return; // skip during Playwright / automated tests
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;

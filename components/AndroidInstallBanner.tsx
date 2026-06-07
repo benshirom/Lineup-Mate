@@ -14,7 +14,7 @@ const AndroidInstallBanner: React.FC = () => {
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (navigator.webdriver) return; // skip during Playwright / automated tests
+    if (navigator.webdriver || window.location.hostname === '127.0.0.1') return; // skip during Playwright / automated tests
     const isAndroid = /Android/.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const dismissed = localStorage.getItem(STORAGE_KEY);
