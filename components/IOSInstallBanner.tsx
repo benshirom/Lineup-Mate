@@ -4,9 +4,10 @@ const STORAGE_KEY = 'ios-install-dismissed';
 
 const IOSInstallBanner: React.FC = () => {
   const [visible, setVisible] = useState(false);
+  const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
-    if (navigator.webdriver || window.location.hostname === '127.0.0.1') return; // skip during Playwright / automated tests
+    if (navigator.webdriver || window.location.hostname === '127.0.0.1') return;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -14,6 +15,7 @@ const IOSInstallBanner: React.FC = () => {
 
     if (isIOS && isSafari && !isStandalone && !dismissed) {
       setVisible(true);
+      setCanShare(typeof navigator.share === 'function');
     }
   }, []);
 
@@ -22,38 +24,71 @@ const IOSInstallBanner: React.FC = () => {
     setVisible(false);
   };
 
+  const handleShare = async () => {
+    try {
+      await navigator.share({ title: 'Lineup Mate', url: window.location.href });
+    } catch {
+      // user cancelled or API unavailable — do nothing
+    }
+  };
+
   if (!visible) return null;
 
   return (
     <div
       dir="rtl"
-      className="fixed bottom-16 inset-x-3 z-50 rounded-2xl p-4 flex items-start gap-3 shadow-xl"
+      className="fixed bottom-16 inset-x-3 z-50 rounded-2xl p-4 shadow-xl"
       style={{ background: '#1a1040', border: '1px solid #8B5CF6' }}
     >
-      {/* Share icon */}
-      <div className="flex-shrink-0 mt-0.5">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-          <polyline points="16 6 12 2 8 6" />
-          <line x1="12" y1="2" x2="12" y2="15" />
-        </svg>
+      <div className="flex items-start gap-3">
+        {/* App icon */}
+        <div
+          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm mt-0.5"
+          style={{ background: '#8B5CF6' }}
+        >
+          LM
+        </div>
+
+        <div className="flex-1 min-w-0" style={{ color: '#e2d9f3' }}>
+          <p className="font-bold text-sm leading-tight">Lineup Mate</p>
+          <p className="text-xs mt-0.5" style={{ color: '#a78bfa' }}>
+            הוסף למסך הבית לגישה מהירה
+          </p>
+        </div>
+
+        <button
+          onClick={dismiss}
+          aria-label="סגור"
+          className="flex-shrink-0 text-gray-400 hover:text-white transition-colors mt-0.5"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
       </div>
 
-      <div className="flex-1 text-sm" style={{ color: '#e2d9f3' }}>
-        <p className="font-bold mb-1" style={{ color: '#8B5CF6' }}>הוסף למסך הבית</p>
-        <p>לחץ על <strong>כפתור השיתוף</strong> ואז בחר <strong>"הוסף למסך הבית"</strong> לגישה מהירה לאפליקציה.</p>
+      <div className="mt-3 flex gap-2">
+        {canShare ? (
+          <button
+            onClick={handleShare}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white"
+            style={{ background: '#8B5CF6' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            הוסף למסך הבית
+          </button>
+        ) : (
+          <p className="flex-1 text-xs text-center" style={{ color: '#a78bfa' }}>
+            לחץ על <strong style={{ color: '#c4b5fd' }}>כפתור השיתוף</strong> ואז{' '}
+            <strong style={{ color: '#c4b5fd' }}>"הוסף למסך הבית"</strong>
+          </p>
+        )}
       </div>
-
-      <button
-        onClick={dismiss}
-        aria-label="סגור"
-        className="flex-shrink-0 text-gray-400 hover:text-white transition-colors"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
     </div>
   );
 };
