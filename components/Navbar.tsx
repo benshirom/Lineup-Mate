@@ -35,7 +35,7 @@ const Navbar: React.FC = () => {
   return (
     <nav
       className="glass-nav sticky top-0 z-40"
-      style={{ background: `${c.surface}f0`, borderBottom: `1px solid ${c.border}`, color: c.text }}
+      style={{ background: `${c.surface}f0`, borderBottom: `1px solid ${c.border}`, color: c.text, paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="hidden md:flex items-center justify-between gap-3 px-6 py-3.5">
         <div className="flex items-center gap-6">
