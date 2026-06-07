@@ -82,8 +82,8 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
           const pt = (e.nativeEvent as PointerEvent).pointerType;
           if (pt !== 'mouse') { open ? setOpen(false) : show(); }
         }}
-        className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-        style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55` }}
+        className="rounded-full px-2 py-0.5 text-[10px] font-bold cursor-pointer"
+        style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55`, touchAction: 'manipulation' }}
       >
         ★ {prefs.length}
       </button>
