@@ -2,6 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { LiveBadge } from '@/components/LiveBadge';
+import InstallAfterLoginPrompt from '@/components/InstallAfterLoginPrompt';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
 import { isFestivalActive, formatMinutesUntil } from '@/lib/festivalUtils';
@@ -171,6 +172,8 @@ export default function FestivalPage() {
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [activeStages, setActiveStages] = useState<Record<string, boolean>>({});
   const [tab, setTab] = useState<FestivalTab>('lineup');
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [canShare, setCanShare] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -195,6 +198,16 @@ export default function FestivalPage() {
   const c = getThemeColors(theme);
   const hourWidth = useHourWidth();
   const stageLabelWidth = useStageLabelWidth();
+
+  useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+    if (isMobile && !isStandalone && !isNative) {
+      setShowInstallBtn(true);
+      setCanShare(typeof navigator.share === 'function');
+    }
+  }, []);
 
   useEffect(() => {
     if (!festivalId) return;
@@ -572,8 +585,37 @@ export default function FestivalPage() {
                     </div>
                   </div>
                   {!user && <p className="mt-3 text-xs font-semibold" style={{ color: c.muted }}>Browse freely — sign in to save acts or create groups.</p>}
+                  {showInstallBtn && (
+                    <div className="mt-3">
+                      {canShare ? (
+                        <button
+                          onClick={async () => {
+                            if (!user) {
+                              sessionStorage.setItem('pendingInstall', '1');
+                              router.push('/login?returnTo=' + encodeURIComponent(router.asPath));
+                              return;
+                            }
+                            try { await navigator.share({ title: festival.name, url: window.location.href }); } catch { /* cancelled */ }
+                          }}
+                          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white"
+                          style={{ background: '#8B5CF6' }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                            <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+                          </svg>
+                          הוסף קיצור למסך הבית
+                        </button>
+                      ) : (
+                        <p className="text-xs" style={{ color: c.muted }}>
+                          לחץ על <strong>⋮ התפריט</strong> ואז <strong>"הוסף למסך הבית"</strong>
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </header>
+              <InstallAfterLoginPrompt />
 
               {/* ── What's Next banner ──────────────────────────── */}
               {festivalIsActive && nextPerformance && (
