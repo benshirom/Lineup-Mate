@@ -289,9 +289,13 @@ test.describe('security: input validation', () => {
 test.describe('security: open redirect prevention', () => {
   test('login page returnTo=//evil.com should not be reachable as external redirect', async ({ page }) => {
     // Navigate to login with a protocol-relative returnTo. The page should load without
-    // redirecting to an external domain. We verify returnTo param doesn't cause 500.
+    // redirecting to an external domain.
     await page.goto('/login?returnTo=//evil.com');
-    await expect(page).not.toHaveURL(/evil\.com/);
+    await page.waitForLoadState('networkidle');
+    // Check hostname only — the query param itself contains "evil.com" so a full-URL match
+    // would always fail. We only care that the browser did not navigate to evil.com.
+    const finalHostname = new URL(page.url()).hostname;
+    expect(finalHostname).not.toContain('evil.com');
   });
 });
 
