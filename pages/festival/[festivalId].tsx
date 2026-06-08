@@ -1253,7 +1253,6 @@ export default function FestivalPage() {
                     </form>
                   </div>
               </Modal>
-              )}
             </>
           )}
         </section>
