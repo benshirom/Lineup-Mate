@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/AuthContext';
+import { getThemeColors } from '@/lib/platform';
 
 interface ToastProps {
   message: string;
@@ -8,6 +10,8 @@ interface ToastProps {
 
 export function Toast({ message, duration = 4000, onClose }: ToastProps) {
   const [visible, setVisible] = useState(true);
+  const { theme } = useAuth();
+  const c = getThemeColors(theme);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -19,12 +23,13 @@ export function Toast({ message, duration = 4000, onClose }: ToastProps) {
 
   return (
     <div
-      className="toast-slide-in fixed bottom-24 left-1/2 z-50 max-w-xs rounded-2xl px-4 py-3 text-sm font-bold shadow-xl"
+      className="toast-slide-in fixed left-1/2 z-50 max-w-xs rounded-2xl px-4 py-3 text-sm font-bold shadow-xl"
       style={{
+        bottom: 'max(96px, calc(72px + env(safe-area-inset-bottom, 0px) + 8px))',
         transform: 'translateX(-50%)',
-        background: '#1e293b',
-        color: '#f1f5f9',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: c.surf2,
+        color: c.txt,
+        border: `1px solid ${c.brd}`,
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.3s ease',
       }}
