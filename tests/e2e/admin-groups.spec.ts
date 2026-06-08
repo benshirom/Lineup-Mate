@@ -58,10 +58,9 @@ test.describe('admin group management', () => {
   test('blocked filter shows only blocked groups', async ({ page }) => {
     await expect(page.getByRole('columnheader', { name: /Group Name/i })).toBeVisible({ timeout: 15_000 });
     await page.locator('[data-testid="groups-blocked-filter"]').selectOption('true');
-    await page.waitForTimeout(800);
-    // After filtering to blocked only, there should be no 'Active' badges
+    // Use Playwright's retry-aware assertion instead of a fixed waitForTimeout
     const activeSpans = page.locator('span', { hasText: /^Active$/ });
-    expect(await activeSpans.count()).toBe(0);
+    await expect(activeSpans).toHaveCount(0, { timeout: 8_000 });
   });
 
   test('shows pagination info', async ({ page }) => {
