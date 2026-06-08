@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { fetchClashfinderEvent, normalizeClashfinderEvent } from '@/lib/clashfinder';
 import { cleanupClashfinderPerformances, getStageNames } from '@/lib/clashfinderCleanup';
 import type { NormalizedClashfinderPerformance } from '@/lib/clashfinder';
@@ -109,6 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             : null
     });
   } catch (error: unknown) {
+    Sentry.captureException(error, { extra: { slug, action: 'preview-clashfinder' } });
     console.error('[Admin API Error] preview-clashfinder', error);
     return res.status(500).json({ error: 'Internal server error' });
   }

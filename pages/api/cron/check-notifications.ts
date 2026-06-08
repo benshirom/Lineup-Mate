@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { sendPushNotification } from '@/lib/webpush';
 
@@ -24,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Find performances starting in the next 2-63 minutes
     const { data: performances, error: perfError } = await supabaseAdmin
       .from('performances')
-      .select('id, artist_id, start_time, artists(name)')
+      .select('id, artist_id, start_time, artists(name), stages(name)')
       .eq('is_active', true)
       .gte('start_time', windowStart.toISOString())
       .lte('start_time', windowEnd.toISOString());
@@ -83,11 +84,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (minutesUntil < minutesBefore - 3 || minutesUntil > minutesBefore + 3) continue;
 
       const artistName = (perf as any).artists?.name || 'Artist';
+      const stageName = (perf as any).stages?.name as string | undefined;
+      const startTimeStr = new Date(perf.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       notifications.push({
         user_id: pref.user_id,
         type: 'set_starting',
-        title: `🎵 ${artistName} מתחיל בקרוב!`,
-        body: `ההופעה מתחילה בעוד ${Math.round(minutesUntil)} דקות`,
+        title: `🎵 ${artistName} is starting soon!`,
+        body: `${stageName ? `${stageName} · ` : ''}Starting in ${Math.round(minutesUntil)} min (${startTimeStr})`,
         performance_id: pref.performance_id,
       });
     }
@@ -156,7 +159,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ sent: toInsert.length, pushSent });
   } catch (err: unknown) {
+    Sentry.captureException(err, { extra: { action: 'check-notifications' } });
     console.error('check-notifications error:', err);
-    return res.status(500).json({ error: 'Internal error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

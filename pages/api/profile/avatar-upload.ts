@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
+import * as Sentry from '@sentry/nextjs';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { applyRateLimit } from '@/lib/rateLimit';
 
@@ -138,6 +139,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       public_id: payload.public_id
     });
   } catch (error: unknown) {
+    Sentry.captureException(error, { extra: { action: 'avatar-upload' } });
+    console.error('[Profile API Error] avatar-upload', error);
     return res.status(500).json({ error: 'Could not upload avatar.' });
   }
 }

@@ -22,7 +22,7 @@ test.describe("What's Next banner", () => {
 
     // If banner IS visible (festival is active and user has going picks), verify structure
     if (isVisible) {
-      await expect(banner).toContainText('הבא שלך:');
+      await expect(banner).toContainText('Up next:');
     }
   });
 

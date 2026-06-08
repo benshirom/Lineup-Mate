@@ -16,11 +16,11 @@ interface Notification {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'עכשיו';
-  if (mins < 60) return `לפני ${mins}ד׳`;
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `לפני ${hrs}ש׳`;
-  return `לפני ${Math.floor(hrs / 24)} ימים`;
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 const instanceCounter = { n: 0 };

@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 import supabase from './supabaseClient';
 import { translations, type ThemeMode } from './platform';
 import { storage, sessionStore } from './storage';
@@ -107,6 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
         role: data.role === 'admin' ? 'admin' : 'user',
         theme: nextTheme
       });
+      Sentry.setUser({ id: userId });
     } else {
       setProfile(null);
     }
@@ -174,6 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
         setProfile(null);
         applyPreferences(DEFAULT_THEME);
         pendingInviteHandled.current = false;
+        Sentry.setUser(null);
       }
     });
 

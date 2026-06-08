@@ -604,11 +604,11 @@ export default function FestivalPage() {
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                             <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
                           </svg>
-                          הוסף קיצור למסך הבית
+                          Add shortcut to Home Screen
                         </button>
                       ) : (
                         <p className="text-xs" style={{ color: c.muted }}>
-                          לחץ על <strong>⋮ התפריט</strong> ואז <strong>"הוסף למסך הבית"</strong>
+                          Tap <strong>⋮ Menu</strong> then <strong>&quot;Add to Home Screen&quot;</strong>
                         </p>
                       )}
                     </div>
@@ -623,7 +623,7 @@ export default function FestivalPage() {
                   data-testid="whats-next-banner"
                   className="whats-next-banner mb-4 fade-up"
                 >
-                  <span className="whats-next-label">▶ הבא שלך:</span>
+                  <span className="whats-next-label">▶ Up next:</span>
                   <strong style={{ color: '#f1f5f9' }}>{nextPerformance.artistName}</strong>
                   <span className="whats-next-stage">{nextPerformance.stageName}</span>
                   <span className="whats-next-time">
@@ -645,8 +645,8 @@ export default function FestivalPage() {
                 >
                   <span className="text-lg shrink-0">⚠</span>
                   <div className="flex-1 min-w-0">
-                    <b>{conflictWarning.newPerf.artistName}</b> מתנגש עם{' '}
-                    <b>{conflictWarning.existing.artistName}</b> ב-{conflictWarning.existing.stageName}
+                    <b>{conflictWarning.newPerf.artistName}</b> conflicts with{' '}
+                    <b>{conflictWarning.existing.artistName}</b> at {conflictWarning.existing.stageName}
                   </div>
                   <button
                     type="button"
@@ -1017,7 +1017,7 @@ export default function FestivalPage() {
                   className="go-to-now-btn"
                   aria-label="Scroll to current time"
                 >
-                  ▶ עכשיו
+                  ▶ Now
                 </button>
               )}
 

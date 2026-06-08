@@ -49,8 +49,8 @@ function AppInstallCard() {
 
   return (
     <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: '#1a1040', border: '1px solid #8B5CF6' }}>
-      <h2 className="mb-1 text-xl font-black" style={{ color: '#e2d9f3' }}>הגדרות אפליקציה</h2>
-      <p className="mb-4 text-sm" style={{ color: '#a78bfa' }}>הוסף את Lineup Mate למסך הבית לגישה מהירה.</p>
+      <h2 className="mb-1 text-xl font-black" style={{ color: '#e2d9f3' }}>App Settings</h2>
+      <p className="mb-4 text-sm" style={{ color: '#a78bfa' }}>Add Lineup Mate to your Home Screen for quick access.</p>
       {canShare ? (
         <button
           onClick={handleShare}
@@ -61,11 +61,11 @@ function AppInstallCard() {
             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
             <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
           </svg>
-          הוסף למסך הבית
+          Add to Home Screen
         </button>
       ) : (
         <p className="text-sm" style={{ color: '#c4b5fd' }}>
-          לחץ על <strong>⋮ התפריט</strong> ואז <strong>"הוסף למסך הבית"</strong>
+          Tap <strong>⋮ Menu</strong> then <strong>&quot;Add to Home Screen&quot;</strong>
         </p>
       )}
     </div>

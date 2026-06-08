@@ -19,7 +19,7 @@ test.describe('admin smoke tests', () => {
 
   test('admin page follows saved light theme', async ({ page }) => {
     await page.goto('/profile');
-    await expect(page.getByRole('heading', { name: /Profile|פרופיל/i })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: /Profile/i })).toBeVisible({ timeout: 20_000 });
     await page.getByLabel(/Theme/i).selectOption('light');
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.getByText(/Profile saved successfully/i)).toBeVisible({ timeout: 20_000 });

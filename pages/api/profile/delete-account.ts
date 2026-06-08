@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
-import { applyRateLimit } from '@/lib/rateLimit';
+import { strictRateLimit } from '@/lib/rateLimit';
 import { requireUser } from '@/lib/requireUser';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,7 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!await applyRateLimit(req, res, 'delete-account')) return;
+  if (strictRateLimit) {
+    const ip =
+      (req.headers['x-nf-client-connection-ip'] as string) ||
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      'anonymous';
+    const { success } = await strictRateLimit.limit(`delete-account:${ip}`);
+    if (!success) {
+      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+  }
 
   const auth = await requireUser(req);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
@@ -33,12 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await supabaseAdmin.from('profiles').delete().eq('id', user.id);
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteError) {
+      Sentry.captureException(deleteError, { extra: { userId: user.id, action: 'delete-auth-user' } });
       console.error('[Profile API Error] delete auth user', deleteError);
       return res.status(500).json({ error: 'Internal server error' });
     }
 
     return res.status(200).json({ ok: true });
   } catch (error) {
+    Sentry.captureException(error, { extra: { userId: user.id, action: 'delete-account' } });
     console.error('[Profile API Error] delete account', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
