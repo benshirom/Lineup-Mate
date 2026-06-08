@@ -13,6 +13,10 @@ const SubscribeSchema = z.object({
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST' && req.method !== 'DELETE') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   if (!await applyRateLimit(req, res, 'push-subscribe')) return;
 
   const auth = await requireUser(req);
