@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { LiveBadge } from '@/components/LiveBadge';
 import InstallAfterLoginPrompt from '@/components/InstallAfterLoginPrompt';
+import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
 import { isFestivalActive, formatMinutesUntil } from '@/lib/festivalUtils';
@@ -1216,17 +1217,8 @@ export default function FestivalPage() {
               {!loading && performances.length === 0 && <p style={{ color: c.muted }}>No active performances found.</p>}
 
               {/* ── Create group modal ───────────────────────────── */}
-              {showCreateModal && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                  style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  <div
-                    className="slide-up w-full max-w-sm rounded-[28px] p-6 shadow-elevated"
-                    style={{ background: c.surf, border: `1px solid ${c.brd}` }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+              <Modal open={showCreateModal} onClose={() => { setShowCreateModal(false); setGroupNameInput(''); }} maxWidth={384}>
+                <div className="p-6">
                     <h2 className="mb-1 text-2xl font-extrabold">Create a group</h2>
                     <p className="mb-5 text-sm" style={{ color: c.muted }}>Give your group a name your friends will recognise.</p>
                     <form onSubmit={handleCreateGroup} className="space-y-4">
@@ -1260,7 +1252,7 @@ export default function FestivalPage() {
                       </div>
                     </form>
                   </div>
-                </div>
+              </Modal>
               )}
             </>
           )}
