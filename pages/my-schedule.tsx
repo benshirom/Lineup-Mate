@@ -121,8 +121,12 @@ export default function MySchedulePage() {
         if (savedFestivalsResult.error) throw savedFestivalsResult.error;
         if (preferencesResult.error) throw preferencesResult.error;
 
-        const mappedFestivals = (savedFestivalsResult.data || [])
-          .map((row: any): SavedFestivalItem | null => {
+        type SavedFestivalRow = {
+          id: number; created_at: string; festival_id: number;
+          festivals: { id: number; name: string; year: number; emoji: string | null; color: string | null; location: string | null; start_date: string | null; end_date: string | null; genre_label: string | null } | null;
+        };
+        const mappedFestivals = (savedFestivalsResult.data as SavedFestivalRow[] || [])
+          .map((row): SavedFestivalItem | null => {
             const festival = row.festivals;
             if (!festival) return null;
             return {
@@ -143,8 +147,12 @@ export default function MySchedulePage() {
 
         setSavedFestivals(mappedFestivals);
 
-        const mapped = (preferencesResult.data || [])
-          .map((row: any): ScheduleItem | null => {
+        type PrefRow = {
+          id: number; performance_id: number; status: string;
+          performances: { id: number; start_time: string; end_time: string; day_date: string; artists: { name: string } | null; stages: { name: string; color: string | null } | null; festivals: { id: number; name: string; year: number; emoji: string | null; color: string | null; location: string | null } | null } | null;
+        };
+        const mapped = (preferencesResult.data as PrefRow[] || [])
+          .map((row): ScheduleItem | null => {
             const performance = row.performances;
             if (!performance) return null;
 

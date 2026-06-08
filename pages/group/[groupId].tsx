@@ -229,13 +229,14 @@ export default function GroupPage() {
         if (prefsResult.error) throw prefsResult.error;
 
         const profilesById = Object.fromEntries(
-          (profilesResult.data ?? []).map((p: any) => [p.id, { display_name: p.display_name, email: p.email }])
+          (profilesResult.data ?? []).map((p) => [p.id, { display_name: p.display_name, email: p.email }])
         ) as Record<string, Profile>;
         const memberList = rawMembers.map((m) => ({ ...m, profile: profilesById[m.user_id] ?? null }));
         setMembers(memberList);
 
+        type PerfRow = { id: number; start_time: string; end_time: string; day_date: string; stages: { name: string; color: string | null } | null; artists: { name: string } | null };
         const perfMap: Record<number, PerformanceInfo> = {};
-        perfData?.forEach((p: any) => {
+        (perfData as PerfRow[] ?? []).forEach((p) => {
           perfMap[p.id] = {
             id: p.id,
             artist_name: p.artists?.name ?? '',
@@ -257,8 +258,8 @@ export default function GroupPage() {
           const perfIds = new Set(Object.keys(perfMap).map(Number));
           setPerformancePrefs(
             (prefsResult.data ?? [])
-              .filter((p: any) => perfIds.has(p.performance_id))
-              .map((p: any) => ({
+              .filter((p) => perfIds.has(p.performance_id))
+              .map((p) => ({
                 performance_id: p.performance_id,
                 status: p.status,
                 user_id: p.user_id,
