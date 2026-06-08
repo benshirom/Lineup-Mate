@@ -40,19 +40,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     countQuery = countQuery.eq('is_blocked', false);
   }
 
-  const [{ data: profiles, count }, { data: authUsers }] = await Promise.all([
-    query.order('created_at', { ascending: false }).range(from, to),
-    supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
-  ]);
+  const { data: profiles, count } = await query.order('created_at', { ascending: false }).range(from, to);
 
   if (!profiles) return res.status(500).json({ error: 'Failed to fetch users' });
 
   const userIds = profiles.map((p) => p.id);
 
-  const [{ data: groupMembers }, { data: preferences }, { data: savedFests }] = await Promise.all([
+  const [{ data: groupMembers }, { data: preferences }, { data: savedFests }, { data: authRows }] = await Promise.all([
     supabaseAdmin.from('group_members').select('user_id').in('user_id', userIds),
     supabaseAdmin.from('user_performance_preferences').select('user_id').in('user_id', userIds),
     supabaseAdmin.from('saved_festivals').select('user_id').in('user_id', userIds),
+    userIds.length > 0
+      ? supabaseAdmin.from('auth_users_email_confirmed').select('id, email_confirmed_at').in('id', userIds)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const groupCountMap: Record<string, number> = {};
@@ -63,8 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   for (const r of savedFests ?? []) savedCountMap[r.user_id] = (savedCountMap[r.user_id] ?? 0) + 1;
 
   const authMap: Record<string, string | null> = {};
-  for (const u of authUsers?.users ?? []) {
-    authMap[u.id] = u.email_confirmed_at ?? null;
+  for (const u of authRows ?? []) {
+    authMap[u.id] = (u as { id: string; email_confirmed_at: string | null }).email_confirmed_at ?? null;
   }
 
   const users = profiles.map((p) => ({
