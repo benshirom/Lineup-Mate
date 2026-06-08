@@ -1,3 +1,11 @@
+export function timeLabel(dateString: string): string {
+  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export function festivalTitle(name: string, year: number): string {
+  return name.includes(String(year)) ? name : `${name} ${year}`;
+}
+
 export function isFestivalActive(festival: {
   start_date: string | null;
   end_date: string | null;

@@ -6,7 +6,7 @@ import InstallAfterLoginPrompt from '@/components/InstallAfterLoginPrompt';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
-import { isFestivalActive, formatMinutesUntil } from '@/lib/festivalUtils';
+import { isFestivalActive, formatMinutesUntil, timeLabel, festivalTitle as buildFestivalTitle } from '@/lib/festivalUtils';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 type FestivalTab = 'artists' | 'lineup' | 'timeline' | 'info';
@@ -48,9 +48,6 @@ interface ArtistRosterItem {
   starState: 'all' | 'none' | 'mixed';
 }
 
-function timeLabel(dateString: string) {
-  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 function absHour(dateString: string, refTime: number): number {
   return (new Date(dateString).getTime() - refTime) / 36e5;
@@ -60,9 +57,6 @@ function durationHours(start: string, end: string) {
   return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5);
 }
 
-function festivalTitle(festival: Festival) {
-  return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`;
-}
 
 function detectConflicts(performances: PerformanceItem[]): Set<number> {
   const conflictIds = new Set<number>();
@@ -577,7 +571,7 @@ export default function FestivalPage() {
                         {festival.genre_label || festival.genre || 'Festival'}
                       </p>
                       <h1 className="truncate text-xl font-extrabold leading-tight sm:text-3xl" style={{ letterSpacing: '-0.02em' }}>
-                        {festivalTitle(festival)}
+                        {buildFestivalTitle(festival.name, festival.year)}
                       </h1>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs" style={{ color: c.muted }}>
                         {festival.location && <span>📍 {festival.location}</span>}

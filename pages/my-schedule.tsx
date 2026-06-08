@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
+import { timeLabel, festivalTitle } from '@/lib/festivalUtils';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 
@@ -49,10 +50,6 @@ interface FestivalScheduleGroup {
   }>;
 }
 
-function timeLabel(dateString: string) {
-  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
 function dateLabel(dateString: string) {
   return new Date(dateString).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -61,9 +58,6 @@ function dateLabel(dateString: string) {
   });
 }
 
-function festivalTitle(name: string, year: number) {
-  return name.includes(String(year)) ? name : `${name} ${year}`;
-}
 
 export default function MySchedulePage() {
   const router = useRouter();
