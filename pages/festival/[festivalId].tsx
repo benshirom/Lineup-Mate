@@ -6,7 +6,8 @@ import InstallAfterLoginPrompt from '@/components/InstallAfterLoginPrompt';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
-import { isFestivalActive, formatMinutesUntil, timeLabel, festivalTitle as buildFestivalTitle } from '@/lib/festivalUtils';
+import { isFestivalActive, formatMinutesUntil, timeLabel, festivalTitle as buildFestivalTitle, absHour, durationHours } from '@/lib/festivalUtils';
+import { useNowLine, useHourWidth, useStageLabelWidth } from '@/lib/useFestivalTimeline';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 type FestivalTab = 'artists' | 'lineup' | 'timeline' | 'info';
@@ -49,15 +50,6 @@ interface ArtistRosterItem {
 }
 
 
-function absHour(dateString: string, refTime: number): number {
-  return (new Date(dateString).getTime() - refTime) / 36e5;
-}
-
-function durationHours(start: string, end: string) {
-  return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5);
-}
-
-
 function detectConflicts(performances: PerformanceItem[]): Set<number> {
   const conflictIds = new Set<number>();
   const going = performances.filter((p) => p.status === 'going');
@@ -74,24 +66,6 @@ function detectConflicts(performances: PerformanceItem[]): Set<number> {
     });
   });
   return conflictIds;
-}
-
-function useNowLine(hours: number[], minHour: number, hourWidth: number, refTime: number) {
-  const [nowLeft, setNowLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    const update = () => {
-      if (!refTime) { setNowLeft(null); return; }
-      const nowAbsHour = (Date.now() - refTime) / 36e5;
-      if (hours.length === 0 || nowAbsHour < hours[0] || nowAbsHour > hours[hours.length - 1] + 1) { setNowLeft(null); return; }
-      setNowLeft((nowAbsHour - minHour) * hourWidth);
-    };
-    update();
-    const id = setInterval(update, 30_000);
-    return () => clearInterval(id);
-  }, [hours, minHour, hourWidth, refTime]);
-
-  return nowLeft;
 }
 
 function useNowPlaying(performances: PerformanceItem[]): Set<number> {
@@ -133,28 +107,6 @@ function useNextPerformance(
     return () => clearInterval(id);
   }, [performances, preferences]);
   return next;
-}
-
-function useHourWidth() {
-  const [w, setW] = useState(118);
-  useEffect(() => {
-    const update = () => setW(window.innerWidth < 640 ? 72 : 118);
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-  return w;
-}
-
-function useStageLabelWidth() {
-  const [w, setW] = useState(132);
-  useEffect(() => {
-    const update = () => setW(window.innerWidth < 640 ? 80 : 132);
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-  return w;
 }
 
 export default function FestivalPage() {

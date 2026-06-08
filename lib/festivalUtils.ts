@@ -27,3 +27,11 @@ export function formatMinutesUntil(ms: number): string {
   const rem = minutes % 60;
   return rem === 0 ? `In ${hours}h` : `In ${hours}h ${rem}m`;
 }
+
+export function absHour(dateString: string, refTime: number): number {
+  return (new Date(dateString).getTime() - refTime) / 36e5;
+}
+
+export function durationHours(start: string, end: string): number {
+  return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5);
+}
