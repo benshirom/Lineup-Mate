@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import { requireAdmin } from '@/lib/adminAuth';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { z } from 'zod';
@@ -70,6 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         if (description) return res.status(200).json({ description });
       }
     } catch (err) {
+      Sentry.captureException(err, { extra: { festivalName, action: 'fetch-festival-info-google' } });
       console.error('[fetch-festival-info] Google Places error:', err);
     }
   }

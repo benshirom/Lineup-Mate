@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import * as Sentry from '@sentry/nextjs';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { requireUser } from '@/lib/requireUser';
@@ -52,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Disposition', 'attachment; filename="lineup-mate-data.json"');
     return res.status(200).json(exportData);
   } catch (error) {
+    Sentry.captureException(error, { extra: { userId: user.id, action: 'export-data' } });
     console.error('[Profile API Error] export data', error);
     return res.status(500).json({ error: 'Internal server error' });
   }

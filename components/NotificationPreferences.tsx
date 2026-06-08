@@ -102,9 +102,9 @@ export function NotificationPreferences() {
       {/* Web Push enable / disable */}
       {pushSupported && (
         <div className="rounded-2xl p-4" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
-          <p className="text-sm font-bold mb-1" style={{ color: c.txt }}>התראות Push</p>
+          <p className="text-sm font-bold mb-1" style={{ color: c.txt }}>Push Notifications</p>
           <p className="text-xs mb-3" style={{ color: c.muted }}>
-            קבל התראות גם כשהדפדפן סגור
+            Receive alerts even when the browser is closed
           </p>
           {pushPermission === 'granted' ? (
             <button
@@ -114,11 +114,11 @@ export function NotificationPreferences() {
               className="rounded-full px-4 py-2 text-xs font-bold transition-all disabled:opacity-50"
               style={{ background: c.surf, border: `1px solid ${c.brd}`, color: c.muted }}
             >
-              {pushLoading ? 'מעדכן…' : '🔕 בטל התראות Push'}
+              {pushLoading ? 'Updating…' : '🔕 Disable Push Notifications'}
             </button>
           ) : pushPermission === 'denied' ? (
             <p className="text-xs font-bold" style={{ color: c.danger }}>
-              ❌ גישה לנוטיפיקציות נחסמה. שחרר בהגדרות הדפדפן.
+              ❌ Notification access is blocked. Enable it in browser settings.
             </p>
           ) : (
             <button
@@ -128,7 +128,7 @@ export function NotificationPreferences() {
               className="rounded-full px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-50"
               style={{ background: c.acc }}
             >
-              {pushLoading ? 'מאשר…' : '🔔 הפעל התראות Push'}
+              {pushLoading ? 'Enabling…' : '🔔 Enable Push Notifications'}
             </button>
           )}
         </div>

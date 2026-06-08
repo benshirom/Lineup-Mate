@@ -133,14 +133,14 @@ export async function openProfile(page: Page) {
     return;
   }
 
-  await clickNav(page, /Profile|פרופיל/i);
+  await clickNav(page, /Profile/i);
 }
 
 export async function openFirstFestival(page: Page) {
   await page.goto('/');
   await dismissPreviewOverlays(page);
-  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 20_000 });
-  await page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first().click();
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first().click();
   await dismissPreviewOverlays(page);
   await expect(page.getByRole('button', { name: /timeline/i }), 'Festival page should render schedule tabs after opening first festival').toBeVisible({ timeout: 20_000 });
   return page.url();
@@ -174,19 +174,19 @@ export const openLineupTab = openArtistsTab;
 export async function ensureFirstFestivalIsSaved(page: Page) {
   await page.goto('/');
   await dismissPreviewOverlays(page);
-  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup|צפה בליינאפ/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
 
-  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!|Saved|נשמר/i }).first();
+  const firstSaveOrSavedButton = page.getByRole('button', { name: /\+ Save|✓ Saved|Save Festival|Saved!|Saved/i }).first();
   await expect(firstSaveOrSavedButton, 'Home page should expose a save/saved festival button').toBeVisible({ timeout: 20_000 });
 
   const label = (await firstSaveOrSavedButton.innerText()).trim();
-  if (/\+ Save|Save Festival|שמור פסטיבל/i.test(label)) {
+  if (/\+ Save|Save Festival/i.test(label)) {
     await firstSaveOrSavedButton.click();
     await page.waitForLoadState('networkidle').catch(() => undefined);
   }
 
   await expect(
-    page.getByRole('button', { name: /✓ Saved|Saved!|Saved|נשמר/i }).first(),
+    page.getByRole('button', { name: /✓ Saved|Saved!|Saved/i }).first(),
     'Festival save should persist in UI as Saved after clicking save.'
   ).toBeVisible({ timeout: 20_000 });
 }

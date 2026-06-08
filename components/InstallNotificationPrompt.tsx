@@ -34,12 +34,11 @@ const InstallNotificationPrompt: React.FC<Props> = ({ onDone }) => {
 
   return (
     <div
-      dir="rtl"
       className="fixed bottom-16 inset-x-3 z-50 rounded-2xl p-4 shadow-xl"
       style={{ background: '#1a1040', border: '1px solid #8B5CF6' }}
     >
       <p className="font-bold text-sm mb-3" style={{ color: '#e2d9f3' }}>
-        רוצה לקבל עדכונים על הופעות?
+        Want to get performance updates?
       </p>
       <div className="flex gap-2">
         <button
@@ -48,14 +47,14 @@ const InstallNotificationPrompt: React.FC<Props> = ({ onDone }) => {
           className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60"
           style={{ background: '#8B5CF6' }}
         >
-          {loading ? '...' : 'הפעל התראות'}
+          {loading ? '...' : 'Enable notifications'}
         </button>
         <button
           onClick={onDone}
           className="flex-1 rounded-xl py-2.5 text-sm font-bold"
           style={{ background: '#2d1f5e', color: '#a78bfa' }}
         >
-          לא עכשיו
+          Not now
         </button>
       </div>
     </div>

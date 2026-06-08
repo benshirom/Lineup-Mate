@@ -381,7 +381,7 @@ export default function GroupsPage() {
           <ShareSheet
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}/join/${shareSheetGroup.invite_code}`}
             title={`${shareSheetGroup.festival_name} – ${shareSheetGroup.name}`}
-            text={`הצטרף לקבוצה שלי "${shareSheetGroup.name}" ב-${shareSheetGroup.festival_name}! 🎵`}
+            text={`Join my group "${shareSheetGroup.name}" at ${shareSheetGroup.festival_name}! 🎵`}
             onClose={() => setShareSheetGroup(null)}
           />
         )}

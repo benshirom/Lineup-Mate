@@ -3,6 +3,7 @@ import { Redis } from '@upstash/redis';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 let ratelimit: Ratelimit | null = null;
+export let strictRateLimit: Ratelimit | null = null;
 
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   const redis = new Redis({
@@ -12,6 +13,11 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
   ratelimit = new Ratelimit({
     redis,
     limiter: Ratelimit.slidingWindow(60, '1 m'),
+    analytics: false,
+  });
+  strictRateLimit = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, '1 m'),
     analytics: false,
   });
 } else if (process.env.NODE_ENV === 'production') {

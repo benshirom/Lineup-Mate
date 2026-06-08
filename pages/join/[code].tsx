@@ -83,7 +83,7 @@ export default function JoinPage() {
       <>
         <Navbar />
         <main className="mobile-shell-padding flex items-center justify-center" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
-          <p style={{ color: c.muted }}>טוען…</p>
+          <p style={{ color: c.muted }}>Loading…</p>
         </main>
       </>
     );
@@ -96,10 +96,10 @@ export default function JoinPage() {
         <main className="mobile-shell-padding flex items-center justify-center p-4" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
           <div className="text-center max-w-sm">
             <div className="text-5xl mb-4">🔍</div>
-            <h1 className="text-2xl font-black mb-2">קישור לא נמצא</h1>
-            <p className="text-sm mb-6" style={{ color: c.muted }}>קישור ההזמנה הזה לא קיים או פג תוקפו.</p>
+            <h1 className="text-2xl font-black mb-2">Link not found</h1>
+            <p className="text-sm mb-6" style={{ color: c.muted }}>This invite link doesn&apos;t exist or has expired.</p>
             <Link href="/" className="rounded-full px-6 py-3 text-sm font-bold text-white" style={{ background: c.acc }}>
-              לדף הבית
+              Go home
             </Link>
           </div>
         </main>
@@ -112,7 +112,7 @@ export default function JoinPage() {
       <>
         <Navbar />
         <main className="mobile-shell-padding flex items-center justify-center" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
-          <p style={{ color: c.muted }}>מצטרף לקבוצה…</p>
+          <p style={{ color: c.muted }}>Joining group…</p>
         </main>
       </>
     );
@@ -137,7 +137,7 @@ export default function JoinPage() {
                 {preview?.group_name}
               </h1>
               <p className="text-sm" style={{ color: c.muted }}>
-                {preview?.member_count} {preview?.member_count === 1 ? 'חבר' : 'חברים'} בקבוצה
+                {preview?.member_count} {preview?.member_count === 1 ? 'member' : 'members'}
               </p>
             </div>
 
@@ -145,7 +145,7 @@ export default function JoinPage() {
               className="rounded-2xl p-3 text-sm text-center mb-4"
               style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
             >
-              הצטרף לקבוצה וראה מה החברים שלך הולכים לראות בפסטיבל 🎵
+              Join the group and see what your friends are going to at the festival 🎵
             </div>
 
             {error && (
@@ -161,17 +161,17 @@ export default function JoinPage() {
                   className="w-full rounded-2xl py-3.5 text-sm font-bold text-white tap-active"
                   style={{ background: c.acc }}
                 >
-                  התחבר / הצטרף
+                  Log in / Sign up
                 </button>
                 <p className="text-center text-xs" style={{ color: c.muted }}>
-                  אין לך חשבון?{' '}
+                  Don&apos;t have an account?{' '}
                   <button
                     type="button"
                     onClick={handleLoginRedirect}
                     className="font-bold underline"
                     style={{ color: c.acc }}
                   >
-                    הרשמה חינמית
+                    Sign up free
                   </button>
                 </p>
               </div>

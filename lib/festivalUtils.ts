@@ -12,10 +12,10 @@ export function isFestivalActive(festival: {
 
 export function formatMinutesUntil(ms: number): string {
   const minutes = Math.round(ms / 60_000);
-  if (minutes <= 0) return 'מתחיל עכשיו!';
-  if (minutes === 1) return 'בעוד דקה';
-  if (minutes < 60) return `בעוד ${minutes} דקות`;
+  if (minutes <= 0) return 'Starting now!';
+  if (minutes === 1) return 'In 1 min';
+  if (minutes < 60) return `In ${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const rem = minutes % 60;
-  return rem === 0 ? `בעוד ${hours} שעות` : `בעוד ${hours}ש׳ ${rem}ד׳`;
+  return rem === 0 ? `In ${hours}h` : `In ${hours}h ${rem}m`;
 }

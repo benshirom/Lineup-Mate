@@ -415,7 +415,7 @@ export default function GroupPage() {
           }}
           role="status"
         >
-          🎵 ברוך הבא לקבוצה!
+          🎵 Welcome to the group!
         </div>
       )}
       <main className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>

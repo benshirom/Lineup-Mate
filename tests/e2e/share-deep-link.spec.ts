@@ -53,7 +53,7 @@ test.describe('Share sheet', () => {
     await expect(page.getByTestId('share-sheet')).toBeVisible();
 
     // Click the cancel button
-    await page.locator('[data-testid="share-sheet"] ~ button, [data-testid="share-sheet"]').locator('button:has-text("ביטול")').click().catch(async () => {
+    await page.locator('[data-testid="share-sheet"] ~ button, [data-testid="share-sheet"]').locator('button:has-text("Cancel")').click().catch(async () => {
       // Try clicking outside
       await page.keyboard.press('Escape');
     });
@@ -87,8 +87,8 @@ test.describe('Share sheet', () => {
       expect(clipboardText).toContain('/join/');
     }
 
-    // Verify button shows "הקישור הועתק!" feedback
-    await expect(page.getByTestId('share-copy-link')).toContainText('הקישור הועתק');
+    // Verify button shows "Link copied!" feedback
+    await expect(page.getByTestId('share-copy-link')).toContainText('Link copied');
   });
 });
 
@@ -99,7 +99,7 @@ test.describe('Join page', () => {
 
     // Should show not-found state
     const body = await page.textContent('body');
-    expect(body).toMatch(/לא נמצא|not found|404|קישור/i);
+    expect(body).toMatch(/Link not found|not found|404/i);
   });
 
   test('Join page for logged-out user shows festival preview and login CTA', async ({ page }) => {

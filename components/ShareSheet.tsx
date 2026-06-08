@@ -100,7 +100,7 @@ export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-1 text-center text-xs font-extrabold uppercase tracking-widest" style={{ color: '#64748b' }}>
-          שיתוף קבוצה
+          Share Group
         </div>
         <h3 className="mb-5 text-center text-base font-bold" style={{ color: '#f1f5f9' }}>
           {title}
@@ -119,7 +119,7 @@ export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
             }}
           >
             <span className="text-lg">{copied ? '✓' : '🔗'}</span>
-            {copied ? 'הקישור הועתק!' : 'העתק קישור'}
+            {copied ? 'Link copied!' : 'Copy link'}
           </button>
 
           <button
@@ -162,7 +162,7 @@ export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
               }}
             >
               <span className="text-lg">📤</span>
-              שיתוף נוסף…
+              More…
             </button>
           )}
         </div>
@@ -173,7 +173,7 @@ export function ShareSheet({ url, title, text, onClose }: ShareSheetProps) {
           className="mt-4 w-full rounded-2xl py-3 text-sm font-bold"
           style={{ background: 'rgba(255,255,255,0.04)', color: '#64748b' }}
         >
-          ביטול
+          Cancel
         </button>
       </div>
     </div>

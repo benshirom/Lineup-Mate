@@ -21,7 +21,7 @@ test.describe('my schedule management', () => {
 
     await test.step('open My Schedule directly and remove one act', async () => {
       await page.goto('/my-schedule');
-      await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
       await expect(
         page.getByTestId('saved-acts-section'),
         'Saved acts section is missing after starring an act. If this fails, check user_performance_preferences persistence/read.'
@@ -44,7 +44,7 @@ test.describe('my schedule management', () => {
 
     await test.step('open My Schedule directly and clear saved acts', async () => {
       await page.goto('/my-schedule');
-      await expect(page.getByRole('heading', { name: /My Schedule|הלוח שלי/i })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
       await expect(
         page.getByTestId('saved-acts-section'),
         'Clear All requires at least one saved act, but saved-acts-section did not render.'

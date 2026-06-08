@@ -48,7 +48,7 @@ test.describe('mobile interactions', () => {
 
     // Close by clicking outside or close button
     const closeBtn = page.getByTestId('share-sheet-close').or(
-      page.getByRole('button', { name: /close|סגור/i })
+      page.getByRole('button', { name: /close/i })
     ).first();
     if (await closeBtn.count() > 0) {
       await closeBtn.click();
