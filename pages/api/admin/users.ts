@@ -23,7 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let countQuery = supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true });
 
   if (search?.trim()) {
-    const pattern = `%${search.trim()}%`;
+    const trimmed = search.trim().slice(0, 200);
+    const pattern = `%${trimmed}%`;
     query = query.or(`email.ilike.${pattern},display_name.ilike.${pattern}`);
     countQuery = countQuery.or(`email.ilike.${pattern},display_name.ilike.${pattern}`);
   }

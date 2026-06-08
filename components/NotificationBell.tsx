@@ -78,14 +78,15 @@ export function NotificationBell() {
 
   const markAllRead = async () => {
     if (!user || unreadCount === 0) return;
-    await supabase.rpc('mark_all_notifications_read');
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    const { error } = await supabase.rpc('mark_all_notifications_read');
+    if (!error) {
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    }
   };
 
   const handleOpen = () => {
     setOpen(o => !o);
     if (!open && unreadCount > 0) {
-      // Mark as read after a short delay (user has seen them)
       setTimeout(markAllRead, 2000);
     }
   };

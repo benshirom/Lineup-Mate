@@ -10,6 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!strictRateLimit && process.env.NODE_ENV === 'production') {
+    // Rate limiting must be configured in production for destructive endpoints.
+    return res.status(503).json({ error: 'Service temporarily unavailable.' });
+  }
   if (strictRateLimit) {
     const ip =
       (req.headers['x-nf-client-connection-ip'] as string) ||
@@ -40,14 +44,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Delete groups owned by this user (members cascade from group_members FK)
     await supabaseAdmin.from('groups').delete().eq('owner_user_id', user.id);
 
-    // Delete profile and auth user
-    await supabaseAdmin.from('profiles').delete().eq('id', user.id);
+    // Delete auth user first — if this fails, the profile remains intact and the user can retry.
+    // Deleting profile first would leave an orphaned auth account on auth deletion failure.
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       Sentry.captureException(deleteError, { extra: { userId: user.id, action: 'delete-auth-user' } });
       console.error('[Profile API Error] delete auth user', deleteError);
       return res.status(500).json({ error: 'Internal server error' });
     }
+    await supabaseAdmin.from('profiles').delete().eq('id', user.id);
 
     return res.status(200).json({ ok: true });
   } catch (error) {
