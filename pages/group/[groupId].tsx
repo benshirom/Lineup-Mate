@@ -236,7 +236,7 @@ export default function GroupPage() {
 
         type PerfRow = { id: number; start_time: string; end_time: string; day_date: string; stages: { name: string; color: string | null } | null; artists: { name: string } | null };
         const perfMap: Record<number, PerformanceInfo> = {};
-        ((perfData as PerfRow[]) ?? []).forEach((p) => {
+        ((perfData as unknown as PerfRow[]) ?? []).forEach((p) => {
           perfMap[p.id] = {
             id: p.id,
             artist_name: p.artists?.name ?? '',

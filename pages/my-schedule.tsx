@@ -125,7 +125,7 @@ export default function MySchedulePage() {
           id: number; created_at: string; festival_id: number;
           festivals: { id: number; name: string; year: number; emoji: string | null; color: string | null; location: string | null; start_date: string | null; end_date: string | null; genre_label: string | null } | null;
         };
-        const mappedFestivals = (savedFestivalsResult.data as SavedFestivalRow[] || [])
+        const mappedFestivals = (savedFestivalsResult.data as unknown as SavedFestivalRow[] || [])
           .map((row): SavedFestivalItem | null => {
             const festival = row.festivals;
             if (!festival) return null;
@@ -151,7 +151,7 @@ export default function MySchedulePage() {
           id: number; performance_id: number; status: string;
           performances: { id: number; start_time: string; end_time: string; day_date: string; artists: { name: string } | null; stages: { name: string; color: string | null } | null; festivals: { id: number; name: string; year: number; emoji: string | null; color: string | null; location: string | null } | null } | null;
         };
-        const mapped = (preferencesResult.data as PrefRow[] || [])
+        const mapped = (preferencesResult.data as unknown as PrefRow[] || [])
           .map((row): ScheduleItem | null => {
             const performance = row.performances;
             if (!performance) return null;
@@ -159,14 +159,14 @@ export default function MySchedulePage() {
             return {
               preferenceId: row.id,
               performanceId: row.performance_id,
-              status: row.status,
+              status: row.status as PreferenceStatus,
               startTime: performance.start_time,
               endTime: performance.end_time,
               dayDate: performance.day_date,
               artistName: performance.artists?.name || 'Unknown Artist',
               stageName: performance.stages?.name || 'Stage',
               stageColor: performance.stages?.color || performance.festivals?.color || '#e85d26',
-              festivalId: performance.festivals?.id,
+              festivalId: performance.festivals?.id ?? 0,
               festivalName: performance.festivals?.name || 'Festival',
               festivalYear: performance.festivals?.year || new Date(performance.start_time).getFullYear(),
               festivalEmoji: performance.festivals?.emoji || '🎪',

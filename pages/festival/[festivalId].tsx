@@ -247,7 +247,7 @@ export default function FestivalPage() {
         }
 
         type PerfRow = { id: number; start_time: string; end_time: string; day_date: string; stages: { name: string; color: string | null } | null; artists: { name: string } | null };
-        const mapped: PerformanceItem[] = (performanceRows as PerfRow[] || []).map((row) => ({
+        const mapped: PerformanceItem[] = (performanceRows as unknown as PerfRow[] || []).map((row) => ({
           id: row.id,
           artistName: row.artists?.name || 'Unknown Artist',
           stageName: row.stages?.name || 'Stage',

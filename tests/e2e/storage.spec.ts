@@ -7,7 +7,7 @@ test.describe('storage abstraction', () => {
     if (!email || !password) { test.skip(); return; }
 
     await page.goto('/login');
-    await page.fill('input[type="text"]', email);
+    await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
     await page.waitForURL('/');
