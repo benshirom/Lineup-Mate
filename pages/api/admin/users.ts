@@ -51,8 +51,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     supabaseAdmin.from('user_performance_preferences').select('user_id').in('user_id', userIds),
     supabaseAdmin.from('saved_festivals').select('user_id').in('user_id', userIds),
     userIds.length > 0
-      ? supabaseAdmin.from('auth_users_email_confirmed').select('id, email_confirmed_at').in('id', userIds)
-      : Promise.resolve({ data: [] }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ? (supabaseAdmin as any).from('auth_users_email_confirmed').select('id, email_confirmed_at').in('id', userIds)
+      : Promise.resolve({ data: [] as { id: string; email_confirmed_at: string | null }[] }),
   ]);
 
   const groupCountMap: Record<string, number> = {};
