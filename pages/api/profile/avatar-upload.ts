@@ -3,7 +3,30 @@ import crypto from 'crypto';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { applyRateLimit } from '@/lib/rateLimit';
 
-const MAX_BASE64_LENGTH = 6_000_000;
+// 6_400_000 ≈ base64 overhead for a ~4.7 MB raw image (4/3 ratio).
+// Keep in sync with bodyParser.sizeLimit below.
+const MAX_BASE64_LENGTH = 6_400_000;
+
+const ALLOWED_MIME_TYPES = ['png', 'jpeg', 'jpg', 'webp', 'gif'];
+
+/**
+ * Verifies the actual file bytes match a known image magic number.
+ * Guards against a mislabelled data URL (e.g. SVG with a PNG MIME prefix).
+ */
+function detectImageMagicBytes(buffer: Buffer): boolean {
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return true;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return true;
+  // WebP: RIFF....WEBP
+  if (buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP') return true;
+  // GIF: GIF87a or GIF89a
+  const gifMagic = buffer.toString('ascii', 0, 6);
+  if (gifMagic === 'GIF87a' || gifMagic === 'GIF89a') return true;
+  return false;
+}
 
 function cloudinaryEnv() {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -27,7 +50,9 @@ function signCloudinaryParams(params: Record<string, string | number>, apiSecret
 }
 
 function isValidImageDataUrl(value: unknown): value is string {
-  return typeof value === 'string' && /^data:image\/(png|jpeg|jpg|webp|gif);base64,/i.test(value) && value.length <= MAX_BASE64_LENGTH;
+  if (typeof value !== 'string') return false;
+  const mimePattern = new RegExp(`^data:image/(${ALLOWED_MIME_TYPES.join('|')});base64,`, 'i');
+  return mimePattern.test(value) && value.length <= MAX_BASE64_LENGTH;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -63,6 +88,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Upload a valid image file up to 4MB.' });
     }
 
+    // Verify magic bytes server-side to prevent MIME type spoofing via the data URL prefix.
+    const base64Data = file.replace(/^data:image\/[a-z]+;base64,/i, '');
+    const fileBuffer = Buffer.from(base64Data, 'base64');
+    if (!detectImageMagicBytes(fileBuffer)) {
+      return res.status(400).json({ error: 'Upload a valid image file up to 4MB.' });
+    }
+
     const { cloudName, apiKey, apiSecret } = cloudinaryEnv();
     const timestamp = Math.floor(Date.now() / 1000);
     const folder = 'lineup-mate/avatars';
@@ -77,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const signature = signCloudinaryParams(uploadParams, apiSecret);
 
     const body = new FormData();
-    body.append('file', file);
+    body.append('file', file); // send original data URL; Cloudinary accepts base64 data URLs
     body.append('api_key', apiKey);
     body.append('timestamp', String(timestamp));
     body.append('folder', folder);

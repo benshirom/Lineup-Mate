@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { getThemeColors } from '@/lib/platform';
-import supabase from '@/lib/supabaseClient';
 import { sessionStore } from '@/lib/storage';
 
 interface GroupPreview {
@@ -25,25 +24,28 @@ export default function JoinPage() {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  // Load group preview (public, no auth required)
+  // Load group preview via rate-limited API route (avoids direct anonymous Supabase RPC call)
   useEffect(() => {
     if (!code || typeof code !== 'string') return;
     setLoading(true);
     setError(null);
 
-    supabase
-      .rpc('get_group_preview', { p_code: code })
-      .then(({ data, error: rpcError }) => {
-        if (rpcError || !data || data.length === 0) {
+    fetch(`/api/groups/preview?code=${encodeURIComponent(code)}`)
+      .then(async (res) => {
+        if (!res.ok) {
           setNotFound(true);
         } else {
-          const row = data[0];
+          const data = await res.json();
           setPreview({
-            festival_name: row.festival_name,
-            group_name: row.group_name,
-            member_count: Number(row.member_count),
+            festival_name: data.festival_name,
+            group_name: data.group_name,
+            member_count: Number(data.member_count),
           });
         }
+        setLoading(false);
+      })
+      .catch(() => {
+        setNotFound(true);
         setLoading(false);
       });
   }, [code]);

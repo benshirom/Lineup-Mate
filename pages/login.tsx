@@ -70,16 +70,18 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (user && view !== 'update-password') {
-      const returnTo = typeof router.query.returnTo === 'string' && router.query.returnTo.startsWith('/')
-        ? router.query.returnTo
-        : '/';
+      const rt = router.query.returnTo;
+      const returnTo =
+        typeof rt === 'string' && rt.startsWith('/') && !rt.startsWith('//')
+          ? rt
+          : '/';
       router.push(returnTo);
     }
   }, [user, router, view]);
 
 
   const isEmailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email]);
-  const isPasswordValid = password.length >= 6;
+  const isPasswordValid = password.length >= 8;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
   const redirectTo = appUrl ? `${appUrl}/login?type=recovery` : undefined;
@@ -134,7 +136,7 @@ const LoginPage = () => {
   };
 
   const handleUpdatePassword = async () => {
-    if (!isPasswordValid) { setError('Password must be at least 6 characters.'); return; }
+    if (!isPasswordValid) { setError('Password must be at least 8 characters.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
     setSubmitting(true);
@@ -182,7 +184,7 @@ const LoginPage = () => {
       return;
     }
 
-    if (!isPasswordValid) { setError('Password must be at least 6 characters.'); return; }
+    if (!isPasswordValid) { setError('Password must be at least 8 characters.'); return; }
 
     setSubmitting(true);
     try {
@@ -277,7 +279,7 @@ const LoginPage = () => {
                   {view === 'login' && <button type="button" onClick={() => { reset(); setView('forgot'); }} className="text-xs font-bold hover:opacity-80" style={{ color: c.acc }}>Forgot password?</button>}
                 </div>
                 <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete={view === 'login' ? 'current-password' : 'new-password'} className={inputClass} style={inputStyle} />
-                {(view === 'signup' || view === 'update-password') && <p className="mt-1 text-xs" style={{ color: c.muted }}>At least 6 characters.</p>}
+                {(view === 'signup' || view === 'update-password') && <p className="mt-1 text-xs" style={{ color: c.muted }}>At least 8 characters.</p>}
               </div>
             )}
 

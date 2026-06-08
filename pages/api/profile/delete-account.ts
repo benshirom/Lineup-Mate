@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { requireUser } from '@/lib/requireUser';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
@@ -10,13 +11,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!await applyRateLimit(req, res, 'delete-account')) return;
 
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  const auth = await requireUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  const { user } = auth;
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-  if (userError || !user) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     // Delete user data — cascade handles most foreign keys,

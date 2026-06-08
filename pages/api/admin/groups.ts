@@ -1,12 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const auth = await requireAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+
+  if (!await applyRateLimit(req, res, 'admin-groups')) return;
 
   const supabaseAdmin = getSupabaseAdmin();
   const { search, is_blocked, page = '0', limit = '50' } = req.query as Record<string, string>;

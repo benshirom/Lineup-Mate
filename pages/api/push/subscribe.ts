@@ -1,11 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import getSupabaseAdmin from '@/lib/supabaseAdmin';
+import { requireUser } from '@/lib/requireUser';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 const SubscribeSchema = z.object({
   endpoint: z.string().url(),
@@ -15,24 +12,16 @@ const SubscribeSchema = z.object({
   device_name: z.string().max(100).optional(),
 });
 
-async function getUserId(req: NextApiRequest): Promise<string | null> {
-  const authHeader = req.headers.authorization ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return null;
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { data: { user } } = await supabase.auth.getUser(token);
-  return user?.id ?? null;
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'POST') {
-    const userId = await getUserId(req);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!await applyRateLimit(req, res, 'push-subscribe')) return;
 
+  const auth = await requireUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  const { user } = auth;
+
+  const supabaseAdmin = getSupabaseAdmin();
+
+  if (req.method === 'POST') {
     const parsed = SubscribeSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.flatten() });
@@ -41,12 +30,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error } = await supabaseAdmin
       .from('push_subscriptions')
       .upsert(
-        { user_id: userId, ...parsed.data, updated_at: new Date().toISOString() },
+        { user_id: user.id, ...parsed.data, updated_at: new Date().toISOString() },
         { onConflict: 'user_id,endpoint' }
       );
 
     if (error) {
-      console.error('push subscribe error:', error);
+      console.error('push subscribe error:', error.message, error.code);
       return res.status(500).json({ error: 'Could not save subscription' });
     }
 
@@ -54,16 +43,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const userId = await getUserId(req);
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-
     const { endpoint } = req.body ?? {};
     if (!endpoint) return res.status(400).json({ error: 'endpoint required' });
 
     await supabaseAdmin
       .from('push_subscriptions')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('endpoint', endpoint);
 
     return res.status(200).json({ ok: true });

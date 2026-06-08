@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
+import { applyRateLimit } from '@/lib/rateLimit';
+import { z } from 'zod';
 
-interface RequestBody {
-  festivalId?: number;
-  festivalName?: string;
-}
+const RequestSchema = z.object({
+  festivalName: z.string().trim().min(1).max(200),
+});
 
 interface ResponseData {
   description: string | null;
@@ -44,10 +45,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(auth.status).json({ description: null, error: auth.error });
   }
 
-  const { festivalName } = req.body as RequestBody;
-  if (!festivalName) {
-    return res.status(400).json({ description: null, error: 'festivalName is required.' });
+  if (!await applyRateLimit(req, res, 'admin-fetch-festival')) return;
+
+  const parsed = RequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ description: null, error: 'festivalName must be a non-empty string up to 200 characters.' });
   }
+  const { festivalName } = parsed.data;
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
 

@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', ago7),
     supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', ago30),
     supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }).eq('is_blocked', true),
-    supabaseAdmin.from('profiles').select('id, email, display_name, created_at').order('created_at', { ascending: false }).limit(10),
+    supabaseAdmin.from('profiles').select('id, display_name, created_at').order('created_at', { ascending: false }).limit(10),
     supabaseAdmin.from('festivals').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('festivals').select('id', { count: 'exact', head: true }).gte('end_date', today),
     supabaseAdmin.from('groups').select('id', { count: 'exact', head: true }),
@@ -56,15 +56,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Most active users
   const topUserIds = (topActiveUserRows ?? []) as Array<{ user_id: string; preference_count: number }>;
-  let mostActiveUsers: { id: string; display_name: string | null; email: string | null; preferenceCount: number }[] = [];
+  let mostActiveUsers: { id: string; display_name: string | null; preferenceCount: number }[] = [];
   if (topUserIds.length > 0) {
     const { data: profiles } = await supabaseAdmin
       .from('profiles')
-      .select('id, display_name, email')
+      .select('id, display_name')
       .in('id', topUserIds.map((u) => u.user_id));
     mostActiveUsers = topUserIds.map(({ user_id, preference_count }) => {
       const p = profiles?.find((pr) => pr.id === user_id);
-      return { id: user_id, display_name: p?.display_name ?? null, email: p?.email ?? null, preferenceCount: preference_count };
+      return { id: user_id, display_name: p?.display_name ?? null, preferenceCount: preference_count };
     });
   }
 

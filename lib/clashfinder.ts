@@ -109,7 +109,7 @@ export function buildClashfinderPublicKey(options?: { authParam?: string; authVa
 
 export function buildClashfinderEventUrl(slug: string) {
   const { username, publicKey } = buildClashfinderPublicKey();
-  const cleanSlug = slug.trim().replace(/\.json$/i, '');
+  const cleanSlug = slug.trim().replace(/\.json$/i, '').replace(/[^a-zA-Z0-9_-]/g, '');
   const url = new URL(`https://clashfinder.com/data/event/${encodeURIComponent(cleanSlug)}.json`);
   url.searchParams.set('authUsername', username);
   url.searchParams.set('authPublicKey', publicKey);
