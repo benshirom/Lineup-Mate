@@ -28,6 +28,8 @@ function fileToDataUrl(file: File) {
 function AppInstallCard() {
   const [show, setShow] = useState(false);
   const [canShare, setCanShare] = useState(false);
+  const { theme } = useAuth();
+  const c = getThemeColors(theme);
 
   useEffect(() => {
     const isMobile = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
@@ -48,14 +50,14 @@ function AppInstallCard() {
   if (!show) return null;
 
   return (
-    <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: '#1a1040', border: '1px solid #8B5CF6' }}>
-      <h2 className="mb-1 text-xl font-black" style={{ color: '#e2d9f3' }}>App Settings</h2>
-      <p className="mb-4 text-sm" style={{ color: '#a78bfa' }}>Add Lineup Mate to your Home Screen for quick access.</p>
+    <div className="rounded-[28px] p-5 lg:col-span-2" style={{ background: c.surf, border: `1px solid ${c.acc}` }}>
+      <h2 className="mb-1 text-xl font-black" style={{ color: c.txt }}>App Settings</h2>
+      <p className="mb-4 text-sm" style={{ color: c.muted }}>Add Lineup Mate to your Home Screen for quick access.</p>
       {canShare ? (
         <button
           onClick={handleShare}
           className="flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white"
-          style={{ background: '#8B5CF6' }}
+          style={{ background: c.acc }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -64,7 +66,7 @@ function AppInstallCard() {
           Add to Home Screen
         </button>
       ) : (
-        <p className="text-sm" style={{ color: '#c4b5fd' }}>
+        <p className="text-sm" style={{ color: c.muted }}>
           Tap <strong>⋮ Menu</strong> then <strong>&quot;Add to Home Screen&quot;</strong>
         </p>
       )}

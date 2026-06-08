@@ -54,12 +54,13 @@ export async function sendPushNotification(
       JSON.stringify({ ...payload, icon: '/icons/icon-192.png', badge: '/icons/icon-72.png' })
     );
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const status = (err as { statusCode?: number })?.statusCode;
     // 410 Gone or 404 means subscription is no longer valid
-    if (err?.statusCode === 410 || err?.statusCode === 404) {
+    if (status === 410 || status === 404) {
       return false;
     }
-    console.error('web-push error:', err?.statusCode, err?.message);
+    console.error('web-push error:', status, err instanceof Error ? err.message : String(err));
     return false;
   }
 }
