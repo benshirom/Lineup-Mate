@@ -1,10 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+
+  if (!await applyRateLimit(req, res, 'admin-group-id')) return;
 
   const { id } = req.query as { id: string };
   const groupId = parseInt(id, 10);

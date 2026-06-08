@@ -70,9 +70,11 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (user && view !== 'update-password') {
-      const returnTo = typeof router.query.returnTo === 'string' && router.query.returnTo.startsWith('/')
-        ? router.query.returnTo
-        : '/';
+      const rt = router.query.returnTo;
+      const returnTo =
+        typeof rt === 'string' && rt.startsWith('/') && !rt.startsWith('//')
+          ? rt
+          : '/';
       router.push(returnTo);
     }
   }, [user, router, view]);

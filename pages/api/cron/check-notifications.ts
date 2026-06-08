@@ -1,11 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { sendPushNotification } from '@/lib/webpush';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow GET (Netlify scheduled functions use GET)
@@ -18,6 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  const supabaseAdmin = getSupabaseAdmin();
 
   try {
     const now = new Date();

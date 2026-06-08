@@ -198,6 +198,11 @@ export default function ProfilePage() {
     event.preventDefault();
     if (!user) return;
 
+    if (displayName.trim().length > 100) {
+      setError('Display name must be 100 characters or less.');
+      return;
+    }
+
     const selectedTheme = theme;
     setSaving(true);
     setError(null);

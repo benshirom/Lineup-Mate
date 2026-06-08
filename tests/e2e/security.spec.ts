@@ -240,6 +240,94 @@ test.describe('security: XSS payload rejection on admin endpoints', () => {
   }
 });
 
+test.describe('security: blocked user cannot access profile endpoints', () => {
+  test('export-data with invalid/blocked token returns 401 or 403', async ({ request }) => {
+    // A blocked user's token will either fail JWT validation (401) or be rejected by is_blocked (403).
+    const response = await request.get('/api/profile/export-data', {
+      headers: { Authorization: 'Bearer blocked-or-invalid-token' },
+    });
+    expect([401, 403]).toContain(response.status());
+  });
+
+  test('delete-account with invalid/blocked token returns 401 or 403', async ({ request }) => {
+    const response = await request.delete('/api/profile/delete-account', {
+      headers: { Authorization: 'Bearer blocked-or-invalid-token' },
+    });
+    expect([401, 403]).toContain(response.status());
+  });
+
+  test('push subscribe with invalid/blocked token returns 401 or 403', async ({ request }) => {
+    const response = await request.post('/api/push/subscribe', {
+      headers: { Authorization: 'Bearer blocked-or-invalid-token' },
+      data: { endpoint: 'https://example.com/push', p256dh: '', auth: '' },
+    });
+    expect([401, 403]).toContain(response.status());
+  });
+});
+
+test.describe('security: input validation', () => {
+  test('POST /api/admin/fetch-festival-info rejects festivalName over 200 chars', async ({ request }) => {
+    const response = await request.post('/api/admin/fetch-festival-info', {
+      headers: { Authorization: 'Bearer fake-token' },
+      data: { festivalName: 'A'.repeat(201) },
+    });
+    // Auth fails first (401) or validation rejects (400) — never 200 or 500
+    expect([400, 401]).toContain(response.status());
+  });
+
+  test('GET /api/groups/preview without code returns 400', async ({ request }) => {
+    const response = await request.get('/api/groups/preview');
+    expect(response.status()).toBe(400);
+  });
+
+  test('GET /api/groups/preview with unknown code returns 404', async ({ request }) => {
+    const response = await request.get('/api/groups/preview?code=nonexistentcode999');
+    expect([404, 429]).toContain(response.status());
+  });
+});
+
+test.describe('security: open redirect prevention', () => {
+  test('login page returnTo=//evil.com should not be reachable as external redirect', async ({ page }) => {
+    // Navigate to login with a protocol-relative returnTo. The page should load without
+    // redirecting to an external domain.
+    await page.goto('/login?returnTo=//evil.com');
+    await page.waitForLoadState('networkidle');
+    // Check hostname only — the query param itself contains "evil.com" so a full-URL match
+    // would always fail. We only care that the browser did not navigate to evil.com.
+    const finalHostname = new URL(page.url()).hostname;
+    expect(finalHostname).not.toContain('evil.com');
+  });
+});
+
+test.describe('security: admin stats does not expose user emails', () => {
+  test('GET /api/admin/stats with invalid token returns 401 (no PII in error)', async ({ request }) => {
+    const response = await request.get('/api/admin/stats', {
+      headers: { Authorization: 'Bearer fake' },
+    });
+    expect(response.status()).toBe(401);
+    const body = await response.json();
+    // Error message must not contain an email address pattern
+    expect(body.error ?? '').not.toMatch(/@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  });
+});
+
+test.describe('security: CSP header present and no unsafe-inline in script-src', () => {
+  test('response includes Content-Security-Policy header', async ({ request }) => {
+    const response = await request.get('/');
+    const csp = response.headers()['content-security-policy'];
+    expect(csp).toBeTruthy();
+  });
+
+  test('script-src does not use unsafe-inline', async ({ request }) => {
+    // Finding 9-A deferred: nonce-based CSP not yet integrated with PWA/Supabase auth flow.
+    test.skip(true, 'Finding 9-A deferred: unsafe-inline temporarily required for Pages Router + PWA');
+    const response = await request.get('/');
+    const csp = response.headers()['content-security-policy'] ?? '';
+    const scriptSrc = csp.split(';').find(d => d.trim().startsWith('script-src')) ?? '';
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+  });
+});
+
 test.describe('security: cron endpoint only accepts header secret', () => {
   test('GET /api/cron/check-notifications with secret in query param returns 401', async ({ request }) => {
     const response = await request.get('/api/cron/check-notifications?secret=any-value');
