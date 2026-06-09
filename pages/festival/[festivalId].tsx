@@ -451,6 +451,7 @@ export default function FestivalPage() {
     if (tab === 'timeline' && selectedDay && refTime) {
       setTimeout(() => scrollToDay(selectedDay), 50);
     }
+  // intentionally omits selectedDay/scrollToDay: only scroll when switching to timeline tab
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, refTime]);
 
@@ -468,6 +469,7 @@ export default function FestivalPage() {
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
+  // intentionally omits lastManualScrollRef (ref, no re-render) and scrollToDay (stable fn)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, days, refTime, hours, minHour, hourWidth]);
 

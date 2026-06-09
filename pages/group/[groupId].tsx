@@ -151,6 +151,7 @@ export default function GroupPage() {
       router.replace(`/group/${groupId}`, undefined, { shallow: true });
       setTimeout(() => setWelcomeToast(false), 4000);
     }
+  // intentionally omits router: Next.js router is stable and including it would cause loops
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.welcome]);
 
@@ -352,6 +353,7 @@ export default function GroupPage() {
     if (viewMode === 'timeline' && selectedDay && refTime) {
       setTimeout(() => scrollToDay(selectedDay), 50);
     }
+  // intentionally omits selectedDay/scrollToDay: only scroll when switching to timeline view
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, refTime]);
 
@@ -383,7 +385,7 @@ export default function GroupPage() {
       <div
         className="flex max-h-24 flex-wrap gap-1 overflow-y-auto pr-1"
         data-testid="group-performance-picks"
-        title={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}
+        aria-label={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}
       >
         {prefs.map((pref) => (
           <span
@@ -732,7 +734,7 @@ export default function GroupPage() {
                                   <div
                                     key={p.id}
                                     data-testid="group-performance-block"
-                                    title={`${p.artist_name} · ${timeLabel(p.start_time)}–${timeLabel(p.end_time)}`}
+                                    aria-label={`${p.artist_name} · ${timeLabel(p.start_time)}–${timeLabel(p.end_time)}`}
                                     className="perf-block absolute top-2 h-16 overflow-hidden rounded-xl py-1.5 text-left text-xs font-bold"
                                     style={{
                                       left,
