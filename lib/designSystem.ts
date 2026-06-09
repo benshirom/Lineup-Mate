@@ -1,3 +1,5 @@
+// Component-layer design tokens. Builds on getThemeColors() from platform.ts.
+// Use this in shared UI components; use getThemeColors() directly in pages.
 import type { CSSProperties } from 'react';
 import { getThemeColors, type ThemeMode } from '@/lib/platform';
 

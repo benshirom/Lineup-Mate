@@ -25,7 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .rpc('get_group_preview', { p_code: code.toLowerCase() });
 
   if (error) {
-    console.error('[groups/preview] RPC error:', error.message, error.code);
     return res.status(500).json({ error: 'Internal server error' });
   }
 

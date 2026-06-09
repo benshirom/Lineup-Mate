@@ -96,9 +96,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
       return;
     }
 
-    const storedTheme = readStoredTheme();
     const profileTheme = data?.theme ? normalizeTheme(data.theme) : null;
-    const nextTheme = profileTheme ?? storedTheme;
+    const nextTheme = profileTheme ?? readStoredTheme();
 
     if (data) {
       setProfile({
@@ -129,22 +128,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
   useEffect(() => {
     applyPreferences(readStoredTheme());
 
+    let cancelled = false;
     const setData = async () => {
       try {
         const {
           data: { session }
         } = await supabase.auth.getSession();
 
+        if (cancelled) return;
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           await loadProfile(session.user.id);
         } else {
-          setProfile(null);
+          if (!cancelled) setProfile(null);
         }
       } finally {
-        setAuthReady(true);
+        if (!cancelled) setAuthReady(true);
       }
     };
     setData();
@@ -181,6 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
     });
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
     };
   }, [applyPreferences, loadProfile, navigate]);

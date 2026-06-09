@@ -24,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   let countQuery = supabaseAdmin.from('groups').select('*', { count: 'exact', head: true });
 
   if (search?.trim()) {
-    const pattern = `%${search.trim()}%`;
+    const trimmed = search.trim().slice(0, 200);
+    const pattern = `%${trimmed}%`;
     query = query.ilike('name', pattern);
     countQuery = countQuery.ilike('name', pattern);
   }

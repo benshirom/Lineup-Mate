@@ -54,48 +54,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     supabaseAdmin.rpc('get_top_groups_by_members', { n: 5 }),
   ]);
 
-  // Most active users
   const topUserIds = (topActiveUserRows ?? []) as Array<{ user_id: string; preference_count: number }>;
-  let mostActiveUsers: { id: string; display_name: string | null; preferenceCount: number }[] = [];
-  if (topUserIds.length > 0) {
-    const { data: profiles } = await supabaseAdmin
-      .from('profiles')
-      .select('id, display_name')
-      .in('id', topUserIds.map((u) => u.user_id));
-    mostActiveUsers = topUserIds.map(({ user_id, preference_count }) => {
-      const p = profiles?.find((pr) => pr.id === user_id);
-      return { id: user_id, display_name: p?.display_name ?? null, preferenceCount: preference_count };
-    });
-  }
-
-  // Most saved festivals
   const topFestIds = (topSavedFestivalRows ?? []) as Array<{ festival_id: number; save_count: number }>;
-  let mostSavedFestivals: { id: number; name: string; saveCount: number }[] = [];
-  if (topFestIds.length > 0) {
-    const { data: festivals } = await supabaseAdmin
-      .from('festivals')
-      .select('id, name')
-      .in('id', topFestIds.map((f) => f.festival_id));
-    mostSavedFestivals = topFestIds.map(({ festival_id, save_count }) => {
-      const f = festivals?.find((fe) => fe.id === festival_id);
-      return { id: festival_id, name: f?.name ?? String(festival_id), saveCount: save_count };
-    });
-  }
-
-  // Most popular groups
   const topGroupIds = (topGroupMemberRows ?? []) as Array<{ group_id: number; member_count: number }>;
-  let mostPopularGroups: { id: number; name: string; festivalName: string; memberCount: number }[] = [];
-  if (topGroupIds.length > 0) {
-    const { data: groups } = await supabaseAdmin
-      .from('groups')
-      .select('id, name, festival:festivals(name)')
-      .in('id', topGroupIds.map((g) => g.group_id));
-    mostPopularGroups = topGroupIds.map(({ group_id, member_count }) => {
-      const g = groups?.find((gr) => gr.id === group_id);
-      const festivalName = (g?.festival as { name?: string } | null)?.name ?? '';
-      return { id: group_id, name: g?.name ?? String(group_id), festivalName, memberCount: member_count };
-    });
-  }
+
+  // Fetch all enrichment data in parallel
+  const [{ data: activeProfiles }, { data: savedFestivalNames }, { data: popularGroups }] = await Promise.all([
+    topUserIds.length > 0
+      ? supabaseAdmin.from('profiles').select('id, display_name').in('id', topUserIds.map((u) => u.user_id))
+      : Promise.resolve({ data: [] }),
+    topFestIds.length > 0
+      ? supabaseAdmin.from('festivals').select('id, name').in('id', topFestIds.map((f) => f.festival_id))
+      : Promise.resolve({ data: [] }),
+    topGroupIds.length > 0
+      ? supabaseAdmin.from('groups').select('id, name, festival:festivals(name)').in('id', topGroupIds.map((g) => g.group_id))
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const mostActiveUsers = topUserIds.map(({ user_id, preference_count }) => {
+    const p = (activeProfiles ?? []).find((pr) => pr.id === user_id);
+    return { id: user_id, display_name: p?.display_name ?? null, preferenceCount: preference_count };
+  });
+
+  const mostSavedFestivals = topFestIds.map(({ festival_id, save_count }) => {
+    const f = (savedFestivalNames ?? []).find((fe) => fe.id === festival_id);
+    return { id: festival_id, name: f?.name ?? String(festival_id), saveCount: save_count };
+  });
+
+  const mostPopularGroups = topGroupIds.map(({ group_id, member_count }) => {
+    const g = (popularGroups ?? []).find((gr) => gr.id === group_id);
+    const festivalName = (g?.festival as { name?: string } | null)?.name ?? '';
+    return { id: group_id, name: g?.name ?? String(group_id), festivalName, memberCount: member_count };
+  });
 
   return res.status(200).json({
     users: {

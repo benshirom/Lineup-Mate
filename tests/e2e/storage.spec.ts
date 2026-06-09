@@ -6,7 +6,7 @@ test.describe('storage abstraction', () => {
     const password = process.env.E2E_USER_PASSWORD;
     if (!email || !password) { test.skip(); return; }
 
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.fill('input[type="text"]', email);
     await page.fill('input[type="password"]', password);
     await page.click('button[type="submit"]');
@@ -24,7 +24,7 @@ test.describe('storage abstraction', () => {
 
   test('pending invite code is cleared from sessionStorage after join', async ({ page }) => {
     // Set a fake invite code in sessionStorage
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await page.evaluate(() => sessionStorage.setItem('pendingInviteCode', 'testcode'));
 
     // Verify it's there

@@ -1,0 +1,185 @@
+import React from 'react';
+import { StarButton } from '@/components/festival/StarButton';
+import { timeLabel, absHour, durationHours } from '@/lib/festivalUtils';
+import type { PerformanceItem, PreferenceStatus } from '@/lib/festivalTypes';
+import type { getThemeColors } from '@/lib/platform';
+
+interface FestivalTimelineTabProps {
+  allStages: { name: string; color: string }[];
+  activeStages: Record<string, boolean>;
+  onSetActiveStages: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  selectedDayPerformances: PerformanceItem[];
+  timelinePerformances: PerformanceItem[];
+  hours: number[];
+  refTime: number;
+  hourWidth: number;
+  stageLabelWidth: number;
+  minHour: number;
+  nowLeft: number | null;
+  nowLineRef: React.MutableRefObject<HTMLDivElement | null>;
+  timelineRef: React.MutableRefObject<HTMLDivElement | null>;
+  conflictIds: Set<number>;
+  nowPlayingIds: Set<number>;
+  savingId: number | null;
+  popId: number | null;
+  onUpdatePreference: (id: number, status: PreferenceStatus | null) => void;
+  c: ReturnType<typeof getThemeColors>;
+}
+
+export function FestivalTimelineTab({
+  allStages,
+  activeStages,
+  onSetActiveStages,
+  selectedDayPerformances,
+  timelinePerformances,
+  hours,
+  refTime,
+  hourWidth,
+  stageLabelWidth,
+  minHour,
+  nowLeft,
+  nowLineRef,
+  timelineRef,
+  conflictIds,
+  nowPlayingIds,
+  savingId,
+  popId,
+  onUpdatePreference,
+  c,
+}: FestivalTimelineTabProps) {
+  return (
+    <section className="rounded-3xl p-4 shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
+      <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="festival-stage-filters">
+        {allStages.map((stage) => {
+          const isOn = activeStages[stage.name] !== false;
+          const hasShowsToday = selectedDayPerformances.some((p) => p.stageName === stage.name);
+          return (
+            <button
+              key={stage.name}
+              type="button"
+              data-testid="festival-stage-filter"
+              onClick={() => onSetActiveStages((current) => ({ ...current, [stage.name]: !isOn }))}
+              className="shrink-0 tap-active rounded-full px-3 py-1 text-xs font-bold transition-all"
+              style={{
+                background: isOn ? stage.color : c.surf2,
+                color: isOn ? '#fff' : c.muted,
+                border: `1px solid ${isOn ? stage.color : c.brd}`,
+                opacity: hasShowsToday ? 1 : 0.4,
+              }}
+              title={hasShowsToday ? stage.name : `${stage.name} — no shows today`}
+            >
+              {stage.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {timelinePerformances.length === 0 ? (
+        <p style={{ color: c.muted }}>No shows to display.</p>
+      ) : (
+        <div ref={timelineRef} className="relative overflow-x-auto scroll-thin">
+          <p className="mb-2 text-[10px] font-bold sm:hidden" style={{ color: c.muted }}>← swipe to see full timeline →</p>
+          <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
+            {/* Hour header */}
+            <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
+              {hours.map((hour) => {
+                const isMidnight = hour % 24 === 0 && hour !== hours[0];
+                const dateLabel = isMidnight
+                  ? new Date(refTime + hour * 36e5).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                  : null;
+                return (
+                  <div
+                    key={hour}
+                    className="shrink-0 pl-2 text-xs font-bold relative"
+                    style={{ width: hourWidth, color: isMidnight ? c.acc : c.muted, borderLeft: `${isMidnight ? 2 : 1}px solid ${isMidnight ? c.acc : c.brd}` }}
+                  >
+                    {dateLabel
+                      ? <span style={{ color: c.acc, fontWeight: 800 }}>{dateLabel}</span>
+                      : `${String(hour % 24).padStart(2, '0')}:00`}
+                  </div>
+                );
+              })}
+            </div>
+
+            {allStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
+              const stageItems = timelinePerformances.filter((p) => p.stageName === stage.name);
+              return (
+                <div key={stage.name} className="mb-2 flex items-stretch" data-testid="festival-stage-row">
+                  <div
+                    className="shrink-0 pr-2 text-right text-xs font-bold leading-tight flex items-center justify-end"
+                    style={{ width: stageLabelWidth, color: stage.color, position: 'sticky', left: 0, zIndex: 2, background: c.surf }}
+                  >
+                    <span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}18` }}>{stage.name}</span>
+                  </div>
+                  <div className="relative h-14 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}06`, border: `1px solid ${c.brd}` }}>
+                    {hours.map((hour) => {
+                      const isMidnight = hour % 24 === 0 && hour !== hours[0];
+                      return (
+                        <div
+                          key={hour}
+                          className="absolute top-0 h-full"
+                          style={{ left: (hour - minHour) * hourWidth, width: isMidnight ? 2 : 1, background: isMidnight ? `${c.acc}66` : c.brd }}
+                        />
+                      );
+                    })}
+                    {nowLeft !== null && (
+                      <div
+                        ref={nowLineRef}
+                        className="now-line absolute top-0 h-full z-10 pointer-events-none"
+                        style={{ left: nowLeft, width: 2, background: c.danger, borderRadius: 2 }}
+                      >
+                        <span className="now-label">NOW</span>
+                      </div>
+                    )}
+                    {stageItems.map((performance) => {
+                      const left = (absHour(performance.startTime, refTime) - minHour) * hourWidth;
+                      const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
+                      const isGoing = performance.status === 'going';
+                      const hasConflict = conflictIds.has(performance.id);
+                      const isLive = nowPlayingIds.has(performance.id);
+                      return (
+                        <div
+                          key={performance.id}
+                          data-testid="festival-performance-block"
+                          title={`${performance.artistName} · ${timeLabel(performance.startTime)}–${timeLabel(performance.endTime)}${hasConflict ? ' ⚠ Time conflict!' : ''}${isLive ? ' 🔴 LIVE' : ''}`}
+                          className={`perf-block absolute top-1.5 h-11 overflow-hidden rounded-xl text-left text-xs font-bold ${isGoing && hasConflict ? 'conflict-block' : ''}`}
+                          style={{
+                            left,
+                            width,
+                            background: c.surf2,
+                            borderLeft: `3px solid ${performance.stageColor}`,
+                            paddingLeft: 10,
+                            paddingRight: 34,
+                            color: c.txt,
+                            boxShadow: isLive
+                              ? `inset 0 0 0 2px rgba(239,68,68,0.6), 0 2px 10px rgba(239,68,68,0.2)`
+                              : isGoing
+                              ? `inset 0 0 0 1px ${performance.stageColor}44, 0 2px 10px ${performance.stageColor}33`
+                              : `inset 0 0 0 1px ${c.brd}`,
+                          }}
+                        >
+                          <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
+                          <span className="block truncate text-[10px]" style={{ color: c.muted }}>
+                            {isLive ? (
+                              <span style={{ color: '#ef4444', fontWeight: 800 }}>● LIVE</span>
+                            ) : `${timeLabel(performance.startTime)} – ${timeLabel(performance.endTime)}`}
+                          </span>
+                          {hasConflict && isGoing && (
+                            <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: c.danger }}>⚠</span>
+                          )}
+                          <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                            <StarButton performance={performance} savingId={savingId} popId={popId} onUpdatePreference={onUpdatePreference} compact c={c} />
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

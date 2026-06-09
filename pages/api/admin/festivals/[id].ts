@@ -2,6 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAdmin } from '@/lib/adminAuth';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { z } from 'zod';
+
+const patchSchema = z.object({
+  description: z.string().max(5000).nullable().optional(),
+  location: z.string().max(500).nullable().optional(),
+  website: z.string().url().max(2000).nullable().optional().or(z.literal('').transform(() => null)),
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = await requireAdmin(req);
@@ -14,11 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (isNaN(festivalId)) return res.status(400).json({ error: 'Invalid festival id.' });
 
   if (req.method === 'PATCH') {
-    const { description, location, website } = req.body as {
-      description?: string | null;
-      location?: string | null;
-      website?: string | null;
-    };
+    const parsed = patchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message ?? 'Invalid input.' });
+    }
+    const { description, location, website } = parsed.data;
 
     const updates: Record<string, string | null> = {};
     if ('description' in req.body) updates.description = description ?? null;

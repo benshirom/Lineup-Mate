@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
+import { timeLabel, festivalTitle } from '@/lib/festivalUtils';
 
 type PreferenceStatus = 'going' | 'maybe' | 'not_interested';
 
@@ -49,10 +50,6 @@ interface FestivalScheduleGroup {
   }>;
 }
 
-function timeLabel(dateString: string) {
-  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
 function dateLabel(dateString: string) {
   return new Date(dateString).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -61,9 +58,6 @@ function dateLabel(dateString: string) {
   });
 }
 
-function festivalTitle(name: string, year: number) {
-  return name.includes(String(year)) ? name : `${name} ${year}`;
-}
 
 export default function MySchedulePage() {
   const router = useRouter();
@@ -127,8 +121,12 @@ export default function MySchedulePage() {
         if (savedFestivalsResult.error) throw savedFestivalsResult.error;
         if (preferencesResult.error) throw preferencesResult.error;
 
-        const mappedFestivals = (savedFestivalsResult.data || [])
-          .map((row: any): SavedFestivalItem | null => {
+        type SavedFestivalRow = {
+          id: number; created_at: string; festival_id: number;
+          festivals: { id: number; name: string; year: number; emoji: string | null; color: string | null; location: string | null; start_date: string | null; end_date: string | null; genre_label: string | null } | null;
+        };
+        const mappedFestivals = (savedFestivalsResult.data as unknown as SavedFestivalRow[] || [])
+          .map((row): SavedFestivalItem | null => {
             const festival = row.festivals;
             if (!festival) return null;
             return {
@@ -149,22 +147,26 @@ export default function MySchedulePage() {
 
         setSavedFestivals(mappedFestivals);
 
-        const mapped = (preferencesResult.data || [])
-          .map((row: any): ScheduleItem | null => {
+        type PrefRow = {
+          id: number; performance_id: number; status: string;
+          performances: { id: number; start_time: string; end_time: string; day_date: string; artists: { name: string } | null; stages: { name: string; color: string | null } | null; festivals: { id: number; name: string; year: number; emoji: string | null; color: string | null; location: string | null } | null } | null;
+        };
+        const mapped = (preferencesResult.data as unknown as PrefRow[] || [])
+          .map((row): ScheduleItem | null => {
             const performance = row.performances;
             if (!performance) return null;
 
             return {
               preferenceId: row.id,
               performanceId: row.performance_id,
-              status: row.status,
+              status: row.status as PreferenceStatus,
               startTime: performance.start_time,
               endTime: performance.end_time,
               dayDate: performance.day_date,
               artistName: performance.artists?.name || 'Unknown Artist',
               stageName: performance.stages?.name || 'Stage',
               stageColor: performance.stages?.color || performance.festivals?.color || '#e85d26',
-              festivalId: performance.festivals?.id,
+              festivalId: performance.festivals?.id ?? 0,
               festivalName: performance.festivals?.name || 'Festival',
               festivalYear: performance.festivals?.year || new Date(performance.start_time).getFullYear(),
               festivalEmoji: performance.festivals?.emoji || '🎪',
@@ -224,6 +226,7 @@ export default function MySchedulePage() {
 
   const removeItem = async (item: ScheduleItem) => {
     if (!user) return;
+    if (!window.confirm(`Remove ${item.artistName} from your schedule?`)) return;
 
     setRemovingId(item.performanceId);
 
@@ -375,7 +378,7 @@ export default function MySchedulePage() {
             <div className="rounded-[28px] p-8 text-center" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <div className="text-5xl">☆</div>
               <h2 className="mt-3 text-2xl font-black">No saved acts yet</h2>
-              <p className="mt-2 text-sm" style={{ color: c.muted }}>Open a festival and tap the star next to artists you do not want to miss.</p>
+              <p className="mt-2 text-sm" style={{ color: c.muted }}>Open a festival and tap the star next to artists you don&apos;t want to miss. Joining or creating a group also saves the festival here.</p>
               <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: c.acc }}>
                 Find Festivals
               </button>

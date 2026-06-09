@@ -32,7 +32,9 @@ async function fetchFromWikipedia(festivalName: string): Promise<string | null> 
         if (data.type !== 'disambiguation' && data.extract) return data.extract;
       }
     }
-  } catch (_) { /* ignore */ }
+  } catch (wikiErr) {
+    console.warn('[fetch-festival-info] Wikipedia fetch failed:', wikiErr instanceof Error ? wikiErr.message : String(wikiErr));
+  }
   return null;
 }
 
@@ -71,8 +73,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         if (description) return res.status(200).json({ description });
       }
     } catch (err) {
-      Sentry.captureException(err, { extra: { festivalName, action: 'fetch-festival-info-google' } });
-      console.error('[fetch-festival-info] Google Places error:', err);
+      // Sanitize the error before logging — the request URL contains the API key.
+      const safeErr = err instanceof Error ? new Error(err.message.replace(apiKey, '[REDACTED]')) : err;
+      Sentry.captureException(safeErr, { extra: { festivalName, action: 'fetch-festival-info-google' } });
+      console.error('[fetch-festival-info] Google Places error:', safeErr);
     }
   }
 

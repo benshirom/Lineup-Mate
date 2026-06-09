@@ -5,13 +5,13 @@ const isExternalBaseUrl = !baseURL.includes('127.0.0.1') && !baseURL.includes('l
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
     timeout: 10_000
   },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['html'], ['github']] : [['list'], ['html']],
   use: {

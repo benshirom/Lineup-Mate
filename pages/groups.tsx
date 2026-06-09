@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { ShareSheet } from '@/components/ShareSheet';
+import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
 
@@ -386,13 +387,11 @@ export default function GroupsPage() {
           />
         )}
 
-        {showCreateModal && (
-          <div data-testid="create-group-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(5px)' }} onClick={resetCreateForm}>
-            <div className="w-full max-w-lg rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }} onClick={(event) => event.stopPropagation()}>
-              {renderCreateGroupForm(true)}
-            </div>
+        <Modal open={showCreateModal} onClose={resetCreateForm} maxWidth={512}>
+          <div data-testid="create-group-modal" className="p-6">
+            {renderCreateGroupForm(true)}
           </div>
-        )}
+        </Modal>
       </main>
     </>
   );

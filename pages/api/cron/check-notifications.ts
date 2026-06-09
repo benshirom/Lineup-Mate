@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as Sentry from '@sentry/nextjs';
+import * as crypto from 'crypto';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { sendPushNotification } from '@/lib/webpush';
 
@@ -9,9 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Validate cron secret to prevent unauthorized triggers
-  const secret = req.headers['x-cron-secret'];
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  // Validate cron secret using constant-time comparison to prevent timing attacks
+  const cronSecret = process.env.CRON_SECRET;
+  const incomingSecret = Array.isArray(req.headers['x-cron-secret'])
+    ? req.headers['x-cron-secret'][0]
+    : req.headers['x-cron-secret'];
+  if (!cronSecret || !incomingSecret) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const expected = Buffer.from(cronSecret, 'utf8');
+  const provided = Buffer.from(incomingSecret, 'utf8');
+  if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -123,31 +132,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (insertError) throw insertError;
 
-    // Send Web Push notifications to all subscribed devices
-    let pushSent = 0;
-    const expiredEndpoints: string[] = [];
+    // Fetch all push subscriptions for all affected users in one query
+    const affectedUserIds = [...new Set(toInsert.map((n) => n.user_id))];
+    const { data: allSubs } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('user_id, endpoint, p256dh, auth')
+      .in('user_id', affectedUserIds)
+      .eq('platform', 'web');
 
-    for (const notif of toInsert) {
-      const { data: subs } = await supabaseAdmin
-        .from('push_subscriptions')
-        .select('endpoint, p256dh, auth')
-        .eq('user_id', notif.user_id)
-        .eq('platform', 'web');
-
-      for (const sub of subs ?? []) {
-        const ok = await sendPushNotification(sub, {
-          title: notif.title,
-          body: notif.body,
-          url: '/',
-          tag: `perf-${notif.performance_id}`,
-        });
-        if (ok) {
-          pushSent++;
-        } else {
-          expiredEndpoints.push(sub.endpoint);
-        }
-      }
+    const subsByUser = new Map<string, typeof allSubs>();
+    for (const sub of allSubs ?? []) {
+      const list = subsByUser.get(sub.user_id) ?? [];
+      list.push(sub);
+      subsByUser.set(sub.user_id, list);
     }
+
+    // Send all push notifications in parallel
+    const pushResults = await Promise.all(
+      toInsert.flatMap((notif) =>
+        (subsByUser.get(notif.user_id) ?? []).map(async (sub) => {
+          const ok = await sendPushNotification(sub, {
+            title: notif.title,
+            body: notif.body,
+            url: '/',
+            tag: `perf-${notif.performance_id}`,
+          });
+          return { ok, endpoint: sub.endpoint };
+        })
+      )
+    );
+
+    const pushSent = pushResults.filter((r) => r.ok).length;
+    const expiredEndpoints = pushResults.filter((r) => !r.ok).map((r) => r.endpoint);
 
     // Clean up expired subscriptions
     if (expiredEndpoints.length > 0) {

@@ -93,7 +93,7 @@ export default function AdminDashboard() {
         if (data.error) throw new Error(data.error);
         setStats(data as StatsResponse);
       })
-      .catch((e) => setError(String(e.message)))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [session]);
 

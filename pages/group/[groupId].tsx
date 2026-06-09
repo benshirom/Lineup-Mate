@@ -151,6 +151,7 @@ export default function GroupPage() {
       router.replace(`/group/${groupId}`, undefined, { shallow: true });
       setTimeout(() => setWelcomeToast(false), 4000);
     }
+  // intentionally omits router: Next.js router is stable and including it would cause loops
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query.welcome]);
 
@@ -229,13 +230,14 @@ export default function GroupPage() {
         if (prefsResult.error) throw prefsResult.error;
 
         const profilesById = Object.fromEntries(
-          (profilesResult.data ?? []).map((p: any) => [p.id, { display_name: p.display_name, email: p.email }])
+          (profilesResult.data ?? []).map((p) => [p.id, { display_name: p.display_name, email: p.email }])
         ) as Record<string, Profile>;
         const memberList = rawMembers.map((m) => ({ ...m, profile: profilesById[m.user_id] ?? null }));
         setMembers(memberList);
 
+        type PerfRow = { id: number; start_time: string; end_time: string; day_date: string; stages: { name: string; color: string | null } | null; artists: { name: string } | null };
         const perfMap: Record<number, PerformanceInfo> = {};
-        perfData?.forEach((p: any) => {
+        ((perfData as unknown as PerfRow[]) ?? []).forEach((p) => {
           perfMap[p.id] = {
             id: p.id,
             artist_name: p.artists?.name ?? '',
@@ -257,8 +259,8 @@ export default function GroupPage() {
           const perfIds = new Set(Object.keys(perfMap).map(Number));
           setPerformancePrefs(
             (prefsResult.data ?? [])
-              .filter((p: any) => perfIds.has(p.performance_id))
-              .map((p: any) => ({
+              .filter((p) => perfIds.has(p.performance_id))
+              .map((p) => ({
                 performance_id: p.performance_id,
                 status: p.status,
                 user_id: p.user_id,
@@ -351,6 +353,7 @@ export default function GroupPage() {
     if (viewMode === 'timeline' && selectedDay && refTime) {
       setTimeout(() => scrollToDay(selectedDay), 50);
     }
+  // intentionally omits selectedDay/scrollToDay: only scroll when switching to timeline view
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, refTime]);
 
@@ -382,7 +385,7 @@ export default function GroupPage() {
       <div
         className="flex max-h-24 flex-wrap gap-1 overflow-y-auto pr-1"
         data-testid="group-performance-picks"
-        title={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}
+        aria-label={prefs.map((p) => `${p.user_label} · ${p.status}`).join(', ')}
       >
         {prefs.map((pref) => (
           <span
@@ -731,7 +734,7 @@ export default function GroupPage() {
                                   <div
                                     key={p.id}
                                     data-testid="group-performance-block"
-                                    title={`${p.artist_name} · ${timeLabel(p.start_time)}–${timeLabel(p.end_time)}`}
+                                    aria-label={`${p.artist_name} · ${timeLabel(p.start_time)}–${timeLabel(p.end_time)}`}
                                     className="perf-block absolute top-2 h-16 overflow-hidden rounded-xl py-1.5 text-left text-xs font-bold"
                                     style={{
                                       left,

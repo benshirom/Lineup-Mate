@@ -17,8 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabaseAdmin = getSupabaseAdmin();
 
-  const { data: group } = await supabaseAdmin.from('groups').select('festival_id').eq('id', groupId).single();
-  const festivalId = group?.festival_id;
+  const { data: group, error: groupError } = await supabaseAdmin.from('groups').select('festival_id').eq('id', groupId).single();
+  if (groupError || !group) return res.status(404).json({ error: 'Group not found' });
+  const festivalId = group.festival_id;
 
   const { data: members, error } = await supabaseAdmin
     .from('group_members')

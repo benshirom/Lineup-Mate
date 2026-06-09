@@ -26,9 +26,16 @@ const BlockedPage = () => {
           <h1 className="mb-3 text-2xl font-black" style={{ color: c.txt }}>
             Account Suspended
           </h1>
-          <p className="mb-6 text-sm" style={{ color: c.muted }}>
-            Your account has been suspended by an administrator. If you believe this is a mistake, please contact support.
+          <p className="mb-2 text-sm" style={{ color: c.muted }}>
+            Your account has been suspended by an administrator. If you believe this is a mistake, please reach out:
           </p>
+          <a
+            href="mailto:support@lineup-mate.com"
+            className="mb-6 inline-block text-sm font-bold"
+            style={{ color: c.acc }}
+          >
+            support@lineup-mate.com
+          </a>
           <button
             onClick={() => router.push('/')}
             className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white"

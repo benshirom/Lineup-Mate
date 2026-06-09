@@ -97,7 +97,8 @@ export default function JoinPage() {
           <div className="text-center max-w-sm">
             <div className="text-5xl mb-4">🔍</div>
             <h1 className="text-2xl font-black mb-2">Link not found</h1>
-            <p className="text-sm mb-6" style={{ color: c.muted }}>This invite link doesn&apos;t exist or has expired.</p>
+            <p className="text-sm mb-2" style={{ color: c.muted }}>This invite link doesn&apos;t exist or has expired.</p>
+            <p className="text-xs mb-6" style={{ color: c.muted }}>Make sure the link is complete — ask the group owner to share a fresh invite link if the problem persists.</p>
             <Link href="/" className="rounded-full px-6 py-3 text-sm font-bold text-white" style={{ background: c.acc }}>
               Go home
             </Link>

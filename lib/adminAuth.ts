@@ -21,12 +21,16 @@ export async function requireAdmin(req: NextApiRequest) {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('role')
+    .select('role, is_blocked')
     .eq('id', user.id)
     .single();
 
   if (profileError || profile?.role !== 'admin') {
     return { ok: false as const, status: 403, error: 'Admin access required.' };
+  }
+
+  if (profile.is_blocked) {
+    return { ok: false as const, status: 403, error: 'Account suspended.' };
   }
 
   return { ok: true as const, user };

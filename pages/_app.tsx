@@ -16,8 +16,8 @@ function AppShell({ Component, pageProps }: AppProps) {
       {user && (
         <>
           <BottomNav />
-          {/* spacer so content is not hidden behind the fixed BottomNav */}
-          <div className="md:hidden h-12" style={{ backgroundColor: '#080B12' }} aria-hidden="true" />
+          {/* spacer so content is not hidden behind the fixed BottomNav (60px + safe-area-inset-bottom) */}
+          <div className="md:hidden" style={{ height: 'calc(60px + env(safe-area-inset-bottom, 0px))' }} aria-hidden="true" />
         </>
       )}
     </>

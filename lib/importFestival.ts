@@ -101,11 +101,11 @@ async function deactivateMissingPerformances(
   );
 
   const idsToDeactivate = (existingPerformances ?? [])
-    .filter((performance: any) => {
+    .filter((performance) => {
       const key = `${performance.stage_id}|${performance.artist_id}|${new Date(performance.start_time).toISOString()}`;
       return !seenKeys.has(key);
     })
-    .map((performance: any) => performance.id);
+    .map((performance) => performance.id);
 
   if (idsToDeactivate.length === 0) return 0;
 
@@ -165,6 +165,8 @@ function buildPerformanceRows(
   return { rows, seenRows };
 }
 
+// All steps use upsert (idempotent): re-running the import after a partial failure
+// will complete the operation without data corruption.
 export async function importNormalizedFestival(event: NormalizedClashfinderEvent): Promise<ImportFestivalResult> {
   const supabaseAdmin = getSupabaseAdmin();
   const sourceLastSeenAt = new Date().toISOString();
@@ -190,11 +192,17 @@ export async function importNormalizedFestival(event: NormalizedClashfinderEvent
     ? await supabaseAdmin.from('festivals').update(payload).eq('id', existingBySlug.id).select('id').single()
     : await supabaseAdmin.from('festivals').upsert(payload, { onConflict: 'name,year' }).select('id').single();
 
-  if (festivalError) throw festivalError;
+  if (festivalError) {
+    throw Object.assign(festivalError, { importStep: 'upsert_festival' });
+  }
 
   const [artistMap, stageMap] = await Promise.all([
-    upsertArtists(performances.map((performance) => performance.artistName)),
-    upsertStages(festival.id, performances.map((performance) => performance.stageName))
+    upsertArtists(performances.map((performance) => performance.artistName)).catch((e) => {
+      throw Object.assign(e, { importStep: 'upsert_artists' });
+    }),
+    upsertStages(festival.id, performances.map((performance) => performance.stageName)).catch((e) => {
+      throw Object.assign(e, { importStep: 'upsert_stages' });
+    }),
   ]);
 
   const { rows, seenRows } = buildPerformanceRows(
@@ -206,14 +214,14 @@ export async function importNormalizedFestival(event: NormalizedClashfinderEvent
   );
 
   let insertedPerformances = 0;
-  let skippedPerformances = performances.length - rows.length;
+  const skippedPerformances = performances.length - rows.length;
 
   for (const rowsChunk of chunkArray(rows, 500)) {
     const { error } = await supabaseAdmin
       .from('performances')
       .upsert(rowsChunk, { onConflict: 'festival_id,stage_id,artist_id,start_time' });
 
-    if (error) throw error;
+    if (error) throw Object.assign(error, { importStep: 'upsert_performances' });
     insertedPerformances += rowsChunk.length;
   }
 
@@ -221,7 +229,9 @@ export async function importNormalizedFestival(event: NormalizedClashfinderEvent
     festival.id,
     seenRows,
     sourceLastSeenAt
-  );
+  ).catch((e) => {
+    throw Object.assign(e, { importStep: 'deactivate_missing_performances' });
+  });
 
   return {
     festivalId: festival.id,

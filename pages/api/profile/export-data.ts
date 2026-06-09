@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const [
-      { data: profile },
+      { data: profile, error: profileError },
       { data: preferences },
       { data: savedFestivals },
       { data: groupMemberships },
@@ -30,6 +30,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       supabaseAdmin.from('saved_festivals').select('festival_id, created_at').eq('user_id', user.id),
       supabaseAdmin.from('group_members').select('group_id, role, created_at').eq('user_id', user.id),
     ]);
+
+    if (profileError || !profile) return res.status(404).json({ error: 'Profile not found' });
 
     const MAX_PREFERENCES = 5000;
     const MAX_SAVED_FESTIVALS = 1000;

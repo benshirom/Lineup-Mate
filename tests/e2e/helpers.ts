@@ -66,7 +66,7 @@ export async function expectAuthenticated(page: Page) {
 }
 
 export async function login(page: Page, email: string, password: string) {
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await dismissPreviewOverlays(page);
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: /password/i }).fill(password);
@@ -137,7 +137,7 @@ export async function openProfile(page: Page) {
 }
 
 export async function openFirstFestival(page: Page) {
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await dismissPreviewOverlays(page);
   await expect(page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first().click();
@@ -172,7 +172,7 @@ export async function openArtistsTab(page: Page) {
 export const openLineupTab = openArtistsTab;
 
 export async function ensureFirstFestivalIsSaved(page: Page) {
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await dismissPreviewOverlays(page);
   await expect(page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first(), 'Home page should expose at least one festival before saving').toBeVisible({ timeout: 20_000 });
 
