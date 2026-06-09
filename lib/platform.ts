@@ -1,3 +1,8 @@
+// Theming architecture:
+// - platform.ts (this file): raw color tokens + app-level constants (translations, genre filters)
+//   Use getThemeColors() directly in pages and one-off components.
+// - designSystem.ts: semantic component tokens built on top of getThemeColors().
+//   Use createDesignSystem() in shared UI components (Button, Card, Badge, etc.).
 export type ThemeMode = 'light' | 'dark';
 
 export const translations = {

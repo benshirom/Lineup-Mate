@@ -645,10 +645,16 @@ export default function FestivalPage() {
                       </button>
                     );
                   })}
-                  {dayConflictCount > 0 && tab === 'timeline' && (
-                    <span className="shrink-0 ml-auto rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: `${c.danger}18`, color: c.danger, border: `1px solid ${c.danger}44` }}>
+                  {dayConflictCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTab('timeline')}
+                      className="shrink-0 ml-auto rounded-full px-3 py-1.5 text-xs font-bold tap-active"
+                      style={{ background: `${c.danger}18`, color: c.danger, border: `1px solid ${c.danger}44` }}
+                      aria-label={`${dayConflictCount} schedule conflict${dayConflictCount > 1 ? 's' : ''} — tap to view in timeline`}
+                    >
                       ⚠ {dayConflictCount} conflict{dayConflictCount > 1 ? 's' : ''}
-                    </span>
+                    </button>
                   )}
                 </div>
 
