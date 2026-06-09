@@ -26,14 +26,14 @@ test.describe('authenticated flows', () => {
   test('user can save a festival and see it on My Schedule', async ({ page }) => {
     await ensureFirstFestivalIsSaved(page);
 
-    await page.goto('/my-schedule');
+    await page.goto('/my-schedule', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
     await expectSavedFestivalCard(page);
     await expect(page.getByRole('button', { name: /Open Festival/i }).first()).toBeVisible();
   });
 
   test('user can open groups area', async ({ page }) => {
-    await page.goto('/groups');
+    await page.goto('/groups', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible();
     await expect(page.getByTestId('join-group-panel')).toBeVisible({ timeout: 20_000 });
   });
@@ -44,7 +44,7 @@ test.describe('authenticated flows', () => {
     await openFirstFestival(page);
     await ensureFirstActIsStarred(page);
 
-    await page.goto('/my-schedule');
+    await page.goto('/my-schedule', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
     await expect(
       page.getByTestId('saved-acts-section'),
@@ -63,7 +63,7 @@ test.describe('authenticated flows', () => {
     const selectedDayUrl = page.url();
     const selectedDay = new URL(selectedDayUrl).searchParams.get('day');
 
-    await page.goto('/my-schedule');
+    await page.goto('/my-schedule', { waitUntil: 'domcontentloaded' });
     await expect(
       page.getByTestId('schedule-festival-group').first(),
       'My Schedule did not group saved acts by festival. If this fails, check user_performance_preferences persistence/read.'
@@ -93,7 +93,7 @@ test.describe('authenticated flows', () => {
   });
 
   test('profile can preview an uploaded avatar file without URL input', async ({ page }) => {
-    await page.goto('/profile');
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /Profile/i })).toBeVisible({ timeout: 20_000 });
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#e85d26"/><text x="32" y="40" text-anchor="middle" font-size="28" fill="white">LM</text></svg>`;
@@ -108,7 +108,7 @@ test.describe('authenticated flows', () => {
   });
 
   test('profile theme preference updates immediately and persists across pages', async ({ page }) => {
-    await page.goto('/profile');
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /Profile/i })).toBeVisible({ timeout: 20_000 });
 
     await page.getByLabel(/Theme/i).selectOption('light');
@@ -121,11 +121,11 @@ test.describe('authenticated flows', () => {
     await openFirstFestival(page);
     await expectLightTheme(page, 'Festival page should keep the saved light theme state.');
 
-    await page.goto('/groups');
+    await page.goto('/groups', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
     await expectLightTheme(page, 'Groups page should keep the saved light theme state.');
 
-    await page.goto('/my-schedule');
+    await page.goto('/my-schedule', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: /My Schedule/i })).toBeVisible({ timeout: 20_000 });
     await expectLightTheme(page, 'My Schedule page should keep the saved light theme state.');
 
@@ -136,7 +136,7 @@ test.describe('authenticated flows', () => {
       await expectLightTheme(page, 'Admin page should keep the saved light theme state.');
     }
 
-    await page.goto('/profile');
+    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
     await page.getByLabel(/Theme/i).selectOption('dark');
     await page.getByRole('button', { name: /Save Profile/i }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
