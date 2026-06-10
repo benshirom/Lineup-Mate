@@ -11,6 +11,7 @@
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
     "cap:sync": "npx cap sync",
+    "supabase:types": "npx supabase gen types typescript --project-id jcokguqwmdkkzdakyamo > types/database.types.ts",
     "generate:vapid": "npx web-push generate-vapid-keys",
     "test": "vitest run",
     "test:watch": "vitest",
