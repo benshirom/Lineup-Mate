@@ -308,7 +308,7 @@ export default function GroupsPage() {
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</p>
                 <h1 className="text-4xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>My Groups</h1>
-                <p className="mt-2 text-sm" style={{ color: c.muted }}>Create groups per festival, invite friends, and open a shared schedule that shows everyone's picks.</p>
+                <p className="mt-2 text-sm" style={{ color: c.muted }}>Create groups per festival, invite friends, and open a shared schedule that shows everyone&apos;s picks.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {groups.length > 0 && <button type="button" data-testid="open-create-group-modal" onClick={() => setShowCreateModal(true)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: c.acc }}>Create Group</button>}
@@ -324,7 +324,7 @@ export default function GroupsPage() {
             {groups.length === 0 && renderCreateGroupForm()}
             <form onSubmit={handleJoinGroup} data-testid="join-group-panel" className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
               <h2 className="mb-2 text-xl font-black">Join a group</h2>
-              <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend to join their festival schedule. Joining also saves the group's festival to your schedule.</p>
+              <p className="mb-4 text-sm" style={{ color: c.muted }}>Paste an invite code from a friend to join their festival schedule. Joining also saves the group&apos;s festival to your schedule.</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input data-testid="join-group-code-input" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
                 <button type="submit" data-testid="join-group-submit" disabled={actionLoading || !inviteCode.trim()} className="rounded-2xl px-5 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.acc }}>{actionLoading ? 'Joining…' : 'Join'}</button>
