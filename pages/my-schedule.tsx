@@ -234,7 +234,7 @@ export default function MySchedulePage() {
       const { error } = await supabase.rpc('upsert_user_preference', {
         p_user_id: user.id,
         p_performance_id: item.performanceId,
-        p_status: null
+        p_status: null as unknown as string
       });
 
       if (error) throw error;

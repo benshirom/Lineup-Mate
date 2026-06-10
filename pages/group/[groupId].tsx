@@ -163,11 +163,12 @@ export default function GroupPage() {
     const loadData = async () => {
       setLoading(true);
       setError(null);
+      const groupIdNum = Number(groupId as string);
       try {
         const { data: groupData, error: groupError } = await supabase
           .from('groups')
           .select('id, name, invite_code, festival_id, is_blocked, festivals(id, name, year, location, start_date, end_date, description, emoji, color, genre, genre_label, website)')
-          .eq('id', groupId)
+          .eq('id', groupIdNum)
           .single();
         if (groupError) throw groupError;
 
@@ -181,7 +182,7 @@ export default function GroupPage() {
           id: groupData.id,
           name: groupData.name,
           invite_code: groupData.invite_code,
-          festival_id: groupData.festival_id,
+          festival_id: groupData.festival_id ?? 0,
           festival: (groupData as any).festivals ?? null
         };
         setGroup(mappedGroup);
@@ -259,7 +260,9 @@ export default function GroupPage() {
           const perfIds = new Set(Object.keys(perfMap).map(Number));
           setPerformancePrefs(
             (prefsResult.data ?? [])
-              .filter((p) => perfIds.has(p.performance_id))
+              .filter((p): p is typeof p & { performance_id: number; status: string; user_id: string } =>
+                p.performance_id != null && p.status != null && p.user_id != null && perfIds.has(p.performance_id)
+              )
               .map((p) => ({
                 performance_id: p.performance_id,
                 status: p.status,

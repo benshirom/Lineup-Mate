@@ -115,11 +115,12 @@ export default function FestivalPage() {
       setError(null);
       setSelectedDay('');
       setActiveStages({});
+      const festivalIdNum = Number(festivalId as string);
       try {
         const { data: festivalData, error: festivalError } = await supabase
           .from('festivals')
           .select('*')
-          .eq('id', festivalId)
+          .eq('id', festivalIdNum)
           .single();
         if (festivalError) throw festivalError;
         setFestival(festivalData as Festival);
@@ -127,7 +128,7 @@ export default function FestivalPage() {
         const { data: performanceRows, error: perfError } = await supabase
           .from('performances')
           .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
-          .eq('festival_id', festivalId)
+          .eq('festival_id', festivalIdNum)
           .eq('is_active', true)
           .order('start_time')
           .limit(500);
@@ -140,7 +141,11 @@ export default function FestivalPage() {
             .select('performance_id,status')
             .eq('user_id', user.id);
           if (prefsError) throw prefsError;
-          prefs?.forEach((pref) => { prefMap[pref.performance_id] = pref.status; });
+          prefs?.forEach((pref) => {
+            if (pref.performance_id != null && pref.status != null) {
+              prefMap[pref.performance_id] = pref.status as PreferenceStatus;
+            }
+          });
         }
 
         type PerfRow = { id: number; start_time: string; end_time: string; day_date: string; stages: { name: string; color: string | null } | null; artists: { name: string } | null };
@@ -232,7 +237,7 @@ export default function FestivalPage() {
       const { error: rpcError } = await supabase.rpc('upsert_user_preference', {
         p_user_id: user!.id,
         p_performance_id: performanceId,
-        p_status: status,
+        p_status: status as unknown as string,
       });
       if (rpcError) throw rpcError;
       setPerformances((current) => {
