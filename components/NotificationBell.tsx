@@ -155,7 +155,7 @@ export function NotificationBell() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold leading-snug" style={{ color: c.txt }}>{n.title}</p>
                       <p className="text-xs mt-0.5" style={{ color: c.muted }}>{n.body}</p>
-                      <p className="text-[10px] mt-1 font-semibold" style={{ color: c.muted }}>{timeAgo(n.created_at)}</p>
+                      <p className="text-[10px] mt-1 font-semibold" style={{ color: c.muted }}>{n.created_at ? timeAgo(n.created_at) : ''}</p>
                     </div>
                     {!n.is_read && (
                       <div className="mt-1.5 h-2 w-2 rounded-full shrink-0" style={{ background: c.acc }} />
