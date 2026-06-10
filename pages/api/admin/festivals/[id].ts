@@ -37,7 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { error } = await supabaseAdmin.from('festivals').update(updates).eq('id', festivalId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabaseAdmin.from('festivals').update(updates as any).eq('id', festivalId);
     if (error) {
       console.error('[Admin API] festival update', error);
       return res.status(500).json({ error: 'Internal server error.' });

@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 
-  const userIds = (members ?? []).map((m) => m.user_id);
+  const userIds = (members ?? []).map((m) => m.user_id).filter((id): id is string => id != null);
 
   const { data: profiles } = userIds.length > 0
     ? await supabaseAdmin.from('profiles').select('id, display_name, email').in('id', userIds)

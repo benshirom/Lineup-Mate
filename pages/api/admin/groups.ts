@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!groups) return res.status(500).json({ error: 'Failed to fetch groups' });
 
   const groupIds = groups.map((g) => g.id);
-  const ownerIds = [...new Set(groups.map((g) => g.owner_user_id).filter(Boolean))];
+  const ownerIds = [...new Set(groups.map((g) => g.owner_user_id).filter((id): id is string => id != null))];
 
   const [{ data: members }, { data: owners }] = await Promise.all([
     supabaseAdmin.from('group_members').select('group_id').in('group_id', groupIds),
@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   ]);
 
   const memberCountMap: Record<number, number> = {};
-  for (const m of members ?? []) memberCountMap[m.group_id] = (memberCountMap[m.group_id] ?? 0) + 1;
+  for (const m of members ?? []) { if (m.group_id != null) memberCountMap[m.group_id] = (memberCountMap[m.group_id] ?? 0) + 1; }
 
   const ownerMap: Record<string, { display_name: string | null; email: string | null }> = {};
   for (const o of owners ?? []) ownerMap[o.id] = { display_name: o.display_name, email: o.email };
@@ -64,8 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     created_at: g.created_at,
     is_blocked: g.is_blocked,
     festivalName: (g.festival as { name?: string } | null)?.name ?? null,
-    ownerName: ownerMap[g.owner_user_id]?.display_name ?? null,
-    ownerEmail: ownerMap[g.owner_user_id]?.email ?? null,
+    ownerName: g.owner_user_id != null ? (ownerMap[g.owner_user_id]?.display_name ?? null) : null,
+    ownerEmail: g.owner_user_id != null ? (ownerMap[g.owner_user_id]?.email ?? null) : null,
     memberCount: memberCountMap[g.id] ?? 0,
   }));
 

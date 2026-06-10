@@ -2,6 +2,7 @@ import getSupabaseAdmin from './supabaseAdmin';
 import { buildClashfinderEventUrl } from './clashfinder';
 import type { NormalizedClashfinderEvent, NormalizedClashfinderPerformance } from './clashfinder';
 import { cleanupClashfinderPerformances } from './clashfinderCleanup';
+import type { Json } from '@/types/database.types';
 
 export interface ImportFestivalResult {
   festivalId: number;
@@ -185,7 +186,7 @@ export async function importNormalizedFestival(event: NormalizedClashfinderEvent
     source_url: buildClashfinderEventUrl(event.slug),
     source_type: 'clashfinder',
     last_synced_at: sourceLastSeenAt,
-    raw_clashfinder: event.raw
+    raw_clashfinder: event.raw as Json
   };
 
   const { data: festival, error: festivalError } = existingBySlug?.id
