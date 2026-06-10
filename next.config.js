@@ -34,6 +34,8 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://res.cloudinary.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
       "font-src 'self' https://fonts.gstatic.com",
+      "worker-src 'self'",
+      "manifest-src 'self'",
       "frame-ancestors 'none'",
     ].join('; '),
   },
@@ -42,6 +44,10 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // When NEXT_EXPORT=true (mobile build via Capacitor), emit a fully-static site.
+  // API routes are not included in the static export; the mobile app calls the
+  // Netlify-hosted API directly via NEXT_PUBLIC_APP_URL.
+  ...(process.env.NEXT_EXPORT === 'true' ? { output: 'export' } : {}),
   async headers() {
     return [
       {
