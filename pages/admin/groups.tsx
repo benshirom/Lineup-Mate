@@ -258,7 +258,7 @@ export default function AdminGroups() {
                     <tr key={`${g.id}-members`}>
                       <td colSpan={8} style={{ padding: 0, background: c.surf2, borderBottom: `1px solid ${c.brd}` }}>
                         <div style={{ padding: '12px 20px' }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: c.txt, marginBottom: 10 }}>Members of "{g.name}"</div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: c.txt, marginBottom: 10 }}>Members of &quot;{g.name}&quot;</div>
                           {membersLoading ? (
                             <div style={{ color: c.muted, fontSize: 13 }}>Loading members…</div>
                           ) : members.length === 0 ? (

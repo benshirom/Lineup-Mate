@@ -95,7 +95,7 @@ const AndroidInstallBanner: React.FC = () => {
             Tap{' '}
             <strong style={{ color: '#c4b5fd' }}>⋮ Menu</strong>
             {' '}then{' '}
-            <strong style={{ color: '#c4b5fd' }}>"Add to Home Screen"</strong>
+            <strong style={{ color: '#c4b5fd' }}>&quot;Add to Home Screen&quot;</strong>
           </p>
         )}
       </div>

@@ -92,7 +92,7 @@ const IOSInstallBanner: React.FC = () => {
             Tap the{' '}
             <strong style={{ color: '#c4b5fd' }}>Share button</strong>
             {' '}then{' '}
-            <strong style={{ color: '#c4b5fd' }}>"Add to Home Screen"</strong>
+            <strong style={{ color: '#c4b5fd' }}>&quot;Add to Home Screen&quot;</strong>
           </p>
         )}
       </div>

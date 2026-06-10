@@ -32,12 +32,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const windowEnd = new Date(now.getTime() + 63 * 60_000);    // 63 min from now
 
     // Find performances starting in the next 2-63 minutes
-    const { data: performances, error: perfError } = await supabaseAdmin
+    const { data: rawPerformances, error: perfError } = await supabaseAdmin
       .from('performances')
       .select('id, artist_id, start_time, artists(name), stages(name)')
       .eq('is_active', true)
       .gte('start_time', windowStart.toISOString())
       .lte('start_time', windowEnd.toISOString());
+
+    type PerformanceWithRelations = {
+      id: number;
+      artist_id: number;
+      start_time: string;
+      artists: { name: string } | null;
+      stages: { name: string } | null;
+    };
+    const performances = rawPerformances as PerformanceWithRelations[] | null;
 
     if (perfError) throw perfError;
     if (!performances || performances.length === 0) {
@@ -92,8 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (minutesUntil < minutesBefore - 3 || minutesUntil > minutesBefore + 3) continue;
 
-      const artistName = (perf as any).artists?.name || 'Artist';
-      const stageName = (perf as any).stages?.name as string | undefined;
+      const artistName = perf.artists?.name || 'Artist';
+      const stageName = perf.stages?.name;
       const startTimeStr = new Date(perf.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       notifications.push({
         user_id: pref.user_id,

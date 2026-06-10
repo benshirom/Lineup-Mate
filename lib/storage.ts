@@ -38,7 +38,7 @@ export const sessionStore = {
 function isNative(): boolean {
   try {
     // Capacitor is only available when the app runs inside a native shell
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Capacitor } = require('@capacitor/core');
     return Capacitor.isNativePlatform();
   } catch {

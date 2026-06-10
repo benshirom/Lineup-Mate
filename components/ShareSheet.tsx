@@ -9,7 +9,7 @@ interface ShareSheetProps {
 
 function isNative(): boolean {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Capacitor } = require('@capacitor/core');
     return Capacitor.isNativePlatform();
   } catch {

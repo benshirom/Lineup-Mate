@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import * as Sentry from '@sentry/nextjs';
 import getSupabaseAdmin from '@/lib/supabaseAdmin';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { requireUser } from '@/lib/requireUser';
 
 // 6_400_000 ≈ base64 overhead for a ~4.7 MB raw image (4/3 ratio).
 // Keep in sync with bodyParser.sizeLimit below.
@@ -66,25 +67,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const allowed = await applyRateLimit(req, res, 'avatar-upload');
   if (!allowed) return;
 
-  const token = req.headers.authorization?.startsWith('Bearer ')
-    ? req.headers.authorization.slice('Bearer '.length)
-    : null;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Missing authorization token.' });
-  }
+  const auth = await requireUser(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  const { user } = auth;
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
-    const {
-      data: { user },
-      error: userError
-    } = await supabaseAdmin.auth.getUser(token);
-
-    if (userError || !user) {
-      return res.status(401).json({ error: 'Invalid authorization token.' });
-    }
-
     const { file } = req.body || {};
     if (!isValidImageDataUrl(file)) {
       return res.status(400).json({ error: 'Upload a valid image file up to 4MB.' });
