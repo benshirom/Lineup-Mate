@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem } from '@/lib/designSystem';
 
 interface ToastProps {
   message: string;
@@ -11,7 +11,7 @@ interface ToastProps {
 export function Toast({ message, duration = 4000, onClose }: ToastProps) {
   const [visible, setVisible] = useState(true);
   const { theme } = useAuth();
-  const c = getThemeColors(theme);
+  const c = createDesignSystem(theme).colors;
 
   useEffect(() => {
     const timer = setTimeout(() => {

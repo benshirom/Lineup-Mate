@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { getThemeColors } from '@/lib/platform';
+import { createDesignSystem } from '@/lib/designSystem';
 
 interface Notification {
   id: number;
@@ -27,7 +27,7 @@ const instanceCounter = { n: 0 };
 
 export function NotificationBell() {
   const { user, supabase, theme, t } = useAuth();
-  const c = getThemeColors(theme);
+  const c = createDesignSystem(theme).colors;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);

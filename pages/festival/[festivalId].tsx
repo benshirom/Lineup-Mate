@@ -85,6 +85,7 @@ export default function FestivalPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [popId, setPopId] = useState<number | null>(null);
   const [conflictWarning, setConflictWarning] = useState<{ newPerf: PerformanceItem; existing: PerformanceItem } | null>(null);
+  const lastConflictRef = useRef<{ newPerf: PerformanceItem; existing: PerformanceItem } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [groupNameInput, setGroupNameInput] = useState('');
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -247,7 +248,10 @@ export default function FestivalPage() {
               new Date(p.startTime).getTime() < newEnd &&
               new Date(p.endTime).getTime() > newStart
             );
-            if (existing) setConflictWarning({ newPerf, existing });
+            if (existing) {
+              lastConflictRef.current = { newPerf, existing };
+              setConflictWarning({ newPerf, existing });
+            }
           }
         }
         return updated;
@@ -506,6 +510,17 @@ export default function FestivalPage() {
                       aria-label={`${dayConflictCount} schedule conflict${dayConflictCount > 1 ? 's' : ''} — tap to view in timeline`}
                     >
                       ⚠ {dayConflictCount} conflict{dayConflictCount > 1 ? 's' : ''}
+                    </button>
+                  )}
+                  {conflictWarning === null && lastConflictRef.current !== null && conflictIds.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setConflictWarning(lastConflictRef.current)}
+                      className="shrink-0 ml-2 rounded-full px-3 py-1.5 text-xs font-bold tap-active"
+                      style={{ background: `${c.danger}18`, color: c.danger, border: `1px solid ${c.danger}44` }}
+                      aria-label="Show conflict warning"
+                    >
+                      ⚠ Show conflict
                     </button>
                   )}
                 </div>

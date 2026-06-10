@@ -47,6 +47,7 @@ function signCloudinaryParams(params: Record<string, string | number>, apiSecret
     .map((key) => `${key}=${params[key]}`)
     .join('&');
 
+  // Cloudinary's signed-upload API enforces SHA-1 for request signing (not our choice).
   return crypto.createHash('sha1').update(`${toSign}${apiSecret}`).digest('hex');
 }
 
