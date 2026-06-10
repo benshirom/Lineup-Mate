@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ sent: 0, message: 'No going preferences for upcoming performances' });
     }
 
-    const userIds = [...new Set(goingPrefs.map(p => p.user_id))];
+    const userIds = [...new Set(goingPrefs.map(p => p.user_id).filter((id): id is string => id != null))];
 
     // Get notification preferences for these users
     const { data: userPrefs } = await supabaseAdmin
