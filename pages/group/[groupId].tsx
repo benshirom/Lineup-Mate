@@ -200,7 +200,7 @@ export default function GroupPage() {
           { data: memberData, error: membersError },
           { data: perfData, error: perfError },
         ] = await Promise.all([
-          supabase.from('group_members').select('user_id, role').eq('group_id', groupId),
+          supabase.from('group_members').select('user_id, role').eq('group_id', groupIdNum),
           supabase
             .from('performances')
             .select('id, start_time, end_time, day_date, stages(name, color), artists(name)')
@@ -260,14 +260,12 @@ export default function GroupPage() {
           const perfIds = new Set(Object.keys(perfMap).map(Number));
           setPerformancePrefs(
             (prefsResult.data ?? [])
-              .filter((p): p is typeof p & { performance_id: number; status: string; user_id: string } =>
-                p.performance_id != null && p.status != null && p.user_id != null && perfIds.has(p.performance_id)
-              )
+              .filter(p => p.performance_id != null && p.status != null && p.user_id != null && perfIds.has(p.performance_id!))
               .map((p) => ({
-                performance_id: p.performance_id,
-                status: p.status,
-                user_id: p.user_id,
-                user_label: memberLabelById[p.user_id] ?? `User·${p.user_id.slice(0, 6)}`,
+                performance_id: p.performance_id!,
+                status: p.status!,
+                user_id: p.user_id!,
+                user_label: memberLabelById[p.user_id!] ?? `User·${p.user_id!.slice(0, 6)}`,
               }))
           );
         } else {

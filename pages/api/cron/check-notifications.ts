@@ -77,7 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('notify_set_starting', true);
 
     const enabledUsers = new Map<string, number>(
-      (userPrefs || []).map(p => [p.user_id, p.notify_before_minutes])
+      (userPrefs || [])
+        .filter((p): p is typeof p & { notify_before_minutes: number } => p.notify_before_minutes != null)
+        .map(p => [p.user_id, p.notify_before_minutes] as [string, number])
     );
 
     const perfMap = new Map(performances.map(p => [p.id, p]));
@@ -90,6 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }> = [];
 
     for (const pref of goingPrefs) {
+      if (pref.user_id == null || pref.performance_id == null) continue;
       const minutesBefore = enabledUsers.get(pref.user_id);
       if (minutesBefore === undefined) continue;
 
