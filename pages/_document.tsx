@@ -22,9 +22,7 @@ export default class MyDocument extends Document<DocumentProps> {
     const { nonce } = this.props;
     return (
       <Html>
-        <Head>
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        </Head>
+        <Head />
         <body>
           <Main />
           <NextScript nonce={nonce} />
