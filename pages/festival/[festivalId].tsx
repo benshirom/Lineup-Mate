@@ -77,7 +77,7 @@ export default function FestivalPage() {
   const [days, setDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [activeStages, setActiveStages] = useState<Record<string, boolean>>({});
-  const [tab, setTab] = useState<FestivalTab>('lineup');
+  const [tab, setTab] = useState<FestivalTab>('timeline');
   const [showInstallBtn, setShowInstallBtn] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const [loading, setLoading] = useState(true);
