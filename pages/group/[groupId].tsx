@@ -94,7 +94,7 @@ function memberLabel(member: GroupMember): string {
   if (member.profile?.email) return member.profile.email.split('@')[0];
   return `User·${member.user_id.slice(0, 6)}`;
 }
-function timeLabel(dateString: string) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function timeLabel(dateString: string) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); }
 function absHour(dateString: string, refTime: number): number { return (new Date(dateString).getTime() - refTime) / 36e5; }
 function durationHours(start: string, end: string) { return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5); }
 function festivalTitle(festival: FestivalInfo) { return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`; }
