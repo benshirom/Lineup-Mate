@@ -160,7 +160,6 @@ export function FestivalTimelineTab({
                       const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
                       const lane = lanes.get(performance.id) ?? 0;
                       const top = lane * laneHeight + 6;
-                      const isTiny = width < 80;
                       const isGoing = performance.status === 'going';
                       const hasConflict = conflictIds.has(performance.id);
                       const isLive = nowPlayingIds.has(performance.id);
@@ -176,8 +175,8 @@ export function FestivalTimelineTab({
                             width,
                             background: c.surf2,
                             borderLeft: `3px solid ${performance.stageColor}`,
-                            paddingLeft: isTiny ? 4 : 10,
-                            paddingRight: isTiny ? 4 : 34,
+                            paddingLeft: 6,
+                            paddingRight: 28,
                             color: c.txt,
                             boxShadow: isLive
                               ? `inset 0 0 0 2px rgba(239,68,68,0.6), 0 2px 10px rgba(239,68,68,0.2)`
@@ -186,16 +185,12 @@ export function FestivalTimelineTab({
                               : `inset 0 0 0 1px ${c.brd}`,
                           }}
                         >
-                          {!isTiny && (
-                            <>
-                              <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
-                              <span className="block truncate text-[10px]" style={{ color: c.muted }}>
-                                {isLive ? (
-                                  <span style={{ color: '#ef4444', fontWeight: 800 }}>● LIVE</span>
-                                ) : `${timeLabel(performance.startTime)} – ${timeLabel(performance.endTime)}`}
-                              </span>
-                            </>
-                          )}
+                          <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
+                          <span className="block truncate text-[10px]" style={{ color: c.muted }}>
+                            {isLive ? (
+                              <span style={{ color: '#ef4444', fontWeight: 800 }}>● LIVE</span>
+                            ) : `${timeLabel(performance.startTime)} – ${timeLabel(performance.endTime)}`}
+                          </span>
                           {hasConflict && isGoing && (
                             <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: c.danger }}>⚠</span>
                           )}
