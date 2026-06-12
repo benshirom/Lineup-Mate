@@ -75,6 +75,8 @@ export function FestivalTimelineTab({
     if (!popover) return;
     const handler = (e: MouseEvent | TouchEvent) => {
       if (popoverRef.current?.contains(e.target as Node)) return;
+      // Let the block's own click handler manage toggling — don't close on mousedown targeting a block
+      if ((e.target as HTMLElement).closest('[data-testid="festival-performance-block"]')) return;
       setPopover(null);
     };
     document.addEventListener('mousedown', handler);
