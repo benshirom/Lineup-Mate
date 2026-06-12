@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StarButton } from '@/components/festival/StarButton';
-import { timeLabel, absHour, durationHours } from '@/lib/festivalUtils';
+import { timeLabel, absHour, durationHours, assignLanes } from '@/lib/festivalUtils';
 import type { PerformanceItem, PreferenceStatus } from '@/lib/festivalTypes';
 import type { getThemeColors } from '@/lib/platform';
 
@@ -47,6 +47,21 @@ export function FestivalTimelineTab({
   onUpdatePreference,
   c,
 }: FestivalTimelineTabProps) {
+  const [visibleDate, setVisibleDate] = useState<string>('');
+
+  useEffect(() => {
+    const el = timelineRef.current;
+    if (!el || !refTime || hours.length === 0) return;
+    const update = () => {
+      const centerHour = (el.scrollLeft + el.clientWidth / 2 - stageLabelWidth) / hourWidth + minHour;
+      const date = new Date(refTime + centerHour * 36e5);
+      setVisibleDate(date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    return () => el.removeEventListener('scroll', update);
+  }, [timelineRef, refTime, hours, hourWidth, stageLabelWidth, minHour]);
+
   return (
     <section className="rounded-3xl p-4 shadow-card" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
       <div className="mb-4 flex gap-2 overflow-x-auto scroll-hidden pb-1" data-testid="festival-stage-filters">
@@ -79,6 +94,11 @@ export function FestivalTimelineTab({
       ) : (
         <div ref={timelineRef} className="relative overflow-x-auto scroll-thin">
           <p className="mb-2 text-[10px] font-bold sm:hidden" style={{ color: c.muted }}>← swipe to see full timeline →</p>
+          {visibleDate && (
+            <div className="sticky left-0 mb-1 w-fit rounded-full px-3 py-0.5 text-[11px] font-bold pointer-events-none" style={{ background: `${c.acc}22`, color: c.acc, border: `1px solid ${c.acc}44` }}>
+              {visibleDate}
+            </div>
+          )}
           <div style={{ minWidth: stageLabelWidth + hours.length * hourWidth }}>
             {/* Hour header */}
             <div className="mb-2 flex" style={{ marginLeft: stageLabelWidth }}>
@@ -103,6 +123,10 @@ export function FestivalTimelineTab({
 
             {allStages.filter((stage) => activeStages[stage.name] !== false).map((stage) => {
               const stageItems = timelinePerformances.filter((p) => p.stageName === stage.name);
+              const lanes = assignLanes(stageItems);
+              const laneCount = Math.max(1, ...Array.from(lanes.values()).map((l) => l + 1));
+              const laneHeight = 56;
+              const rowHeight = laneCount * laneHeight;
               return (
                 <div key={stage.name} className="mb-2 flex items-stretch" data-testid="festival-stage-row">
                   <div
@@ -111,7 +135,7 @@ export function FestivalTimelineTab({
                   >
                     <span className="rounded-lg px-1.5 py-0.5" style={{ background: `${stage.color}18` }}>{stage.name}</span>
                   </div>
-                  <div className="relative h-14 flex-1 rounded-2xl overflow-hidden" style={{ background: `${stage.color}06`, border: `1px solid ${c.brd}` }}>
+                  <div className="relative flex-1 rounded-2xl overflow-hidden" style={{ height: rowHeight, background: `${stage.color}06`, border: `1px solid ${c.brd}` }}>
                     {hours.map((hour) => {
                       const isMidnight = hour % 24 === 0 && hour !== hours[0];
                       return (
@@ -134,6 +158,9 @@ export function FestivalTimelineTab({
                     {stageItems.map((performance) => {
                       const left = (absHour(performance.startTime, refTime) - minHour) * hourWidth;
                       const width = Math.max(60, durationHours(performance.startTime, performance.endTime) * hourWidth - 4);
+                      const lane = lanes.get(performance.id) ?? 0;
+                      const top = lane * laneHeight + 6;
+                      const isTiny = width < 80;
                       const isGoing = performance.status === 'going';
                       const hasConflict = conflictIds.has(performance.id);
                       const isLive = nowPlayingIds.has(performance.id);
@@ -142,14 +169,15 @@ export function FestivalTimelineTab({
                           key={performance.id}
                           data-testid="festival-performance-block"
                           title={`${performance.artistName} · ${timeLabel(performance.startTime)}–${timeLabel(performance.endTime)}${hasConflict ? ' ⚠ Time conflict!' : ''}${isLive ? ' 🔴 LIVE' : ''}`}
-                          className={`perf-block absolute top-1.5 h-11 overflow-hidden rounded-xl text-left text-xs font-bold ${isGoing && hasConflict ? 'conflict-block' : ''}`}
+                          className={`perf-block absolute h-11 overflow-hidden rounded-xl text-left text-xs font-bold ${isGoing && hasConflict ? 'conflict-block' : ''}`}
                           style={{
                             left,
+                            top,
                             width,
                             background: c.surf2,
                             borderLeft: `3px solid ${performance.stageColor}`,
-                            paddingLeft: 10,
-                            paddingRight: 34,
+                            paddingLeft: isTiny ? 4 : 10,
+                            paddingRight: isTiny ? 4 : 34,
                             color: c.txt,
                             boxShadow: isLive
                               ? `inset 0 0 0 2px rgba(239,68,68,0.6), 0 2px 10px rgba(239,68,68,0.2)`
@@ -158,18 +186,24 @@ export function FestivalTimelineTab({
                               : `inset 0 0 0 1px ${c.brd}`,
                           }}
                         >
-                          <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
-                          <span className="block truncate text-[10px]" style={{ color: c.muted }}>
-                            {isLive ? (
-                              <span style={{ color: '#ef4444', fontWeight: 800 }}>● LIVE</span>
-                            ) : `${timeLabel(performance.startTime)} – ${timeLabel(performance.endTime)}`}
-                          </span>
+                          {!isTiny && (
+                            <>
+                              <span className="block truncate leading-4 pt-1" style={{ color: c.txt }}>{performance.artistName}</span>
+                              <span className="block truncate text-[10px]" style={{ color: c.muted }}>
+                                {isLive ? (
+                                  <span style={{ color: '#ef4444', fontWeight: 800 }}>● LIVE</span>
+                                ) : `${timeLabel(performance.startTime)} – ${timeLabel(performance.endTime)}`}
+                              </span>
+                            </>
+                          )}
                           {hasConflict && isGoing && (
                             <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: c.danger }}>⚠</span>
                           )}
-                          <span className="absolute right-1 top-1/2 -translate-y-1/2">
-                            <StarButton performance={performance} savingId={savingId} popId={popId} onUpdatePreference={onUpdatePreference} compact c={c} />
-                          </span>
+                          {!isTiny && (
+                            <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                              <StarButton performance={performance} savingId={savingId} popId={popId} onUpdatePreference={onUpdatePreference} compact c={c} />
+                            </span>
+                          )}
                         </div>
                       );
                     })}
