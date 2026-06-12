@@ -199,11 +199,9 @@ export function FestivalTimelineTab({
                           {hasConflict && isGoing && (
                             <span className="absolute left-1.5 bottom-1 text-[9px] font-black" style={{ color: c.danger }}>⚠</span>
                           )}
-                          {!isTiny && (
-                            <span className="absolute right-1 top-1/2 -translate-y-1/2">
-                              <StarButton performance={performance} savingId={savingId} popId={popId} onUpdatePreference={onUpdatePreference} compact c={c} />
-                            </span>
-                          )}
+                          <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                            <StarButton performance={performance} savingId={savingId} popId={popId} onUpdatePreference={onUpdatePreference} compact c={c} />
+                          </span>
                         </div>
                       );
                     })}
