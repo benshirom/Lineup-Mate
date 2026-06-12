@@ -31,7 +31,7 @@ test.describe('viewport meta tag', () => {
   test('viewport-fit=cover is set', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    const content = await page.locator('meta[name="viewport"]').getAttribute('content');
+    const content = await page.locator('meta[name="viewport"][content*="viewport-fit"]').getAttribute('content');
     expect(content).toContain('viewport-fit=cover');
   });
 });
