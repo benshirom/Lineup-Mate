@@ -39,6 +39,7 @@ test.describe('mobile navigation', () => {
 
   test('viewport meta tag has viewport-fit=cover', async ({ page }) => {
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
     const viewport = await page.$eval(
       'meta[name="viewport"]',
       (el) => el.getAttribute('content')

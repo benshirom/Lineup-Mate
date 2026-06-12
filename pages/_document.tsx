@@ -22,12 +22,7 @@ export default class MyDocument extends Document<DocumentProps> {
     const { nonce } = this.props;
     return (
       <Html>
-        <Head>
-          {/* Belt-and-suspenders: ensures viewport-fit=cover is present in the
-              static HTML before React hydration, so mobile browsers don't fill
-              in their own default during the next/head update cycle. */}
-          <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        </Head>
+        <Head />
         <body>
           <Main />
           <NextScript nonce={nonce} />
