@@ -82,7 +82,7 @@ export default function GroupsPage() {
         return;
       }
 
-      const groupIds = memberships.map((membership) => membership.group_id);
+      const groupIds = memberships.map((membership) => membership.group_id).filter((id): id is number => id != null);
       const roleByGroupId = Object.fromEntries(memberships.map((membership) => [membership.group_id, membership.role])) as Record<number, 'owner' | 'member'>;
 
       const { data: groupRows, error: groupsError } = await supabase
@@ -98,7 +98,7 @@ export default function GroupsPage() {
       if (memberCountError) throw memberCountError;
 
       const countByGroupId = (memberCountRows || []).reduce<Record<number, number>>((acc, row) => {
-        acc[row.group_id] = (acc[row.group_id] || 0) + 1;
+        if (row.group_id != null) acc[row.group_id] = (acc[row.group_id] || 0) + 1;
         return acc;
       }, {});
 
@@ -249,7 +249,7 @@ export default function GroupsPage() {
         .single();
 
       if (joinedGroupError) throw joinedGroupError;
-      await saveFestivalForUser(joinedGroup.festival_id);
+      if (joinedGroup.festival_id != null) await saveFestivalForUser(joinedGroup.festival_id);
 
       setInviteCode('');
       await loadGroups();

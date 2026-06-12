@@ -59,8 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const groupCountMap: Record<string, number> = {};
   const prefCountMap: Record<string, number> = {};
   const savedCountMap: Record<string, number> = {};
-  for (const r of groupMembers ?? []) groupCountMap[r.user_id] = (groupCountMap[r.user_id] ?? 0) + 1;
-  for (const r of preferences ?? []) prefCountMap[r.user_id] = (prefCountMap[r.user_id] ?? 0) + 1;
+  for (const r of groupMembers ?? []) { if (r.user_id != null) groupCountMap[r.user_id] = (groupCountMap[r.user_id] ?? 0) + 1; }
+  for (const r of preferences ?? []) { if (r.user_id != null) prefCountMap[r.user_id] = (prefCountMap[r.user_id] ?? 0) + 1; }
   for (const r of savedFests ?? []) savedCountMap[r.user_id] = (savedCountMap[r.user_id] ?? 0) + 1;
 
   const authMap: Record<string, string | null> = {};

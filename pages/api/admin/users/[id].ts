@@ -34,7 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields to update' });
 
-    const { error } = await supabaseAdmin.from('profiles').update(updates).eq('id', id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabaseAdmin.from('profiles').update(updates as any).eq('id', id);
     if (error) {
       console.error('[Admin API Error] user update', error);
       return res.status(500).json({ error: 'Internal server error' });

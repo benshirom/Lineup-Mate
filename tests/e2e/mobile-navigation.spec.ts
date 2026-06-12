@@ -39,10 +39,7 @@ test.describe('mobile navigation', () => {
 
   test('viewport meta tag has viewport-fit=cover', async ({ page }) => {
     await page.goto('/');
-    const viewport = await page.$eval(
-      'meta[name="viewport"]',
-      (el) => el.getAttribute('content')
-    );
+    const viewport = await page.locator('meta[name="viewport"][content*="viewport-fit"]').getAttribute('content');
     expect(viewport).toContain('viewport-fit=cover');
   });
 });

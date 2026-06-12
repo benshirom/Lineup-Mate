@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 
-  const userIds = (members ?? []).map((m) => m.user_id);
+  const userIds = (members ?? []).map((m) => m.user_id).filter((id): id is string => id != null);
 
   const { data: profiles } = userIds.length > 0
     ? await supabaseAdmin.from('profiles').select('id, display_name, email').in('id', userIds)
@@ -48,17 +48,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('performances.festival_id', festivalId);
 
     for (const p of prefs ?? []) {
-      prefCountMap[p.user_id] = (prefCountMap[p.user_id] ?? 0) + 1;
+      if (p.user_id != null) prefCountMap[p.user_id] = (prefCountMap[p.user_id] ?? 0) + 1;
     }
   }
 
   const result = (members ?? []).map((m) => ({
     userId: m.user_id,
-    displayName: profileMap[m.user_id]?.display_name ?? null,
-    email: profileMap[m.user_id]?.email ?? null,
+    displayName: m.user_id != null ? (profileMap[m.user_id]?.display_name ?? null) : null,
+    email: m.user_id != null ? (profileMap[m.user_id]?.email ?? null) : null,
     role: m.role,
     joinedAt: m.created_at,
-    preferenceCount: prefCountMap[m.user_id] ?? 0,
+    preferenceCount: m.user_id != null ? (prefCountMap[m.user_id] ?? 0) : 0,
   }));
 
   return res.status(200).json({ members: result });
