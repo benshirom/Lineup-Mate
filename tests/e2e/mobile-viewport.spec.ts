@@ -30,7 +30,7 @@ test.describe('mobile viewport — no overflow', () => {
 test.describe('viewport meta tag', () => {
   test('viewport-fit=cover is set', async ({ page }) => {
     await page.goto('/');
-    const content = await page.locator('meta[name="viewport"]').getAttribute('content');
+    const content = await page.locator('meta[name="viewport"]').first().getAttribute('content');
     expect(content).toContain('viewport-fit=cover');
   });
 });
