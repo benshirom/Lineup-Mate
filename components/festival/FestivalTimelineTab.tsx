@@ -266,14 +266,6 @@ export function FestivalTimelineTab({
       {/* Performance detail popover / bottom sheet */}
       {popover && (
         <>
-          {/* Backdrop for mobile bottom sheet */}
-          {isMobile && (
-            <div
-              className="fixed inset-0 z-[9998]"
-              style={{ background: 'rgba(0,0,0,0.4)' }}
-              onClick={() => setPopover(null)}
-            />
-          )}
           <div
             ref={popoverRef}
             data-testid="performance-detail-popover"
