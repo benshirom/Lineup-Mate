@@ -1,0 +1,8 @@
+[project]
+id = "jcokguqwmdkkzdakyamo"
+
+[functions.app-update]
+verify_jwt = false
+
+[functions.app-events]
+verify_jwt = false
