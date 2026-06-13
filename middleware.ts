@@ -6,9 +6,13 @@ export function middleware(request: NextRequest) {
   globalThis.crypto.getRandomValues(bytes);
   const nonce = btoa(String.fromCharCode(...bytes));
 
+  // Next.js dev mode uses eval() in webpack bundles for source maps.
+  // Without 'unsafe-eval', the CSP blocks webpack and React never mounts.
+  const isDev = process.env.NODE_ENV === 'development';
+
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io`,
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''} https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https://res.cloudinary.com",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
