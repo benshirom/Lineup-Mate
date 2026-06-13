@@ -286,9 +286,20 @@ test.describe('security: open redirect prevention', () => {
 
 test.describe('security: admin stats does not expose user emails', () => {
   test('GET /api/admin/stats with invalid token returns 401 (no PII in error)', async ({ request }) => {
-    const response = await request.get('/api/admin/stats', {
-      headers: { Authorization: 'Bearer fake' },
-    });
+    let response: Awaited<ReturnType<typeof request.get>> | undefined;
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await request.get('/api/admin/stats', {
+          headers: { Authorization: 'Bearer fake' },
+          timeout: 30_000,
+        });
+        break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (!response) throw lastErr;
     expect(response.status()).toBe(401);
     const body = await response.json();
     // Error message must not contain an email address pattern

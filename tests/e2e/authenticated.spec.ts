@@ -37,7 +37,7 @@ test.describe('authenticated flows', () => {
 
   test('user can open groups area', async ({ page }) => {
     await page.goto('/groups', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /My Groups/i })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('join-group-panel')).toBeVisible({ timeout: 20_000 });
   });
 

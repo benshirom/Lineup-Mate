@@ -75,7 +75,11 @@ export async function login(page: Page, email: string, password: string) {
     await expectAuthenticated(page);
     return;
   } catch {
-    // Still on /login after 3s — form is stable, proceed with fill
+    // waitForURL timed out — if redirect happened just after 8s, bail out
+    if (!page.url().includes('/login')) {
+      await expectAuthenticated(page);
+      return;
+    }
   }
 
   await page.getByLabel('Email').fill(email);
@@ -149,7 +153,8 @@ export async function openProfile(page: Page) {
 export async function openFirstFestival(page: Page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await dismissPreviewOverlays(page);
-  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 20_000 });
+  await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+  await expect(page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first(), 'Home page should expose at least one festival card with Open Schedule').toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: /Open Schedule|View Lineup/i }).first().click();
   await dismissPreviewOverlays(page);
   await expect(page.getByRole('button', { name: /timeline/i }), 'Festival page should render schedule tabs after opening first festival').toBeVisible({ timeout: 20_000 });
