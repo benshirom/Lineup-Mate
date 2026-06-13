@@ -1,5 +1,5 @@
 export function timeLabel(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 export function festivalTitle(name: string, year: number): string {
@@ -34,4 +34,19 @@ export function absHour(dateString: string, refTime: number): number {
 
 export function durationHours(start: string, end: string): number {
   return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5);
+}
+
+export function assignLanes(items: { id: number; startTime: string; endTime: string }[]): Map<number, number> {
+  const sorted = [...items].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const laneEnds: number[] = [];
+  const result = new Map<number, number>();
+  for (const item of sorted) {
+    const start = new Date(item.startTime).getTime();
+    const end = new Date(item.endTime).getTime();
+    let lane = laneEnds.findIndex((laneEnd) => laneEnd <= start);
+    if (lane === -1) lane = laneEnds.length;
+    laneEnds[lane] = end;
+    result.set(item.id, lane);
+  }
+  return result;
 }

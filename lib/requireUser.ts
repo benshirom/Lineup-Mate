@@ -14,12 +14,17 @@ export async function requireUser(req: NextApiRequest) {
   }
 
   const supabaseAdmin = getSupabaseAdmin();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseAdmin.auth.getUser(token);
-
-  if (userError || !user) {
+  let user: Awaited<ReturnType<typeof supabaseAdmin.auth.getUser>>['data']['user'];
+  try {
+    const {
+      data: { user: u },
+      error: userError,
+    } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !u) {
+      return { ok: false as const, status: 401, error: 'Unauthorized' };
+    }
+    user = u;
+  } catch {
     return { ok: false as const, status: 401, error: 'Unauthorized' };
   }
 

@@ -77,7 +77,7 @@ export default function FestivalPage() {
   const [days, setDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [activeStages, setActiveStages] = useState<Record<string, boolean>>({});
-  const [tab, setTab] = useState<FestivalTab>('lineup');
+  const [tab, setTab] = useState<FestivalTab>('timeline');
   const [showInstallBtn, setShowInstallBtn] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -482,7 +482,7 @@ export default function FestivalPage() {
                 style={{ top: 57, background: `${c.bg}ee`, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${c.brd}` }}
               >
                 <div className="flex items-center gap-2 overflow-x-auto scroll-hidden pb-1">
-                  {(['artists', 'lineup', 'timeline', 'info'] as FestivalTab[]).map((nextTab) => {
+                  {(['timeline', 'lineup', 'artists', 'info'] as FestivalTab[]).map((nextTab) => {
                     const tabLabel =
                       nextTab === 'artists' ? 'Artists' :
                       nextTab === 'lineup' ? 'Lineup' :

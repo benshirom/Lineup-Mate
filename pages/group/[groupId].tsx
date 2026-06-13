@@ -1,6 +1,5 @@
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import ReactDOM from 'react-dom';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, getThemeColors } from '@/lib/platform';
@@ -16,27 +15,14 @@ type ThemeColors = ReturnType<typeof getThemeColors>;
 
 function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const computePos = () => {
-    if (!btnRef.current) return null;
-    const rect = btnRef.current.getBoundingClientRect();
-    const estimatedHeight = prefs.length * 22 + 16;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    // -1px overlap so there is no gap between button and popup hover areas
-    const top = spaceBelow > estimatedHeight + 8 ? rect.bottom - 1 : rect.top - estimatedHeight + 1;
-    return { top, left: rect.left };
-  };
 
   const show = () => {
     if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
-    setPos(computePos());
     setOpen(true);
   };
 
-  // Cancel pending hide without triggering a re-render (used by popup onPointerEnter)
   const keepOpen = () => {
     if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
   };
@@ -49,7 +35,7 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
   useEffect(() => {
     if (!open) return;
     const handler = (e: TouchEvent) => {
-      if (btnRef.current?.contains(e.target as Node)) return;
+      if (containerRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
     document.addEventListener('touchstart', handler);
@@ -71,36 +57,33 @@ function PicksBadge({ prefs, c }: { prefs: GroupMemberPref[]; c: ThemeColors }) 
   }
 
   return (
-    <div className="inline-block" data-testid="group-performance-picks">
+    <div ref={containerRef} className="relative inline-block" data-testid="group-performance-picks">
       <button
-        ref={btnRef}
         type="button"
         onPointerEnter={(e) => { if (e.pointerType === 'mouse') show(); }}
         onPointerLeave={(e) => { if (e.pointerType === 'mouse') scheduleHide(); }}
         onClick={(e) => {
           e.stopPropagation();
-          const pt = (e.nativeEvent as PointerEvent).pointerType;
-          if (pt !== 'mouse') { open ? setOpen(false) : show(); }
+          open ? setOpen(false) : show();
         }}
         className="rounded-full px-2 py-0.5 text-[10px] font-bold cursor-pointer"
         style={{ background: `${c.star}22`, color: c.star, border: `1px solid ${c.star}55`, touchAction: 'manipulation' }}
       >
         ★ {prefs.length}
       </button>
-      {open && pos && typeof document !== 'undefined' && ReactDOM.createPortal(
+      {open && (
         <div
           onPointerEnter={(e) => { if (e.pointerType === 'mouse') keepOpen(); }}
           onPointerLeave={(e) => { if (e.pointerType === 'mouse') scheduleHide(); }}
           className="rounded-xl shadow-lg"
-          style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120, padding: '5px 8px 4px' }}
+          style={{ position: 'absolute', bottom: '110%', left: 0, zIndex: 50, background: c.surf, border: `1px solid ${c.brd}`, minWidth: 120, padding: '5px 8px 4px' }}
         >
           {prefs.map((p) => (
             <div key={p.user_id} className="truncate py-0.5 text-[11px] font-semibold" style={{ color: c.txt }}>
               {statusLabel(p.status)} {p.user_label}
             </div>
           ))}
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
@@ -111,7 +94,7 @@ function memberLabel(member: GroupMember): string {
   if (member.profile?.email) return member.profile.email.split('@')[0];
   return `User·${member.user_id.slice(0, 6)}`;
 }
-function timeLabel(dateString: string) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function timeLabel(dateString: string) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); }
 function absHour(dateString: string, refTime: number): number { return (new Date(dateString).getTime() - refTime) / 36e5; }
 function durationHours(start: string, end: string) { return Math.max(0.5, (new Date(end).getTime() - new Date(start).getTime()) / 36e5); }
 function festivalTitle(festival: FestivalInfo) { return festival.name.includes(String(festival.year)) ? festival.name : `${festival.name} ${festival.year}`; }
