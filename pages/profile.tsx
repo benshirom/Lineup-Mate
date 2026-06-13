@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
@@ -10,19 +10,9 @@ type UserRole = 'user' | 'admin';
 interface ProfileData {
   email: string | null;
   display_name: string | null;
-  avatar_url: string | null;
   role: UserRole;
   theme: ThemeMode;
   created_at: string | null;
-}
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Could not read avatar file.'));
-    reader.readAsDataURL(file);
-  });
 }
 
 function AppInstallCard() {
@@ -81,13 +71,9 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [displayName, setDisplayName] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState('');
   const [theme, setTheme] = useState<ThemeMode>(currentTheme);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -108,7 +94,7 @@ export default function ProfilePage() {
       try {
         const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('email, display_name, avatar_url, role, theme, created_at')
+          .select('email, display_name, role, theme, created_at')
           .eq('id', user.id)
           .single();
 
@@ -117,7 +103,6 @@ export default function ProfilePage() {
         const nextProfile: ProfileData = {
           email: data.email ?? user.email ?? null,
           display_name: data.display_name ?? null,
-          avatar_url: data.avatar_url ?? null,
           role: data.role === 'admin' ? 'admin' : 'user',
           theme: data.theme === 'light' ? 'light' : 'dark',
           created_at: data.created_at ?? null
@@ -125,8 +110,6 @@ export default function ProfilePage() {
 
         setProfile(nextProfile);
         setDisplayName(nextProfile.display_name || '');
-        setAvatarUrl(nextProfile.avatar_url || '');
-        setAvatarPreview(nextProfile.avatar_url || '');
         setTheme(nextProfile.theme);
         setLocalPreferences({ theme: nextProfile.theme });
       } catch (err: unknown) {
@@ -142,58 +125,6 @@ export default function ProfilePage() {
   const handleThemeChange = (nextTheme: ThemeMode) => {
     setTheme(nextTheme);
     setLocalPreferences({ theme: nextTheme });
-  };
-
-  const handleAvatarFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    setAvatarFile(file);
-    setMessage(null);
-    setError(null);
-
-    if (!file) {
-      setAvatarPreview(avatarUrl);
-      return;
-    }
-
-    if (!file.type.startsWith('image/')) {
-      setAvatarFile(null);
-      setError('Please choose an image file.');
-      return;
-    }
-
-    if (file.size > 4 * 1024 * 1024) {
-      setAvatarFile(null);
-      setError('Avatar image must be smaller than 4MB.');
-      return;
-    }
-
-    setAvatarPreview(URL.createObjectURL(file));
-  };
-
-  const uploadAvatarIfNeeded = async () => {
-    if (!avatarFile) return avatarUrl.trim() || null;
-    if (!session?.access_token) throw new Error('Missing session token. Please sign in again.');
-
-    setUploadingAvatar(true);
-    try {
-      const fileDataUrl = await fileToDataUrl(avatarFile);
-      const response = await fetch('/api/profile/avatar-upload', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ file: fileDataUrl })
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Could not upload avatar.');
-      if (!payload.secure_url) throw new Error('Cloudinary upload did not return a secure URL.');
-
-      return payload.secure_url as string;
-    } finally {
-      setUploadingAvatar(false);
-    }
   };
 
   const handleSave = async (event: FormEvent) => {
@@ -212,26 +143,19 @@ export default function ProfilePage() {
     setLocalPreferences({ theme: selectedTheme });
 
     try {
-      const uploadedAvatarUrl = await uploadAvatarIfNeeded();
-
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           display_name: displayName.trim() || null,
-          avatar_url: uploadedAvatarUrl,
           theme: selectedTheme
         })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
 
-      setAvatarUrl(uploadedAvatarUrl || '');
-      setAvatarPreview(uploadedAvatarUrl || '');
-      setAvatarFile(null);
       setProfile((current) => current ? {
         ...current,
         display_name: displayName.trim() || null,
-        avatar_url: uploadedAvatarUrl,
         theme: selectedTheme
       } : current);
 
@@ -296,7 +220,7 @@ export default function ProfilePage() {
           <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>{t.appName}</p>
             <h1 className="text-4xl font-black" style={{ fontFamily: 'Syne, Nunito, sans-serif' }}>{t.navProfile}</h1>
-            <p className="mt-2 text-sm" style={{ color: c.muted }}>Manage your display name, avatar and account preferences.</p>
+            <p className="mt-2 text-sm" style={{ color: c.muted }}>Manage your display name and account preferences.</p>
           </header>
 
           {(!authReady || loading) && <p style={{ color: c.muted }}>Loading profile…</p>}
@@ -306,8 +230,8 @@ export default function ProfilePage() {
           {authReady && !loading && profile && (
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
               <aside className="rounded-[28px] p-5" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
-                <div data-testid="profile-avatar-preview" className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] text-4xl font-black" style={{ background: `${c.acc}22`, color: c.acc }}>
-                  {avatarPreview ? <img src={avatarPreview} alt="Profile avatar" className="h-full w-full object-cover" /> : (displayName || profile.email || 'U').slice(0, 1).toUpperCase()}
+                <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] text-4xl font-black" style={{ background: `${c.acc}22`, color: c.acc }}>
+                  {(displayName || profile.email || 'U').slice(0, 1).toUpperCase()}
                 </div>
                 <h2 className="text-xl font-black">{displayName || profile.email || 'User'}</h2>
                 <p className="mt-1 text-sm" style={{ color: c.muted }}>{profile.email}</p>
@@ -333,12 +257,6 @@ export default function ProfilePage() {
                   </label>
 
                   <label className="block">
-                    <span className="mb-1 block text-sm font-black">Profile Photo</span>
-                    <input data-testid="profile-avatar-file" type="file" accept="image/*" onChange={handleAvatarFileChange} className="w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
-                    <span className="mt-1 block text-xs" style={{ color: c.muted }}>Upload a JPG, PNG or WebP image up to 4MB. The image is stored on Cloudinary.</span>
-                  </label>
-
-                  <label className="block">
                     <span className="mb-1 block text-sm font-black">Theme</span>
                     <select value={theme} onChange={(event) => handleThemeChange(event.target.value as ThemeMode)} className="w-full rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
                       <option value="dark">Dark</option>
@@ -348,8 +266,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6 flex justify-end">
-                  <button type="submit" disabled={saving || uploadingAvatar} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.acc }}>
-                    {saving || uploadingAvatar ? 'Saving…' : 'Save Profile'}
+                  <button type="submit" disabled={saving} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.acc }}>
+                    {saving ? 'Saving…' : 'Save Profile'}
                   </button>
                 </div>
               </form>

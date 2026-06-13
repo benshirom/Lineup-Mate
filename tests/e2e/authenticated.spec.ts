@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
+import path from 'path';
 import { clickNav, ensureFirstActIsStarred, ensureFirstFestivalIsSaved, login, openFirstFestival, openArtistsTab, openProfile } from './helpers';
+
+test.use({ storageState: path.join(__dirname, '.auth/user.json') });
 
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;
@@ -87,23 +90,8 @@ test.describe('authenticated flows', () => {
     await expect(page.getByLabel(/Display Name/i)).toBeVisible();
     await expect(page.getByLabel(/^Email$/i)).toBeVisible();
     await expect(page.getByLabel(/Theme/i)).toBeVisible();
-    await expect(page.getByLabel(/Profile Photo/i)).toBeVisible();
+    await expect(page.getByLabel(/Profile Photo/i)).toHaveCount(0);
     await expect(page.getByLabel(/Language/i)).toHaveCount(0);
-    await expect(page.getByLabel(/Avatar URL/i)).toHaveCount(0);
-  });
-
-  test('profile can preview an uploaded avatar file without URL input', async ({ page }) => {
-    await page.goto('/profile', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: /Profile/i })).toBeVisible({ timeout: 20_000 });
-
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#e85d26"/><text x="32" y="40" text-anchor="middle" font-size="28" fill="white">LM</text></svg>`;
-    await page.getByTestId('profile-avatar-file').setInputFiles({
-      name: 'avatar.svg',
-      mimeType: 'image/svg+xml',
-      buffer: Buffer.from(svg)
-    });
-
-    await expect(page.getByTestId('profile-avatar-preview').locator('img')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByLabel(/Avatar URL/i)).toHaveCount(0);
   });
 

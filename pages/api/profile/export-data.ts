@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { data: savedFestivals },
       { data: groupMemberships },
     ] = await Promise.all([
-      supabaseAdmin.from('profiles').select('id, email, display_name, avatar_url, role, theme, created_at').eq('id', user.id).single(),
+      supabaseAdmin.from('profiles').select('id, email, display_name, role, theme, created_at').eq('id', user.id).single(),
       supabaseAdmin.from('user_performance_preferences').select('performance_id, status, created_at').eq('user_id', user.id),
       supabaseAdmin.from('saved_festivals').select('festival_id, created_at').eq('user_id', user.id),
       supabaseAdmin.from('group_members').select('group_id, role, created_at').eq('user_id', user.id),

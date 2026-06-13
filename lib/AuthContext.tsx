@@ -10,7 +10,6 @@ type TranslationSet = typeof translations;
 interface UserProfile {
   email: string | null;
   display_name: string | null;
-  avatar_url: string | null;
   role: 'user' | 'admin';
   theme: ThemeMode;
 }
@@ -86,7 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
   const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('email, display_name, avatar_url, role, theme, is_blocked')
+      .select('email, display_name, role, theme, is_blocked')
       .eq('id', userId)
       .single();
 
@@ -103,7 +102,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onNavigate
       setProfile({
         email: data.email ?? null,
         display_name: data.display_name ?? null,
-        avatar_url: data.avatar_url ?? null,
         role: data.role === 'admin' ? 'admin' : 'user',
         theme: nextTheme
       });

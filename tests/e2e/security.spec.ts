@@ -28,13 +28,6 @@ test.describe('security: unauthenticated access to API endpoints', () => {
     expect(response.status()).toBe(401);
   });
 
-  test('POST /api/profile/avatar-upload returns 401 without token', async ({ request }) => {
-    const response = await request.post('/api/profile/avatar-upload', {
-      data: { file: 'data:image/png;base64,abc' },
-    });
-    expect(response.status()).toBe(401);
-  });
-
   test('DELETE /api/profile/delete-account returns 401 without token', async ({ request }) => {
     const response = await request.delete('/api/profile/delete-account');
     expect(response.status()).toBe(401);
@@ -46,14 +39,6 @@ test.describe('security: unauthenticated access to API endpoints', () => {
   });
 });
 
-test.describe('security: legacy endpoint removed', () => {
-  test('/api/upload-avatar no longer exists (404)', async ({ request }) => {
-    const response = await request.post('/api/upload-avatar', {
-      data: { file: 'data:image/png;base64,abc', userId: 'attacker-chosen-id' },
-    });
-    expect(response.status()).toBe(404);
-  });
-});
 
 test.describe('security: admin endpoints do not leak DB error details', () => {
   test('admin endpoint error response does not contain SQL/schema keywords', async ({ request }) => {

@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
+import path from 'path';
 import { ensureFirstActIsStarred, login, openFirstFestival } from './helpers';
+
+test.use({ storageState: path.join(__dirname, '.auth/user.json') });
 
 const testEmail = process.env.E2E_USER_EMAIL;
 const testPassword = process.env.E2E_USER_PASSWORD;

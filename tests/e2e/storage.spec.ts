@@ -1,4 +1,8 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
+import { login } from './helpers';
+
+test.use({ storageState: path.join(__dirname, '.auth/user.json') });
 
 test.describe('storage abstraction', () => {
   test('theme persists in localStorage across reload', async ({ page }) => {
@@ -6,11 +10,8 @@ test.describe('storage abstraction', () => {
     const password = process.env.E2E_USER_PASSWORD;
     if (!email || !password) { test.skip(); return; }
 
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await page.fill('input[type="text"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/');
+    await login(page, email, password);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // Check localStorage has the theme key
     const theme = await page.evaluate(() => localStorage.getItem('lineup-mate-theme'));
