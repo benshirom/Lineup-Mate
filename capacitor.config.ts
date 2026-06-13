@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    CapacitorUpdater: {
+      autoUpdate: true,
+      updateUrl: 'https://jcokguqwmdkkzdakyamo.supabase.co/functions/v1/app-update',
+      appReadyTimeout: 10000,
+    },
   },
 };
 

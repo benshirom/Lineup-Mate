@@ -80,17 +80,24 @@ export function FestivalInfoTab({ festival, onFestivalUpdate, allStages, days, p
                       setFetchingDescription(true);
                       setFetchError(null);
                       try {
-                        const { data: { session } } = await supabase.auth.getSession();
-                        const res = await fetch('/api/admin/fetch-festival-info', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-                          body: JSON.stringify({ festivalId: festival.id, festivalName: festival.name }),
-                        });
-                        const json = await res.json() as { description?: string | null; error?: string };
-                        if (json.description) {
-                          setEditDescription(json.description);
+                        // Strip trailing year and try Wikipedia API (CORS-friendly, no key needed)
+                        const baseName = festival.name.replace(/\s+\d{4}$/, '').trim();
+                        const candidates = [baseName, `${baseName} (festival)`, festival.name];
+                        let description: string | null = null;
+                        for (const candidate of candidates) {
+                          const res = await fetch(
+                            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(candidate)}`,
+                            { headers: { 'User-Agent': 'lineup-mate/1.0' } }
+                          );
+                          if (res.ok) {
+                            const data = await res.json() as { extract?: string; type?: string };
+                            if (data.type !== 'disambiguation' && data.extract) { description = data.extract; break; }
+                          }
+                        }
+                        if (description) {
+                          setEditDescription(description);
                         } else {
-                          setFetchError(json.error ?? 'No description found.');
+                          setFetchError('No description found. Try editing manually.');
                         }
                       } catch {
                         setFetchError('Request failed.');
@@ -101,7 +108,7 @@ export function FestivalInfoTab({ festival, onFestivalUpdate, allStages, days, p
                     className="tap-active rounded-full px-2.5 py-1 text-[11px] font-bold disabled:opacity-50"
                     style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}
                   >
-                    {fetchingDescription ? 'Fetching…' : '🔍 Fetch from Google'}
+                    {fetchingDescription ? 'Fetching…' : '🔍 Fetch from Wikipedia'}
                   </button>
                 </div>
                 <textarea
@@ -152,14 +159,17 @@ export function FestivalInfoTab({ festival, onFestivalUpdate, allStages, days, p
                   onClick={async () => {
                     setSavingInfo(true);
                     try {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      const res = await fetch(`/api/admin/festivals/${festival.id}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-                        body: JSON.stringify({ description: editDescription || null, location: editLocation || null, website: editWebsite || null }),
-                      });
-                      if (res.ok) {
-                        onFestivalUpdate({ ...festival, description: editDescription || null, location: editLocation || null, website: editWebsite || null });
+                      const updates = {
+                        description: editDescription || null,
+                        location: editLocation || null,
+                        website: editWebsite || null,
+                      };
+                      const { error } = await supabase
+                        .from('festivals')
+                        .update(updates)
+                        .eq('id', festival.id);
+                      if (!error) {
+                        onFestivalUpdate({ ...festival, ...updates });
                         setEditingInfo(false);
                       }
                     } finally {

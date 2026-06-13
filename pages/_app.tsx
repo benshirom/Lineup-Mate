@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import BottomNav from '@/components/BottomNav';
 import IOSInstallBanner from '@/components/IOSInstallBanner';
 import AndroidInstallBanner from '@/components/AndroidInstallBanner';
+import UpdaterInit from '@/components/UpdaterInit';
 
 function AppShell({ Component, pageProps }: AppProps) {
   const { user } = useAuth();
@@ -52,6 +53,7 @@ export default function MyApp(props: AppProps) {
         <IOSInstallBanner />
         <AndroidInstallBanner />
         <AppShell {...props} />
+        <UpdaterInit />
       </AuthProvider>
     </>
   );

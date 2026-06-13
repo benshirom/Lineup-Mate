@@ -24,21 +24,25 @@ const securityHeaders = [
   // CSP is set per-request via middleware.ts using a nonce — no static header here.
 ];
 
+const isExport = process.env.NEXT_EXPORT === 'true';
+
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // When NEXT_EXPORT=true (mobile build via Capacitor), emit a fully-static site.
-  // API routes are not included in the static export; the mobile app calls the
-  // Netlify-hosted API directly via NEXT_PUBLIC_APP_URL.
-  ...(process.env.NEXT_EXPORT === 'true' ? { output: 'export' } : {}),
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: securityHeaders,
-      },
-    ];
-  },
+  // Static export for mobile OTA bundles (NEXT_EXPORT=true set by GitHub Actions).
+  // Netlify web build runs without this flag and keeps full Next.js + API routes.
+  ...(isExport ? {
+    output: 'export',
+    images: { unoptimized: true },
+    trailingSlash: true,
+  } : {}),
+  // Security headers only apply when running as a Next.js server (Netlify).
+  // For static export these are set in netlify.toml at the CDN layer.
+  ...(!isExport ? {
+    async headers() {
+      return [{ source: '/(.*)', headers: securityHeaders }];
+    },
+  } : {}),
 };
 
 module.exports = withSentryConfig(withPWA(nextConfig), {
