@@ -68,6 +68,11 @@ export async function expectAuthenticated(page: Page) {
 export async function login(page: Page, email: string, password: string) {
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await dismissPreviewOverlays(page);
+  // If storageState pre-authenticated this context, /login redirects immediately
+  if (!page.url().includes('/login')) {
+    await expectAuthenticated(page);
+    return;
+  }
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: /password/i }).fill(password);
   await page.getByRole('button', { name: /^Sign in$/i }).click();

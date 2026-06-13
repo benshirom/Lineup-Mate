@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
+import path from 'path';
 import { clickNav, login } from './helpers';
+
+test.use({ storageState: path.join(__dirname, '.auth/admin.json') });
 
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
