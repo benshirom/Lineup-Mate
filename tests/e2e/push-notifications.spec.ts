@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { login } from './helpers';
 
 test.use({ storageState: path.join(__dirname, '.auth/user.json') });
 
@@ -49,11 +50,7 @@ test.describe('push notification preferences UI', () => {
       return;
     }
 
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await page.fill('input[type="text"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/');
+    await login(page, email, password);
 
     await page.goto('/profile', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('notification-prefs-form')).toBeVisible();
