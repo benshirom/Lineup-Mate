@@ -177,7 +177,7 @@ export default function Home() {
                 {t.heroSub}
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#events" className="rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: c.acc, boxShadow: `0 4px 20px ${c.acc}44` }}>
+                <a href="#events" className="rounded-full px-6 py-3 text-sm font-black text-white shadow-lg transition hover:brightness-110 hover:-translate-y-0.5" style={{ background: c.accHover, boxShadow: `0 4px 20px ${c.acc}44` }}>
                   {t.browseEvents}
                 </a>
                 {isAdmin && (
@@ -222,7 +222,7 @@ export default function Home() {
 
           <div className="mb-6 flex flex-wrap gap-2">
             {genreFilters.map((filter) => (
-              <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.acc : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
+              <button key={filter.key} type="button" onClick={() => setGenre(filter.key)} className="rounded-full px-4 py-2 text-xs font-extrabold transition" style={{ background: genre === filter.key ? c.accHover : c.surf, color: genre === filter.key ? '#fff' : c.muted, border: `1px solid ${genre === filter.key ? c.acc : c.brd}` }}>
                 {filter.label}
               </button>
             ))}
@@ -275,7 +275,7 @@ export default function Home() {
                       type="button"
                       onClick={() => router.push(`/festival/${festival.id}`)}
                       className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white transition hover:brightness-110"
-                      style={{ background: c.acc, boxShadow: `0 4px 16px ${c.acc}33` }}
+                      style={{ background: c.accHover, boxShadow: `0 4px 16px ${c.acc}33` }}
                     >
                       {t.viewLineup}
                     </button>

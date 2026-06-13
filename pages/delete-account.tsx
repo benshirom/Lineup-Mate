@@ -72,7 +72,7 @@ export default function DeleteAccountPage() {
             <Link
               href="/login"
               className="inline-block rounded-full px-5 py-3 text-sm font-black text-white"
-              style={{ background: c.acc }}
+              style={{ background: c.accHover }}
             >
               Sign in
             </Link>

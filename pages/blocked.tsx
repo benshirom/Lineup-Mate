@@ -39,7 +39,7 @@ const BlockedPage = () => {
           <button
             onClick={() => router.push('/')}
             className="w-full rounded-2xl px-4 py-3 text-sm font-black text-white"
-            style={{ background: c.acc }}
+            style={{ background: c.accHover }}
           >
             Back to Home
           </button>

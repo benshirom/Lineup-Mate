@@ -291,7 +291,7 @@ export default function GroupsPage() {
 
       <div className="mt-4 flex gap-2">
         {compact && <button type="button" onClick={resetCreateForm} className="flex-1 rounded-full px-5 py-3 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.muted }}>Cancel</button>}
-        <button type="submit" data-testid="create-group-submit" disabled={actionLoading || !selectedFestivalId || !groupName.trim()} className="flex-1 rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: selectedFestival?.color || c.acc }}>
+        <button type="submit" data-testid="create-group-submit" disabled={actionLoading || !selectedFestivalId || !groupName.trim()} className="flex-1 rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: selectedFestival?.color || c.accHover }}>
           {actionLoading ? 'Working…' : 'Create Group'}
         </button>
       </div>
@@ -311,7 +311,7 @@ export default function GroupsPage() {
                 <p className="mt-2 text-sm" style={{ color: c.muted }}>Create groups per festival, invite friends, and open a shared schedule that shows everyone&apos;s picks.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {groups.length > 0 && <button type="button" data-testid="open-create-group-modal" onClick={() => setShowCreateModal(true)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: c.acc }}>Create Group</button>}
+                {groups.length > 0 && <button type="button" data-testid="open-create-group-modal" onClick={() => setShowCreateModal(true)} className="rounded-full px-4 py-2 text-sm font-black text-white" style={{ background: c.accHover }}>Create Group</button>}
                 <button type="button" onClick={() => router.push('/')} className="rounded-full px-4 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>Browse Festivals</button>
               </div>
             </div>
@@ -328,7 +328,7 @@ export default function GroupsPage() {
               <div className="flex flex-col gap-2 sm:flex-row">
                 <label htmlFor="join-group-code-input" className="sr-only">Invite code</label>
                 <input id="join-group-code-input" data-testid="join-group-code-input" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} placeholder="Invite code" className="min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm outline-none" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }} />
-                <button type="submit" data-testid="join-group-submit" disabled={actionLoading || !inviteCode.trim()} className="rounded-2xl px-5 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.acc }}>{actionLoading ? 'Joining…' : 'Join'}</button>
+                <button type="submit" data-testid="join-group-submit" disabled={actionLoading || !inviteCode.trim()} className="rounded-2xl px-5 py-3 text-sm font-black text-white disabled:opacity-50" style={{ background: c.accHover }}>{actionLoading ? 'Joining…' : 'Join'}</button>
               </div>
             </form>
           </section>
@@ -357,7 +357,7 @@ export default function GroupsPage() {
 
                   <div className="mb-3 flex items-center gap-2 rounded-2xl px-3 py-2.5" style={{ background: c.surf2, border: `1px solid ${c.brd}` }}>
                     <code data-testid="group-invite-code" className="min-w-0 flex-1 text-sm font-black" style={{ color: c.txt, letterSpacing: '0.06em' }}>{group.invite_code}</code>
-                    <button type="button" data-testid="copy-invite-code" onClick={() => copyInviteCode(group.invite_code)} className="shrink-0 rounded-full px-3 py-1 text-xs font-black text-white transition" style={{ background: copiedCode === group.invite_code ? c.success : c.acc }}>
+                    <button type="button" data-testid="copy-invite-code" onClick={() => copyInviteCode(group.invite_code)} className="shrink-0 rounded-full px-3 py-1 text-xs font-black text-white transition" style={{ background: copiedCode === group.invite_code ? c.success : c.accHover }}>
                       {copiedCode === group.invite_code ? '✓ Copied' : 'Copy'}
                     </button>
                   </div>

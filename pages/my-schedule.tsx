@@ -379,7 +379,7 @@ export default function MySchedulePage() {
               <div className="text-5xl">☆</div>
               <h2 className="mt-3 text-2xl font-black">No saved acts yet</h2>
               <p className="mt-2 text-sm" style={{ color: c.muted }}>Open a festival and tap the star next to artists you don&apos;t want to miss. Joining or creating a group also saves the festival here.</p>
-              <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: c.acc }}>
+              <button type="button" onClick={() => router.push('/')} className="mt-5 rounded-full px-5 py-3 text-sm font-black text-white" style={{ background: c.accHover }}>
                 Find Festivals
               </button>
             </div>

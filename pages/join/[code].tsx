@@ -99,7 +99,7 @@ export default function JoinPage() {
             <h1 className="text-2xl font-black mb-2">Link not found</h1>
             <p className="text-sm mb-2" style={{ color: c.muted }}>This invite link doesn&apos;t exist or has expired.</p>
             <p className="text-xs mb-6" style={{ color: c.muted }}>Make sure the link is complete — ask the group owner to share a fresh invite link if the problem persists.</p>
-            <Link href="/" className="rounded-full px-6 py-3 text-sm font-bold text-white" style={{ background: c.acc }}>
+            <Link href="/" className="rounded-full px-6 py-3 text-sm font-bold text-white" style={{ background: c.accHover }}>
               Go home
             </Link>
           </div>
@@ -160,7 +160,7 @@ export default function JoinPage() {
                   data-testid="join-cta-login"
                   onClick={handleLoginRedirect}
                   className="w-full rounded-2xl py-3.5 text-sm font-bold text-white tap-active"
-                  style={{ background: c.acc }}
+                  style={{ background: c.accHover }}
                 >
                   Log in / Sign up
                 </button>

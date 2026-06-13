@@ -47,7 +47,7 @@ function AppInstallCard() {
         <button
           onClick={handleShare}
           className="flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white"
-          style={{ background: c.acc }}
+          style={{ background: c.accHover }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -273,7 +273,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6 flex justify-end">
-                  <button type="submit" disabled={saving} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.acc }}>
+                  <button type="submit" disabled={saving} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.accHover }}>
                     {saving ? 'Saving…' : 'Save Profile'}
                   </button>
                 </div>
