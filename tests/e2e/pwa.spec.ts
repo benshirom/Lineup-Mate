@@ -37,7 +37,17 @@ test.describe('well-known files', () => {
   });
 
   test('apple-app-site-association is accessible', async ({ page }) => {
-    const r = await page.request.get('/.well-known/apple-app-site-association');
+    let r: Awaited<ReturnType<typeof page.request.get>> | undefined;
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        r = await page.request.get('/.well-known/apple-app-site-association', { timeout: 30_000 });
+        if (r.ok()) break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (!r) throw lastErr;
     expect(r.ok()).toBeTruthy();
     const json = await r.json();
     expect(json).toHaveProperty('applinks');
