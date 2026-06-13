@@ -1,0 +1,8 @@
+[functions.app-update]
+verify_jwt = false
+
+[functions.app-events]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = true

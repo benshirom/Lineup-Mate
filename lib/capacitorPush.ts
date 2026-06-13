@@ -4,6 +4,8 @@
  * Web push is handled separately via lib/pushNotifications.ts + VAPID.
  */
 
+import { createClient } from '@supabase/supabase-js';
+
 export async function initCapacitorPush(authToken: string): Promise<void> {
   if (typeof window === 'undefined') return;
 
@@ -25,19 +27,21 @@ export async function initCapacitorPush(authToken: string): Promise<void> {
 
   PushNotifications.addListener('registration', async (token: { value: string }) => {
     try {
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
+      const client = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${authToken}` } } }
+      );
+      await client.from('push_subscriptions').upsert(
+        {
           endpoint: token.value,
           p256dh: '',
           auth: '',
           platform: Capacitor.getPlatform(),
-        }),
-      });
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,endpoint' }
+      );
     } catch {
       // Silent — push registration failure is non-fatal
     }

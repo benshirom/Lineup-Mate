@@ -3,6 +3,16 @@
  * Called after user grants notification permission.
  */
 
+import { createClient } from '@supabase/supabase-js';
+
+function supabaseForToken(authToken: string) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${authToken}` } } }
+  );
+}
+
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -51,21 +61,20 @@ export async function subscribeToPush(authToken: string): Promise<boolean> {
     });
 
     const json = subscription.toJSON();
-    const response = await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({
-        endpoint: json.endpoint,
-        p256dh: (json.keys as any)?.p256dh ?? '',
-        auth: (json.keys as any)?.auth ?? '',
-        platform: 'web',
-      }),
-    });
+    const { error } = await supabaseForToken(authToken)
+      .from('push_subscriptions')
+      .upsert(
+        {
+          endpoint: json.endpoint!,
+          p256dh: (json.keys as Record<string, string>)?.p256dh ?? '',
+          auth: (json.keys as Record<string, string>)?.auth ?? '',
+          platform: 'web',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,endpoint' }
+      );
 
-    return response.ok;
+    return !error;
   } catch (err) {
     console.error('subscribeToPush error:', err);
     return false;
@@ -82,12 +91,8 @@ export async function unsubscribeFromPush(authToken: string): Promise<void> {
   const endpoint = subscription.endpoint;
   await subscription.unsubscribe();
 
-  await fetch('/api/push/subscribe', {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${authToken}`,
-    },
-    body: JSON.stringify({ endpoint }),
-  });
+  await supabaseForToken(authToken)
+    .from('push_subscriptions')
+    .delete()
+    .eq('endpoint', endpoint);
 }

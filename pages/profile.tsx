@@ -47,7 +47,7 @@ function AppInstallCard() {
         <button
           onClick={handleShare}
           className="flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black text-white"
-          style={{ background: c.acc }}
+          style={{ background: c.accHover }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -78,6 +78,8 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [exportingData, setExportingData] = useState(false);
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState<'idle' | 'confirm'>('idle');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     if (!authReady) return;
@@ -170,14 +172,22 @@ export default function ProfilePage() {
   };
 
   const handleExportData = async () => {
-    if (!session) return;
+    if (!user) return;
     setExportingData(true);
     try {
-      const response = await fetch('/api/profile/export-data', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!response.ok) throw new Error('Export failed');
-      const blob = await response.blob();
+      const [
+        { data: profileData },
+        { data: preferences },
+        { data: savedFestivals },
+        { data: groupMemberships },
+      ] = await Promise.all([
+        supabase.from('profiles').select('id, email, display_name, role, theme, created_at').eq('id', user.id).single(),
+        supabase.from('user_performance_preferences').select('performance_id, status, created_at').eq('user_id', user.id),
+        supabase.from('saved_festivals').select('festival_id, created_at').eq('user_id', user.id),
+        supabase.from('group_members').select('group_id, role, created_at').eq('user_id', user.id),
+      ]);
+      const exportData = { profile: profileData, preferences, savedFestivals, groupMemberships, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -192,14 +202,11 @@ export default function ProfilePage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!session) return;
-    const confirmed = window.confirm(
-      'Are you sure you want to permanently delete your account? This cannot be undone.'
-    );
-    if (!confirmed) return;
+    if (!session || deleteConfirmText.toLowerCase() !== 'delete') return;
     setDeletingAccount(true);
     try {
-      const response = await fetch('/api/profile/delete-account', {
+      const fnUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`;
+      const response = await fetch(fnUrl, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -215,7 +222,7 @@ export default function ProfilePage() {
   return (
     <>
       <Navbar />
-      <main className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
+      <main id="main-content" className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-4xl px-4 py-8">
           <header className="mb-6 rounded-[28px] p-6 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
             <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>{t.appName}</p>
@@ -266,7 +273,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6 flex justify-end">
-                  <button type="submit" disabled={saving} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.acc }}>
+                  <button type="submit" disabled={saving} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: c.accHover }}>
                     {saving ? 'Saving…' : 'Save Profile'}
                   </button>
                 </div>
@@ -285,9 +292,40 @@ export default function ProfilePage() {
                   <button onClick={handleExportData} disabled={exportingData} className="rounded-full px-5 py-3 text-sm font-black disabled:opacity-60" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
                     {exportingData ? 'Exporting…' : 'Export My Data'}
                   </button>
-                  <button onClick={handleDeleteAccount} disabled={deletingAccount} className="rounded-full px-5 py-3 text-sm font-black text-white disabled:opacity-60" style={{ background: '#ef4444' }}>
-                    {deletingAccount ? 'Deleting…' : 'Delete Account'}
-                  </button>
+                  {deleteConfirmStep === 'idle' ? (
+                    <button onClick={() => setDeleteConfirmStep('confirm')} className="rounded-full px-5 py-3 text-sm font-black" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+                      Delete Account
+                    </button>
+                  ) : (
+                    <div className="w-full rounded-2xl p-4" style={{ background: '#fee2e2', border: '1px solid #fecaca' }}>
+                      <p className="mb-2 text-sm font-black text-red-800">This is permanent and cannot be undone. Type <strong>delete</strong> to confirm.</p>
+                      <div className="flex flex-wrap gap-2">
+                        <label htmlFor="delete-confirm-input" className="sr-only">Type delete to confirm</label>
+                        <input
+                          id="delete-confirm-input"
+                          type="text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder="delete"
+                          className="rounded-xl px-3 py-2 text-sm outline-none"
+                          style={{ border: '1px solid #fecaca', background: 'white', color: '#7f1d1d', minWidth: 120 }}
+                          aria-describedby="delete-confirm-hint"
+                        />
+                        <span id="delete-confirm-hint" className="sr-only">Type the word delete to enable the confirm button</span>
+                        <button
+                          onClick={handleDeleteAccount}
+                          disabled={deletingAccount || deleteConfirmText.toLowerCase() !== 'delete'}
+                          className="rounded-full px-5 py-2 text-sm font-black text-white disabled:opacity-40"
+                          style={{ background: '#dc2626' }}
+                        >
+                          {deletingAccount ? 'Deleting…' : 'Confirm Delete'}
+                        </button>
+                        <button onClick={() => { setDeleteConfirmStep('idle'); setDeleteConfirmText(''); }} className="rounded-full px-5 py-2 text-sm font-black" style={{ background: c.surf2, border: `1px solid ${c.brd}`, color: c.txt }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

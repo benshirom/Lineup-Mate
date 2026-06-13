@@ -85,7 +85,7 @@ const Navbar: React.FC = () => {
             <Link
               href="/login"
               className="rounded-full px-5 py-2 text-sm font-bold text-white tap-active"
-              style={{ background: c.primary }}
+              style={{ background: c.primaryHover }}
             >
               Login
             </Link>
@@ -147,7 +147,7 @@ const Navbar: React.FC = () => {
               href="/login"
               onClick={close}
               className="rounded-2xl px-5 py-3.5 text-center text-sm font-bold text-white tap-active"
-              style={{ background: c.primary }}
+              style={{ background: c.primaryHover }}
             >
               Login
             </Link>

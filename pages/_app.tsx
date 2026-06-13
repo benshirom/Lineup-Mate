@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import BottomNav from '@/components/BottomNav';
 import IOSInstallBanner from '@/components/IOSInstallBanner';
 import AndroidInstallBanner from '@/components/AndroidInstallBanner';
+import UpdaterInit from '@/components/UpdaterInit';
 
 function AppShell({ Component, pageProps }: AppProps) {
   const { user } = useAuth();
@@ -48,10 +49,18 @@ export default function MyApp(props: AppProps) {
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:z-50 focus-visible:rounded-xl focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-black focus-visible:text-white"
+        style={{ insetInlineStart: 16, top: 16, background: '#8B5CF6' }}
+      >
+        דלג לתוכן הראשי
+      </a>
       <AuthProvider onNavigate={(path) => router.push(path)}>
         <IOSInstallBanner />
         <AndroidInstallBanner />
         <AppShell {...props} />
+        <UpdaterInit />
       </AuthProvider>
     </>
   );

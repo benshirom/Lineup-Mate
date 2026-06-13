@@ -21,7 +21,7 @@ export default class MyDocument extends Document<DocumentProps> {
   render() {
     const { nonce } = this.props;
     return (
-      <Html>
+      <Html lang="he" dir="rtl">
         <Head>
           <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
           <meta name="theme-color" content="#8B5CF6" />

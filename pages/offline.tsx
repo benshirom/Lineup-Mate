@@ -23,7 +23,7 @@ export default function OfflinePage() {
         <button
           onClick={() => window.location.reload()}
           className="px-6 py-3 text-white rounded-xl font-medium transition-opacity hover:opacity-80"
-          style={{ background: c.acc }}
+          style={{ background: c.accHover }}
         >
           Try again
         </button>

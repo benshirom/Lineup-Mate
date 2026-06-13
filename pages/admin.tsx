@@ -300,7 +300,7 @@ export default function AdminPage() {
                 disabled={loadingAction !== null}
                 onClick={loadClashfinderEvents}
                 className="rounded-lg px-4 py-2 text-white disabled:opacity-60"
-                style={{ background: c.acc }}
+                style={{ background: c.accHover }}
               >
                 {loadingAction === 'events' ? 'Loading events…' : 'Load Events'}
               </button>
@@ -336,7 +336,7 @@ export default function AdminPage() {
                               data-testid={`select-clashfinder-event-${event.slug}`}
                               onClick={() => selectEvent(event)}
                               className="rounded-lg px-3 py-1 text-white"
-                              style={{ background: c.acc }}
+                              style={{ background: c.accHover }}
                             >
                               Select
                             </button>
@@ -385,7 +385,7 @@ export default function AdminPage() {
                 disabled={!slug || loadingAction !== null}
                 onClick={handleImport}
                 className="rounded-lg px-4 py-2 text-white disabled:opacity-60"
-                style={{ background: c.acc }}
+                style={{ background: c.accHover }}
               >
                 {loadingAction === 'import' ? 'Syncing…' : 'Import / Sync'}
               </button>
