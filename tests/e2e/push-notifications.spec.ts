@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
+
+test.use({ storageState: path.join(__dirname, '.auth/user.json') });
 
 test.describe('push subscription API', () => {
   test('POST /api/push/subscribe rejects without auth', async ({ request }) => {

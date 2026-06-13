@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
+
+test.use({ storageState: path.join(__dirname, '.auth/user.json') });
 
 test.describe('storage abstraction', () => {
   test('theme persists in localStorage across reload', async ({ page }) => {

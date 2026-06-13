@@ -43,23 +43,23 @@ export default defineConfig({
       testMatch: '**/setup/admin.setup.ts'
     },
 
-    // Desktop: all tests
+    // Desktop: all tests (no project-level storageState — each spec declares its own)
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], storageState: userAuthFile },
+      use: { ...devices['Desktop Chrome'] },
       dependencies: ['user setup', 'admin setup']
     },
 
     // Mobile: only mobile-specific specs
     {
       name: 'mobile-chrome',
-      use: { ...devices['Pixel 5'], storageState: userAuthFile },
+      use: { ...devices['Pixel 5'] },
       testMatch: '**/mobile-*.spec.ts',
       dependencies: ['user setup']
     },
     {
       name: 'mobile-safari',
-      use: { ...devices['iPhone 15'], storageState: userAuthFile },
+      use: { ...devices['iPhone 15'] },
       testMatch: '**/mobile-*.spec.ts',
       dependencies: ['user setup']
     }
