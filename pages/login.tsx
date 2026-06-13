@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { useAuth } from '@/lib/AuthContext';
 import Navbar from '@/components/Navbar';
 import { getThemeColors } from '@/lib/platform';
@@ -228,6 +229,7 @@ const LoginPage = () => {
 
   return (
     <>
+      <Head><title>Sign in — Lineup Mate</title></Head>
       <Navbar />
       <main id="main-content" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md rounded-[28px] p-8 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>

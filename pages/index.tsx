@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { formatDateRange, genreFilters, getThemeColors } from '@/lib/platform';
@@ -161,6 +162,7 @@ export default function Home() {
 
   return (
     <>
+      <Head><title>Lineup Mate — Plan your festival schedule</title></Head>
       <Navbar />
       <main id="main-content" className="mobile-shell-padding" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }}>
         <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
