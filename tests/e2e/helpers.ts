@@ -68,11 +68,16 @@ export async function expectAuthenticated(page: Page) {
 export async function login(page: Page, email: string, password: string) {
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await dismissPreviewOverlays(page);
-  // If storageState pre-authenticated this context, /login redirects immediately
-  if (!page.url().includes('/login')) {
+
+  try {
+    // If storageState is active, /login redirects within ~1-2s
+    await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 3000 });
     await expectAuthenticated(page);
     return;
+  } catch {
+    // Still on /login after 3s — form is stable, proceed with fill
   }
+
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: /password/i }).fill(password);
   await page.getByRole('button', { name: /^Sign in$/i }).click();
