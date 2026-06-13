@@ -71,7 +71,7 @@ export async function login(page: Page, email: string, password: string) {
 
   try {
     // If storageState is active, /login redirects within ~1-2s
-    await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 3000 });
+    await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 8000 });
     await expectAuthenticated(page);
     return;
   } catch {
