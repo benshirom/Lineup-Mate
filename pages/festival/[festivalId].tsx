@@ -422,7 +422,7 @@ export default function FestivalPage() {
                             try { await navigator.share({ title: festival.name, url: window.location.href }); } catch { /* cancelled */ }
                           }}
                           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white"
-                          style={{ background: '#8B5CF6' }}
+                          style={{ background: '#7C3AED' }}
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
