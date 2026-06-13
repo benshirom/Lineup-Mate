@@ -229,7 +229,7 @@ const LoginPage = () => {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100dvh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
+      <main id="main-content" style={{ minHeight: '100dvh', background: c.bg, color: c.txt }} className="mobile-shell-padding flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md rounded-[28px] p-8 shadow-2xl" style={{ background: c.surf, border: `1px solid ${c.brd}` }}>
           <div className="mb-1 text-xs font-extrabold uppercase tracking-widest" style={{ color: c.acc }}>Lineup·Mate</div>
           <h1 className="mb-6 text-3xl font-black">{titles[view]}</h1>
